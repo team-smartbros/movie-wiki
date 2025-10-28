@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Movie - Movie Wiki</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#22d3ee',
+                        dark: '#0c1221'
+                    },
+                    fontFamily: {
+                        'sans': ['Poppins', 'sans-serif'],
+                        'body': ['Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Roboto', 'sans-serif';
+            background-color: #0f172a;
+            color: white;
+        }
+        .ad-blocker-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .ad-blocker-message {
+            background: #1e293b;
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 500px;
+        }
+        
+        /* YouTube-style responsive video container with proper 16:9 aspect ratio */
+        #streamingContainer {
+            position: relative;
+            width: 100%;
+            /* 16:9 aspect ratio using padding-bottom trick - EVEN SMALLER */
+            padding-bottom: 35%; /* Further reduced from 42% */
+            height: 0;
+            overflow: hidden;
+            background: #000;
+            border-radius: 12px;
+        }
+        
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 12px;
+        }
+        
+        /* Mobile - compact size */
+        @media (max-width: 767px) {
+            #streamingContainer {
+                padding-bottom: 50%; /* Smaller than standard 16:9 */
+                max-height: 40vh; /* Further reduced */
+            }
+        }
+        
+        /* Tablet - small to medium */
+        @media (min-width: 768px) and (max-width: 1023px) {
+            #streamingContainer {
+                padding-bottom: 38%; /* Reduced */
+                max-height: 45vh; /* Reduced */
+            }
+        }
+        
+        /* Desktop - compact and controlled */
+        @media (min-width: 1024px) {
+            #streamingContainer {
+                padding-bottom: 35%; /* Very compact */
+                max-height: 48vh; /* Significantly reduced */
+            }
+        }
+        
+        /* Landscape mobile - moderate size */
+        @media (max-width: 767px) and (orientation: landscape) {
+            #streamingContainer {
+                padding-bottom: 55vh; /* Reduced */
+                max-height: 65vh; /* Reduced */
+            }
+        }
+        
+        /* No overlay needed - direct streaming */
+        
+        /* Loading overlay - YouTube style */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 12px;
+        }
+        
+        .loading-overlay.hidden {
+            display: none;
+        }
+        
+        /* YouTube-style info cards */
+        .info-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* Chip/tag style */
+        .chip {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(34, 211, 238, 0.1);
+            color: #22d3ee;
+            border: 1px solid rgba(34, 211, 238, 0.2);
+        }
+        
+        /* Modern gradient buttons */
+        .gradient-button {
+            background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .gradient-button:hover {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.4);
+        }
+        
+        /* Smooth animations */
+        * {
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        
+        /* No protection overlay needed */
+    </style>
+</head>
+<body class="bg-primary text-white min-h-screen" style="padding-bottom: 70px;">
+    <!-- Top Navigation Bar -->
+    <nav class="glass-card sticky top-0 z-50 border-b border-gray-700" style="background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(34, 211, 238, 0.1);">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-film text-accent text-2xl"></i>
+                    <h1 class="text-xl md:text-2xl font-bold text-accent font-sans">Movie Wiki</h1>
+                </div>
+                <div class="hidden md:flex items-center gap-6">
+                    <a href="./index.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="./forum.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-comments"></i>
+                        <span>Forum</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Bottom Navigation -->
+    <div style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-top: 1px solid rgba(34, 211, 238, 0.2); z-index: 1000;" class="md:hidden">
+        <div class="flex justify-around items-center py-3">
+            <a href="./index.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 text-accent">
+                <i class="fas fa-play-circle text-xl"></i>
+                <span class="text-xs">Stream</span>
+            </a>
+            <a href="./forum.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-comments text-xl"></i>
+                <span class="text-xs">Forum</span>
+            </a>
+        </div>
+    </div>
+    <!-- YouTube-style header -->
+    <div class="bg-secondary border-b border-gray-700 sticky top-0 z-50 backdrop-blur-lg bg-opacity-95">
+        <div class="container mx-auto px-3 md:px-6 py-3 md:py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <a href="./index.html" class="text-accent hover:text-cyan-300 transition-colors">
+                        <i class="fas fa-arrow-left text-lg md:text-xl"></i>
+                    </a>
+                    <h1 class="text-base md:text-xl font-bold text-white font-sans">Now Playing</h1>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="chip hidden md:inline-block">Free Streaming</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container mx-auto px-2 md:px-6 py-3 md:py-6 max-w-7xl">
+        
+        <!-- YouTube-style video container -->
+        <div class="bg-secondary rounded-xl shadow-2xl overflow-hidden mb-4 md:mb-6">
+            <!-- Video player -->
+            <div class="relative" id="streamingContainer">
+                <!-- Loading overlay -->
+                <div id="loadingOverlay" class="loading-overlay">
+                    <div class="text-center">
+                        <div class="animate-spin rounded-full h-12 w-12 md:h-16 md:w-16 border-b-2 border-accent mx-auto mb-4"></div>
+                        <p class="text-white font-medium text-sm md:text-base">Loading video player...</p>
+                        <p class="text-gray-400 text-xs md:text-sm mt-2">Free streaming service</p>
+                    </div>
+                </div>
+                
+                <iframe 
+                    id="streamingIframe"
+                    src="" 
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowfullscreen
+                    loading="lazy"
+                    title="Movie Stream">
+                </iframe>
+            </div>
+            
+            <!-- Video info section - YouTube style -->
+            <div class="p-3 md:p-6">
+                <h2 id="movieTitle" class="text-lg md:text-2xl font-bold text-white mb-2 leading-tight"></h2>
+                <div class="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm text-gray-400">
+                    <span class="flex items-center gap-1">
+                        <i class="fas fa-play-circle text-accent"></i>
+                        <span id="videoSource" class="text-gray-300">VidSrc Player</span>
+                    </span>
+                    <span class="hidden md:inline">•</span>
+                    <span class="chip">Free Service</span>
+                </div>
+            </div>
+            
+            <!-- Video player tips -->
+            <div class="px-3 md:px-6 pb-4">
+                <div class="bg-blue-900 bg-opacity-30 rounded-lg p-3 border border-blue-700">
+                    <p class="text-blue-200 text-sm font-medium flex items-center gap-2">
+                        <i class="fas fa-info-circle"></i>
+                        Video Player Tips
+                    </p>
+                    <p class="text-blue-100 text-xs mt-1">
+                        In video player press cloud icon to change server and find best server for yourself, use fullscreen for better experience.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- TV Show Episode Selector - YouTube style -->
+            <div id="episodeSelector" class="px-3 md:px-6 pb-4 md:pb-6 hidden">
+                <div class="bg-gray-800 rounded-xl p-4 md:p-5">
+                    <h3 class="text-sm md:text-base font-semibold mb-3 md:mb-4 text-white flex items-center gap-2">
+                        <i class="fas fa-list text-accent"></i>
+                        Select Episode
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                        <div>
+                            <label class="block text-xs md:text-sm font-medium mb-2 text-gray-300">Season</label>
+                            <input type="number" id="seasonInput" min="1" placeholder="1" 
+                                   class="w-full bg-gray-700 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-lg border border-gray-600 focus:border-accent focus:ring-2 focus:ring-accent focus:ring-opacity-50 focus:outline-none text-sm md:text-base transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs md:text-sm font-medium mb-2 text-gray-300">Episode</label>
+                            <input type="number" id="episodeInput" min="1" placeholder="1" 
+                                   class="w-full bg-gray-700 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-lg border border-gray-600 focus:border-accent focus:ring-2 focus:ring-accent focus:ring-opacity-50 focus:outline-none text-sm md:text-base transition-all">
+                        </div>
+                        <div class="flex items-end">
+                            <button id="loadEpisodeButton" class="w-full gradient-button text-primary font-bold py-2.5 md:py-3 px-4 md:px-6 rounded-lg text-sm md:text-base shadow-lg">
+                                <i class="fas fa-play mr-2"></i>Load Episode
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+            
+        <!-- Information sections - YouTube style cards -->
+        <div class="space-y-4 md:space-y-5">
+            <!-- How to use guide -->
+            <div class="info-card border-l-4 border-cyan-500">
+                <div class="flex items-start gap-3">
+                    <div class="bg-cyan-500 bg-opacity-20 p-2 md:p-3 rounded-lg">
+                        <i class="fas fa-play-circle text-cyan-400 text-lg md:text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-cyan-200 mb-2 text-sm md:text-base flex items-center gap-2">
+                            <i class="fas fa-info-circle"></i>
+                            How to Watch - Important!
+                        </h3>
+                        
+                        <div class="bg-cyan-900 bg-opacity-40 rounded-lg p-3 md:p-4 mb-3 border-2 border-cyan-600">
+                            <p class="text-cyan-100 text-sm md:text-base font-bold mb-2">
+                                🎬 VidSrc is a FREE streaming service with ads
+                            </p>
+                            <p class="text-cyan-200 text-xs md:text-sm mb-3">
+                                Ads may appear before videos and when clicking player controls (play, pause, fullscreen). This is how the free service stays online.
+                            </p>
+                        </div>
+                        
+                        <div class="bg-red-900 bg-opacity-30 rounded-lg p-3 md:p-4 mb-3">
+                            <p class="text-red-200 text-sm font-bold mb-2 flex items-center gap-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                IMPORTANT: Do NOT use ad blockers!
+                            </p>
+                            <p class="text-red-100 text-xs md:text-sm mb-2">
+                                <strong>❌ VidSrc does NOT work with ad blockers enabled.</strong> If you have uBlock Origin, AdBlock Plus, or Brave Shields, the video player will NOT load.
+                            </p>
+                        </div>
+                        
+                        <div class="bg-green-900 bg-opacity-30 rounded-lg p-3 md:p-4">
+                            <p class="text-green-200 text-sm font-bold mb-2 flex items-center gap-2">
+                                <i class="fas fa-lightbulb"></i>
+                                ✅ Solution: Use Incognito/Private Mode
+                            </p>
+                            <p class="text-green-100 text-xs md:text-sm mb-3">
+                                <strong>Best practice:</strong> Open this page in Incognito/Private Mode to disable extensions while watching.
+                            </p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                                <div class="bg-green-800 rounded-lg p-3">
+                                    <p class="text-green-200 font-bold text-sm mb-2">💻 Chrome:</p>
+                                    <ol class="text-green-100 text-xs space-y-1 ml-4 list-decimal">
+                                        <li>Press <code class="bg-green-900 px-1.5 py-0.5 rounded">Ctrl+Shift+N</code></li>
+                                        <li>Paste this page's URL</li>
+                                        <li>Watch without issues!</li>
+                                    </ol>
+                                </div>
+                                <div class="bg-green-800 rounded-lg p-3">
+                                    <p class="text-green-200 font-bold text-sm mb-2">🦊 Firefox:</p>
+                                    <ol class="text-green-100 text-xs space-y-1 ml-4 list-decimal">
+                                        <li>Press <code class="bg-green-900 px-1.5 py-0.5 rounded">Ctrl+Shift+P</code></li>
+                                        <li>Paste this page's URL</li>
+                                        <li>Watch without issues!</li>
+                                    </ol>
+                                </div>
+                                <div class="bg-green-800 rounded-lg p-3">
+                                    <p class="text-green-200 font-bold text-sm mb-2">🧡 Edge:</p>
+                                    <ol class="text-green-100 text-xs space-y-1 ml-4 list-decimal">
+                                        <li>Press <code class="bg-green-900 px-1.5 py-0.5 rounded">Ctrl+Shift+N</code></li>
+                                        <li>Paste this page's URL</li>
+                                        <li>Watch without issues!</li>
+                                    </ol>
+                                </div>
+                            </div>
+                            
+                            <p class="text-green-100 text-xs italic">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                Incognito mode disables all browser extensions, allowing VidSrc to load properly while keeping your ad blockers enabled for regular browsing.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                
+            <!-- Streaming tips -->
+            <div class="info-card border-l-4 border-blue-500">
+                <div class="flex items-start gap-3">
+                    <div class="bg-blue-500 bg-opacity-20 p-2 md:p-3 rounded-lg">
+                        <i class="fas fa-info-circle text-blue-400 text-lg md:text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-blue-200 mb-3 text-sm md:text-base">Tips for Better Streaming</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="flex items-start gap-2">
+                                <i class="fas fa-user-secret text-blue-400 mt-0.5"></i>
+                                <div>
+                                    <p class="text-blue-100 text-xs md:text-sm font-medium">Use Private Mode</p>
+                                    <p class="text-blue-300 text-xs">Reduces tracking and some ads</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <i class="fas fa-times-circle text-blue-400 mt-0.5"></i>
+                                <div>
+                                    <p class="text-blue-100 text-xs md:text-sm font-medium">Close Pop-ups</p>
+                                    <p class="text-blue-300 text-xs">Simply close and continue watching</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <i class="fas fa-sync-alt text-blue-400 mt-0.5"></i>
+                                <div>
+                                    <p class="text-blue-100 text-xs md:text-sm font-medium">Refresh if Stuck</p>
+                                    <p class="text-blue-300 text-xs">Reload page if video won't load</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <i class="fas fa-expand text-blue-400 mt-0.5"></i>
+                                <div>
+                                    <p class="text-blue-100 text-xs md:text-sm font-medium">Use Fullscreen</p>
+                                    <p class="text-blue-300 text-xs">Better viewing experience</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                
+            <!-- Recommended ad blockers - YouTube style grid -->
+            <div class="info-card border-l-4 border-green-500">
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="bg-green-500 bg-opacity-20 p-2 md:p-3 rounded-lg">
+                        <i class="fas fa-shield-alt text-green-400 text-lg md:text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-green-200 text-sm md:text-base">Recommended Ad Blockers</h3>
+                        <p class="text-green-300 text-xs md:text-sm mt-1">Install one of these for an ad-free experience</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                    <!-- uBlock Origin -->
+                    <div class="bg-green-900 bg-opacity-30 rounded-lg p-3 md:p-4 hover:bg-opacity-40 transition-all">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fas fa-shield-alt text-green-400"></i>
+                            <h4 class="font-semibold text-xs md:text-sm text-green-100">uBlock Origin</h4>
+                        </div>
+                        <p class="text-xs text-green-200 mb-3">Best ad blocker available</p>
+                        <ul class="space-y-1 text-xs text-green-100 mb-3">
+                            <li class="flex items-center gap-1.5">
+                                <i class="fas fa-check text-green-400 text-xs"></i>
+                                <span>Free & Open Source</span>
+                            </li>
+                            <li class="flex items-center gap-1.5">
+                                <i class="fas fa-check text-green-400 text-xs"></i>
+                                <span>Blocks all ads</span>
+                            </li>
+                            <li class="flex items-center gap-1.5">
+                                <i class="fas fa-check text-green-400 text-xs"></i>
+                                <span>Low resource usage</span>
+                            </li>
+                        </ul>
+                        <a href="https://ublockorigin.com/" target="_blank" 
+                           class="inline-flex items-center gap-1.5 text-green-300 hover:text-green-200 text-xs font-medium transition-colors">
+                            <i class="fas fa-download"></i>
+                            Download
+                        </a>
+                    </div>
+                    
+                    <!-- Brave Browser -->
+                    <div class="bg-green-900 bg-opacity-30 rounded-lg p-3 md:p-4 hover:bg-opacity-40 transition-all">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fas fa-browser text-green-400"></i>
+                            <h4 class="font-semibold text-xs md:text-sm text-green-100">Brave Browser</h4>
+                        </div>
+                        <p class="text-xs text-green-200 mb-3">Built-in ad blocking</p>
+                        <ul class="space-y-1 text-xs text-green-100 mb-3">
+                            <li class="flex items-center gap-1.5">
+                                <i class="fas fa-check text-green-400 text-xs"></i>
+                                <span>No extension needed</span>
+                            </li>
+                            <li class="flex items-center gap-1.5">
+                                <i class="fas fa-check text-green-400 text-xs"></i>
+                                <span>Works on mobile</span>
+                            </li>
+                            <li class="flex items-center gap-1.5">
+                                <i class="fas fa-check text-green-400 text-xs"></i>
+                                <span>Fast & Private</span>
+                            </li>
+                        </ul>
+                        <a href="https://brave.com/" target="_blank" 
+                           class="inline-flex items-center gap-1.5 text-green-300 hover:text-green-200 text-xs font-medium transition-colors">
+                            <i class="fas fa-download"></i>
+                            Download
+                        </a>
+                    </div>
+                    
+                    <!-- Mobile Solution -->
+                    <div class="bg-green-900 bg-opacity-30 rounded-lg p-3 md:p-4 hover:bg-opacity-40 transition-all">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fas fa-mobile-alt text-green-400"></i>
+                            <h4 class="font-semibold text-xs md:text-sm text-green-100">Mobile Solution</h4>
+                        </div>
+                        <p class="text-xs text-green-200 mb-3">For phones & tablets</p>
+                        <ul class="space-y-1 text-xs text-green-100 mb-3">
+                            <li class="flex items-center gap-1.5">
+                                <i class="fas fa-mobile text-green-400 text-xs"></i>
+                                <span>Firefox + uBlock</span>
+                            </li>
+                            <li class="flex items-center gap-1.5">
+                                <i class="fas fa-mobile text-green-400 text-xs"></i>
+                                <span>Brave Browser</span>
+                            </li>
+                            <li class="flex items-center gap-1.5">
+                                <i class="fas fa-mobile text-green-400 text-xs"></i>
+                                <span>AdGuard DNS</span>
+                            </li>
+                        </ul>
+                        <span class="inline-flex items-center gap-1.5 text-green-300 text-xs font-medium">
+                            <i class="fas fa-info-circle"></i>
+                            Android & iOS
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Free service notice -->
+            <div class="info-card border-l-4 border-yellow-500">
+                <div class="flex items-start gap-3">
+                    <div class="bg-yellow-500 bg-opacity-20 p-2 md:p-3 rounded-lg">
+                        <i class="fas fa-heart text-yellow-400 text-lg md:text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-yellow-200 mb-2 text-sm md:text-base">Supporting Free Streaming</h3>
+                        <p class="text-yellow-100 text-xs md:text-sm leading-relaxed">
+                            VidSrc provides free streaming by showing ads. By watching with ads enabled (incognito mode), you're supporting their service and helping keep it free for everyone. Thank you! 🙏
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Share & Comments Section -->
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Share Button -->
+        <div class="mb-8 text-center">
+            <button id="shareStreamBtn" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-8 rounded-lg shadow-lg transition-all hover:scale-105 inline-flex items-center gap-2">
+                <i class="fas fa-share-alt"></i>
+                Share This Movie
+            </button>
+        </div>
+        
+        <!-- Comments Section -->
+        <div class="glass-card rounded-xl p-6 mb-8" style="background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(34, 211, 238, 0.1);">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3 text-accent">
+                <i class="fas fa-comments"></i>
+                <span>Quick Comments</span>
+            </h2>
+            
+            <div id="streamCommentFormAuth" class="hidden mb-6">
+                <form id="streamCommentForm" class="space-y-4">
+                    <textarea 
+                        id="streamCommentText" 
+                        required
+                        rows="3"
+                        maxlength="500"
+                        placeholder="Share your thoughts about this movie..." 
+                        class="w-full px-4 py-3 rounded-lg bg-secondary text-white focus:outline-none focus:ring-2 focus:ring-accent border border-gray-700"
+                    ></textarea>
+                    <button type="submit" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-6 rounded-lg transition flex items-center gap-2">
+                        <i class="fas fa-paper-plane"></i>
+                        Post Comment
+                    </button>
+                </form>
+            </div>
+            
+            <div id="streamCommentFormGuest" class="text-center py-6">
+                <i class="fas fa-sign-in-alt text-accent text-4xl mb-4"></i>
+                <p class="text-gray-300 mb-4">Sign in to post comments</p>
+                <button id="streamGuestLoginBtn" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-6 rounded-lg transition flex items-center gap-2 mx-auto">
+                    <i class="fab fa-google"></i>
+                    Sign in with Google
+                </button>
+            </div>
+            
+            <div id="streamCommentsContainer" class="space-y-4 mt-6">
+                <div class="text-center py-8">
+                    <i class="fas fa-spinner fa-spin text-accent text-2xl mb-3"></i>
+                    <p class="text-gray-400">Loading comments...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const movieId = urlParams.get('id');
+        const title = urlParams.get('title') || 'Movie';
+        const contentType = urlParams.get('type') || 'movie';
+        
+        const iframe = document.getElementById('streamingIframe');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        
+        if (movieId) {
+            // Set movie title
+            document.getElementById('movieTitle').textContent = title;
+            
+            // Hide loading overlay after iframe loads
+            iframe.addEventListener('load', function() {
+                console.log('✅ Video player loaded');
+                setTimeout(() => {
+                    loadingOverlay.classList.add('hidden');
+                }, 1000);
+            });
+            
+            // Fallback: Hide loading overlay after 5 seconds
+            setTimeout(() => {
+                loadingOverlay.classList.add('hidden');
+            }, 5000);
+            
+            if (contentType === 'tv') {
+                // Show episode selector for TV shows
+                document.getElementById('episodeSelector').classList.remove('hidden');
+                
+                // Load episode when button clicked
+                document.getElementById('loadEpisodeButton').addEventListener('click', function() {
+                    const season = document.getElementById('seasonInput').value;
+                    const episode = document.getElementById('episodeInput').value;
+                    
+                    if (season && episode) {
+                        iframe.src = `https://vidsrc-embed.ru/embed/tv/${movieId}/${season}-${episode}`;
+                        console.log(`Loading TV Show: ${title} - S${season}E${episode}`);
+                    } else {
+                        alert('Please enter both season and episode numbers');
+                    }
+                });
+                
+                // Allow Enter key to load episode
+                document.getElementById('seasonInput').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        document.getElementById('episodeInput').focus();
+                    }
+                });
+                
+                document.getElementById('episodeInput').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        document.getElementById('loadEpisodeButton').click();
+                    }
+                });
+                
+                // Default to showing TV show landing page
+                iframe.src = `https://vidsrc-embed.ru/embed/tv/${movieId}`;
+                console.log(`Loading TV Show: ${title}`);
+            } else {
+                // For movies - direct embed
+                iframe.src = `https://vidsrc-embed.ru/embed/movie/${movieId}`;
+                console.log(`Loading Movie: ${title}`);
+            }
+        } else {
+            document.getElementById('movieTitle').textContent = 'Invalid Movie ID';
+            loadingOverlay.classList.add('hidden');
+        }
+        
+        // ===== FIREBASE & COMMENTS =====
+        
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeTE5otOE58jq1-bIPNbiYdwiwX88iT00",
+            authDomain: "movie-wiki-86d4d.firebaseapp.com",
+            databaseURL: "https://movie-wiki-86d4d-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "movie-wiki-86d4d",
+            storageBucket: "movie-wiki-86d4d.firebasestorage.app",
+            messagingSenderId: "453451714779",
+            appId: "1:453451714779:web:e94ad0ef8df299b733fcfe",
+            measurementId: "G-91SHQF7F4P"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+        let currentUser = null;
+        
+        // Auth state
+        auth.onAuthStateChanged((user) => {
+            currentUser = user;
+            if (user) {
+                document.getElementById('streamCommentFormAuth').classList.remove('hidden');
+                document.getElementById('streamCommentFormGuest').classList.add('hidden');
+            } else {
+                document.getElementById('streamCommentFormAuth').classList.add('hidden');
+                document.getElementById('streamCommentFormGuest').classList.remove('hidden');
+            }
+            if (user && movieId) {
+                loadStreamComments(movieId);
+            }
+        });
+        
+        // Login
+        document.getElementById('streamGuestLoginBtn').addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(error => {
+                console.error('Login error:', error);
+                alert('Failed to sign in');
+            });
+        });
+        
+        // Post comment
+        document.getElementById('streamCommentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser || !movieId) return;
+            
+            const text = document.getElementById('streamCommentText').value.trim();
+            if (!text) return;
+            
+            const comment = {
+                userId: currentUser.uid,
+                userName: currentUser.displayName,
+                userPhoto: currentUser.photoURL,
+                text,
+                likes: 0,
+                timestamp: Date.now()
+            };
+            
+            try {
+                await database.ref(`comments/${movieId}`).push(comment);
+                document.getElementById('streamCommentText').value = '';
+                loadStreamComments(movieId);
+            } catch (error) {
+                console.error('Error posting:', error);
+                alert('Failed to post comment');
+            }
+        });
+        
+        // Load comments
+        function loadStreamComments(id) {
+            const container = document.getElementById('streamCommentsContainer');
+            container.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-accent text-2xl"></i></div>';
+            
+            database.ref(`comments/${id}`).limitToLast(5).on('value', (snapshot) => {
+                const comments = [];
+                snapshot.forEach((child) => {
+                    comments.push({ id: child.key, ...child.val() });
+                });
+                
+                comments.reverse();
+                
+                if (comments.length === 0) {
+                    container.innerHTML = '<p class="text-gray-400 text-center py-8">No comments yet. Be the first!</p>';
+                    return;
+                }
+                
+                container.innerHTML = comments.map(c => `
+                    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <div class="flex items-start gap-3">
+                            <img src="${c.userPhoto || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(c.userName)}" 
+                                 class="w-10 h-10 rounded-full">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-bold text-sm">${c.userName}</span>
+                                    <span class="text-xs text-gray-400">${formatTime(c.timestamp)}</span>
+                                </div>
+                                <p class="text-gray-300 text-sm">${c.text}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            });
+        }
+        
+        function formatTime(timestamp) {
+            const diff = Date.now() - timestamp;
+            const mins = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            if (mins < 1) return 'Just now';
+            if (mins < 60) return `${mins}m ago`;
+            if (hours < 24) return `${hours}h ago`;
+            return new Date(timestamp).toLocaleDateString();
+        }
+        
+        // Share button
+        // Share modal function
+        function showShareModal(url, text) {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+            
+            const content = document.createElement('div');
+            content.style.cssText = 'background: #1e293b; padding: 2rem; border-radius: 1rem; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);';
+            
+            content.innerHTML = `
+                <h3 style="color: #22d3ee; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">
+                    📤 Share This Movie
+                </h3>
+                <p style="color: #cbd5e1; margin-bottom: 1rem;">
+                    Copy the link below:
+                </p>
+                <input type="text" value="${url}" readonly 
+                    style="width: 100%; padding: 0.75rem; background: #0f172a; color: white; border: 2px solid #22d3ee; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem;" 
+                    onclick="this.select()" id="shareUrlInput">
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <button onclick="var input = document.getElementById('shareUrlInput'); input.select(); document.execCommand('copy'); alert('Copied!');" 
+                        style="flex: 1; padding: 0.75rem; background: linear-gradient(to right, #22d3ee, #3b82f6); color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">
+                        📋 Copy Link
+                    </button>
+                    <button onclick="this.parentElement.parentElement.parentElement.remove();" 
+                        style="flex: 1; padding: 0.75rem; background: #475569; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">
+                        Close
+                    </button>
+                </div>
+                <div style="padding-top: 1rem; border-top: 1px solid #475569;">
+                    <p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.5rem;">Or share via:</p>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <a href="https://wa.me/?text=${encodeURIComponent(text)}" target="_blank" 
+                            style="flex: 1; padding: 0.5rem; background: #25D366; color: white; text-align: center; border-radius: 0.5rem; text-decoration: none; font-size: 0.875rem;">
+                            WhatsApp
+                        </a>
+                        <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}" target="_blank" 
+                            style="flex: 1; padding: 0.5rem; background: #1DA1F2; color: white; text-align: center; border-radius: 0.5rem; text-decoration: none; font-size: 0.875rem;">
+                            Twitter
+                        </a>
+                        <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}" target="_blank" 
+                            style="flex: 1; padding: 0.5rem; background: #1877F2; color: white; text-align: center; border-radius: 0.5rem; text-decoration: none; font-size: 0.875rem;">
+                            Facebook
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // Auto-select text
+            setTimeout(() => document.getElementById('shareUrlInput').select(), 100);
+            
+            // Close on background click
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+        
+        document.getElementById('shareStreamBtn').addEventListener('click', () => {
+            console.log('🔗 Stream share button clicked');
+            const shareUrl = window.location.href;
+            const shareText = `🎬 Watch ${title} on Movie Wiki!\n${shareUrl}`;
+            
+            console.log('Share data:', { title, shareUrl });
+            
+            // Try Web Share API first (mobile)
+            if (navigator.share) {
+                console.log('📱 Using Web Share API');
+                navigator.share({ 
+                    title, 
+                    text: shareText, 
+                    url: shareUrl 
+                }).then(() => {
+                    console.log('✅ Shared successfully');
+                }).catch(err => {
+                    console.log('❌ Share cancelled:', err);
+                });
+            } else {
+                console.log('💻 Web Share not available, showing modal');
+                // Always show modal for desktop/HTTP
+                showShareModal(shareUrl, shareText);
+            }
+        });
+        
+        // Load comments if movie ID exists
+        if (movieId) {
+            loadStreamComments(movieId);
+        }
+    </script>
+    
+    <!-- Footer -->
+    <footer class="glass-card border-t border-gray-700 py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-film text-accent"></i>
+                        <span class="font-bold text-accent">Movie Wiki</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-2">&copy; 2025 Movie Wiki. All rights reserved.</p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a href="privacy-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Privacy Policy</a>
+                    <a href="terms-of-service.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Terms of Service</a>
+                    <a href="disclaimer.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Disclaimer</a>
+                    <a href="cookie-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

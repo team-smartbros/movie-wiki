@@ -1,0 +1,1865 @@
+// API Base URLs
+const API_BASE = 'https://imdb.iamidiotareyoutoo.com';
+const SCRAPER_API_BASE = 'https://web-1-production.up.railway.app';
+
+// Enhanced CORS Proxy with better, faster proxies and intelligent fallback
+const CORS_PROXIES = [
+    'https://corsproxy.io/?',                      // Tier 1: Fastest, high reliability
+    'https://api.allorigins.win/raw?url=',         // Tier 2: Good reliability
+    'https://api.codetabs.com/v1/proxy?quest=',    // Tier 3: Alternative
+    'https://thingproxy.freeboard.io/fetch/',      // Tier 4: Fallback
+    'https://cors-anywhere.herokuapp.com/'         // Tier 5: Last resort
+];
+
+let currentProxyIndex = 0;
+let proxySuccessCount = Array(CORS_PROXIES.length).fill(0);
+let proxyFailCount = Array(CORS_PROXIES.length).fill(0);
+
+// Enhanced proxy selection with performance tracking
+function selectBestProxy() {
+    // Calculate success rate for each proxy
+    const proxyScores = CORS_PROXIES.map((_, index) => {
+        const totalAttempts = proxySuccessCount[index] + proxyFailCount[index];
+        if (totalAttempts === 0) return 0.5; // Default score for untested proxies
+        return proxySuccessCount[index] / totalAttempts;
+    });
+    
+    // Find proxy with highest success rate
+    let bestIndex = 0;
+    let bestScore = -1;
+    
+    for (let i = 0; i < proxyScores.length; i++) {
+        if (proxyScores[i] > bestScore) {
+            bestScore = proxyScores[i];
+            bestIndex = i;
+        }
+    }
+    
+    return bestIndex;
+}
+
+// Improved fetch with proxy that quickly switches to better proxies
+async function fetchWithProxy(url, options = {}) {
+    // Try direct fetch first with clean headers
+    try {
+        const directOptions = {
+            ...options,
+            credentials: 'omit',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Referer': 'https://www.imdb.com/',
+                ...options.headers
+            }
+        };
+        
+        const response = await fetch(url, directOptions);
+        if (response.ok) {
+            console.log('✅ Direct fetch succeeded');
+            return response;
+        }
+        console.log(`Direct fetch failed with status: ${response.status}`);
+    } catch (error) {
+        console.log('Direct fetch failed:', error.message);
+    }
+    
+    // Select the best performing proxy based on historical data
+    const bestProxyIndex = selectBestProxy();
+    const proxyOrder = [bestProxyIndex];
+    
+    // Add other proxies in order
+    for (let i = 0; i < CORS_PROXIES.length; i++) {
+        if (i !== bestProxyIndex) {
+            proxyOrder.push(i);
+        }
+    }
+    
+    // Try with CORS proxies in order of performance
+    for (const proxyIndex of proxyOrder) {
+        const proxy = CORS_PROXIES[proxyIndex];
+        const proxiedUrl = proxy + encodeURIComponent(url);
+        
+        try {
+            console.log(`🔄 Trying proxy ${proxyIndex + 1}:`, proxy);
+            
+            const proxyOptions = {
+                ...options,
+                credentials: 'omit',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    ...options.headers
+                }
+            };
+            
+            const response = await fetch(proxiedUrl, proxyOptions);
+            if (response.ok) {
+                console.log(`✅ Success with proxy ${proxyIndex + 1}`);
+                proxySuccessCount[proxyIndex]++;
+                currentProxyIndex = proxyIndex; // Remember working proxy
+                return response;
+            } else {
+                console.log(`❌ Proxy ${proxyIndex + 1} failed with status: ${response.status}`);
+                proxyFailCount[proxyIndex]++;
+            }
+        } catch (error) {
+            console.log(`❌ Proxy ${proxyIndex + 1} failed:`, error.message);
+            proxyFailCount[proxyIndex]++;
+        }
+    }
+    
+    // All proxies failed, throw error
+    throw new Error('All fetch attempts failed (direct + proxies)');
+}
+
+// Track pagination for each section
+const sectionPagination = {
+    popular: { page: 1, items: [] },
+    latest: { page: 1, items: [] },
+    comingSoon: { page: 1, items: [] }
+};
+
+// Rate limiting for API calls - increased to prevent server blocking
+const API_RATE_LIMIT = 500; // milliseconds between calls - increased to 500ms to prevent 500 errors
+
+// Rate limiting for API calls - increased to prevent server blocking
+// const API_RATE_LIMIT = 500; // milliseconds between calls - increased to 500ms to prevent 500 errors
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Helper function to fetch details for titles sequentially to prevent 500 errors
+// Updated with progressive rendering support
+// Now includes batch fetching with fallback
+// AND Firebase caching to prevent API bans
+// WITH deduplication to prevent duplicate movies
+// ENHANCED with better proxy handling and timeout management
+async function fetchDetailsSequentially(titles, typeFilter = null, container = null, progressive = false) {
+    const detailedItems = [];
+    const processedIds = new Set(); // Track processed movie IDs to prevent duplicates
+    
+    // For genre view, don't limit to 5
+    const limitedTitles = progressive ? titles : titles.slice(0, 5);
+    
+    // Try Firebase cache first
+    try {
+        const cachedItems = await getCachedItems(limitedTitles);
+        if (cachedItems && cachedItems.length > 0) {
+            console.log(` Found ${cachedItems.length} items in cache`);
+            
+            // Process cached results and deduplicate
+            for (let i = 0; i < cachedItems.length; i++) {
+                const item = cachedItems[i];
+                if (item && item.id && !processedIds.has(item.id)) {
+                    processedIds.add(item.id);
+                    detailedItems.push(item);
+                    
+                    // Progressive rendering: add card immediately if container provided
+                    if (progressive && container) {
+                        addCardToContainer(item, container);
+                    }
+                }
+            }
+            
+            // If we got all items from cache, return early
+            if (cachedItems.length === limitedTitles.length) {
+                console.log(`✅ All items served from cache`);
+                return detailedItems;
+            }
+            
+            // If partial cache, continue with remaining titles
+            const cachedTitles = cachedItems.map(item => item.title);
+            const remainingTitles = limitedTitles.filter(title => !cachedTitles.includes(title));
+            if (remainingTitles.length > 0) {
+                console.log(`📦 Cache partial: ${cachedItems.length} cached, ${remainingTitles.length} to fetch`);
+                // Continue with batch/sequential for remaining titles
+            } else {
+                return detailedItems;
+            }
+        }
+    } catch (cacheError) {
+        console.log('Cache check failed:', cacheError.message);
+    }
+    
+    // Try batch fetching first (faster!)
+    try {
+        console.log(`🚀 Trying batch fetch for ${limitedTitles.length} titles`);
+        const batchResults = await fetchDetailsBatch(limitedTitles);
+        console.log(`✅ Batch fetch successful: ${batchResults.length} items`);
+        
+        // Deduplicate batch results
+        const uniqueBatchResults = batchResults.filter(item => {
+            if (item && item.id && !processedIds.has(item.id)) {
+                processedIds.add(item.id);
+                return true;
+            }
+            return false;
+        });
+        
+        // Cache the results
+        try {
+            await cacheItems(uniqueBatchResults);
+        } catch (cacheError) {
+            console.log('Caching failed:', cacheError.message);
+        }
+        
+        // Process batch results
+        for (let i = 0; i < uniqueBatchResults.length; i++) {
+            const item = uniqueBatchResults[i];
+            if (item) {
+                detailedItems.push(item);
+                
+                // Progressive rendering: add card immediately if container provided
+                if (progressive && container) {
+                    addCardToContainer(item, container);
+                }
+            }
+        }
+        
+        return detailedItems;
+    } catch (batchError) {
+        console.warn('Batch fetch failed, falling back to sequential:', batchError.message);
+        
+        // Fallback to sequential fetching with improved error handling
+        for (let i = 0; i < limitedTitles.length; i++) {
+            const title = limitedTitles[i];
+            try {
+                // Add delay between requests but with exponential backoff
+                if (i > 0) {
+                    const delayTime = Math.min(API_RATE_LIMIT * Math.pow(1.5, i), 2000); // Max 2 seconds
+                    await delay(delayTime);
+                }
+                
+                // Search for title with timeout
+                console.log(`Searching for: ${title}`);
+                
+                const searchUrl = `${API_BASE}/search?q=${encodeURIComponent(title)}`;
+                const searchResponse = await Promise.race([
+                    fetchWithProxy(searchUrl),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Search request timeout')), 15000)
+                    )
+                ]);
+                
+                if (!searchResponse.ok) {
+                    console.error(`Search failed for ${title}: ${searchResponse.status}`);
+                    continue;
+                }
+                
+                const searchData = await searchResponse.json();
+                
+                if (searchData.ok && searchData.description && searchData.description.length > 0) {
+                    const item = searchData.description[0];
+                    const imdbId = item['#IMDB_ID'];
+                    
+                    if (!imdbId) {
+                        console.error(`No IMDb ID for ${title}`);
+                        continue;
+                    }
+                    
+                    // Deduplication: skip if already processed
+                    if (processedIds.has(imdbId)) {
+                        console.log(`⏭️ Skipping duplicate: ${item['#TITLE']} (${imdbId})`);
+                        continue;
+                    }
+                    
+                    processedIds.add(imdbId);
+                    
+                    // Use search result data directly to minimize API calls
+                    const detailedItem = {
+                        id: imdbId,
+                        title: item['#TITLE'] || 'Unknown Title',
+                        year: item['#YEAR'] || 'N/A',
+                        image: item['#IMG_POSTER'] || 'https://via.placeholder.com/300x450?text=No+Image',
+                        type: item['#YEAR']?.toString().includes('–') ? 'tv' : 'movie',
+                        actors: item['#ACTORS'] ? item['#ACTORS'].split(', ') : [],
+                        rating: item['#RATING'] || 'N/A'
+                    };
+                    
+                    detailedItems.push(detailedItem);
+                    console.log(`Added: ${item['#TITLE']} (${imdbId})`);
+                    
+                    // Cache the item
+                    try {
+                        await cacheItem(detailedItem);
+                    } catch (cacheError) {
+                        console.log('Caching single item failed:', cacheError.message);
+                    }
+                    
+                    // Progressive rendering: add card immediately if container provided
+                    if (progressive && container) {
+                        addCardToContainer(detailedItem, container);
+                    }
+                }
+            } catch (error) {
+                console.error(`Error processing ${title}:`, error);
+                // Continue with next title instead of breaking
+                continue;
+            }
+        }
+    }
+    
+    return detailedItems;
+}
+
+// Lightweight caching using localStorage (placeholder for Firebase)
+// In production, replace with Firebase Realtime Database
+
+// Get cached items
+async function getCachedItems(titles) {
+    try {
+        const cachedItems = [];
+        const processedIds = new Set(); // Track processed IDs to prevent duplicates
+        
+        for (const title of titles) {
+            const key = `movie_cache_${title.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+            const cached = localStorage.getItem(key);
+            if (cached) {
+                const item = JSON.parse(cached);
+                // Check if cache is less than 1 hour old
+                if (Date.now() - item.timestamp < 3600000) {
+                    // Deduplication: skip if already processed
+                    if (item.data && item.data.id && !processedIds.has(item.data.id)) {
+                        processedIds.add(item.data.id);
+                        cachedItems.push(item.data);
+                    }
+                } else {
+                    // Expired, remove
+                    localStorage.removeItem(key);
+                }
+            }
+        }
+        return cachedItems;
+    } catch (error) {
+        console.log('Cache get failed:', error.message);
+        return [];
+    }
+}
+
+// Cache single item
+async function cacheItem(item) {
+    try {
+        const key = `movie_cache_${item.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+        const cacheData = {
+            data: item,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(key, JSON.stringify(cacheData));
+        
+        // Clean up old cache entries
+        cleanupCache();
+    } catch (error) {
+        console.log('Cache item failed:', error.message);
+    }
+}
+
+// Cache multiple items
+async function cacheItems(items) {
+    try {
+        for (const item of items) {
+            await cacheItem(item);
+        }
+    } catch (error) {
+        console.log('Cache items failed:', error.message);
+    }
+}
+
+// Clean up old cache entries
+function cleanupCache() {
+    try {
+        const now = Date.now();
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('movie_cache_')) {
+                const cached = localStorage.getItem(key);
+                if (cached) {
+                    const item = JSON.parse(cached);
+                    // Remove if older than 24 hours
+                    if (now - item.timestamp > 86400000) {
+                        localStorage.removeItem(key);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.log('Cache cleanup failed:', error.message);
+    }
+}
+
+// Batch fetch using powerful proxy (faster!) with improved error handling
+async function fetchDetailsBatch(titles) {
+    console.log(`📦 Batch fetching ${titles.length} titles`);
+    
+    // Select the best performing proxy based on historical data
+    const bestProxyIndex = selectBestProxy();
+    const proxyOrder = [bestProxyIndex];
+    
+    // Add other proxies in order
+    for (let i = 0; i < CORS_PROXIES.length; i++) {
+        if (i !== bestProxyIndex) {
+            proxyOrder.push(i);
+        }
+    }
+    
+    // Try different proxies for batch request in order of performance
+    for (const proxyIndex of proxyOrder) {
+        const proxy = CORS_PROXIES[proxyIndex];
+        
+        try {
+            console.log(`🔄 Trying batch with proxy ${proxyIndex + 1}:`, proxy);
+            
+            // Create batch request URLs with better error handling
+            const urls = titles.map(title => {
+                const searchUrl = `${API_BASE}/search?q=${encodeURIComponent(title)}`;
+                return `${proxy}${encodeURIComponent(searchUrl)}`;
+            }).filter(url => url && url.length > proxy.length + 50); // Filter out malformed/empty URLs
+            
+            // Skip if no valid URLs
+            if (urls.length === 0) {
+                console.log('⏭️ No valid URLs to fetch, skipping proxy');
+                proxyFailCount[proxyIndex]++;
+                continue;
+            }
+            
+            // Fetch all URLs in parallel with timeout
+            const promises = urls.map(url => 
+                Promise.race([
+                    fetch(url, { 
+                        method: 'GET',
+                        credentials: 'omit',
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                            'Accept': 'application/json, text/plain, */*'
+                        }
+                    }).catch(err => {
+                        console.log(`Individual fetch failed: ${err.message}`);
+                        return null;
+                    }),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Request timeout')), 10000)
+                    )
+                ])
+            );
+            
+            const responses = await Promise.all(promises);
+            console.log(`📡 Received ${responses.filter(r => r && r.ok).length}/${responses.length} responses`);
+            
+            // Process responses
+            const results = [];
+            for (let i = 0; i < responses.length; i++) {
+                const response = responses[i];
+                if (response && response.ok) {
+                    try {
+                        const data = await response.json();
+                        if (data.ok && data.description && data.description.length > 0) {
+                            const item = data.description[0];
+                            const imdbId = item['#IMDB_ID'];
+                            
+                            if (imdbId) {
+                                results.push({
+                                    id: imdbId,
+                                    title: item['#TITLE'] || 'Unknown Title',
+                                    year: item['#YEAR'] || 'N/A',
+                                    image: item['#IMG_POSTER'] || 'https://via.placeholder.com/300x450?text=No+Image',
+                                    type: item['#YEAR']?.toString().includes('–') ? 'tv' : 'movie',
+                                    actors: item['#ACTORS'] ? item['#ACTORS'].split(', ') : [],
+                                    rating: item['#RATING'] || 'N/A'
+                                });
+                                console.log(`📦 Batch added: ${item['#TITLE']} (${imdbId})`);
+                            }
+                        }
+                    } catch (parseError) {
+                        console.log(`Parse error for response ${i}:`, parseError.message);
+                    }
+                }
+            }
+            
+            // Update proxy performance metrics
+            if (results.length > 0) {
+                proxySuccessCount[proxyIndex]++;
+                console.log(`✅ Batch fetch complete: ${results.length}/${titles.length} items`);
+                return results;
+            } else {
+                proxyFailCount[proxyIndex]++;
+                console.log(`⚠️ Batch fetch with proxy ${proxyIndex + 1} returned no valid results`);
+            }
+            
+        } catch (error) {
+            console.log(`Proxy ${proxyIndex + 1} batch failed:`, error.message);
+            proxyFailCount[proxyIndex]++;
+            continue;
+        }
+    }
+    
+    throw new Error('All batch proxies failed');
+}
+
+// Add single card to container (for progressive loading)
+function addCardToContainer(item, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const contentCard = document.createElement('div');
+    contentCard.className = 'bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1';
+    
+    // Build the HTML with additional information
+    let additionalInfo = '';
+    if (item.type) {
+        additionalInfo += `<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.type}</span>`;
+    }
+    if (item.rating && item.rating !== 'N/A') {
+        additionalInfo += `<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.rating}</span>`;
+    }
+    
+    // Add actors if available
+    let actorsInfo = '';
+    if (item.actors && item.actors.length > 0) {
+        const actors = item.actors.slice(0, 3).join(', ');
+        actorsInfo = `<p class="text-gray-300 text-xs mt-1 truncate">${actors}</p>`;
+    }
+    
+    const linkUrl = `details.html?id=${item.id}&title=${encodeURIComponent(item.title || 'Unknown Title')}`;
+    
+    contentCard.innerHTML = `
+        <img src="${item.image}" alt="${item.title}" class="w-full h-48 object-cover" loading="lazy">
+        <div class="p-3">
+            <h4 class="font-bold text-sm mb-1 truncate">${item.title || 'Unknown Title'}</h4>
+            <p class="text-gray-400 text-xs">${item.year || 'N/A'}</p>
+            ${additionalInfo}
+            ${actorsInfo}
+        </div>
+    `;
+    
+    contentCard.addEventListener('click', () => {
+        window.location.href = linkUrl;
+    });
+    
+    container.appendChild(contentCard);
+}
+
+// Search movies using the API
+async function searchMovies() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) return;
+    
+    try {
+        // Show loading indicator
+        const resultsContainer = document.getElementById('resultsContainer');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = '<p class="text-center">Searching...</p>';
+        }
+        
+        // Show search results section
+        document.getElementById('searchResults').style.display = 'block';
+        document.getElementById('welcomeSection').style.display = 'none';
+        document.getElementById('movieDetails').style.display = 'none';
+        
+        const response = await fetchWithProxy(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        
+        if (data.ok && data.description) {
+            displaySearchResults(data.description);
+        } else {
+            const resultsContainer = document.getElementById('resultsContainer');
+            if (resultsContainer) {
+                resultsContainer.innerHTML = '<p class="text-center">No movies found</p>';
+            }
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        const resultsContainer = document.getElementById('resultsContainer');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = '<p class="text-center text-red-500">Search failed. Please try again.</p>';
+        }
+    }
+}
+
+// DOM loaded event
+document.addEventListener('DOMContentLoaded', async function() {
+    // Test scraper API
+    try {
+        const scraperResponse = await fetch('https://web-1-production.up.railway.app/top');
+        const scraperData = await scraperResponse.json();
+        console.log('Scraper API test result:', scraperData);
+        
+        const movieResponse = await fetch('https://imdb.iamidiotareyoutoo.com/search?q=The Shawshank Redemption');
+        const movieData = await movieResponse.json();
+        console.log('Movie API test result:', movieData);
+    } catch (error) {
+        console.error('API test error:', error);
+    }
+    
+    // Start scraping movie data for homepage
+    scrapeMovieData();
+    
+    // Add search event listeners
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchMovies();
+            }
+        });
+    }
+    
+    const searchButton = document.getElementById('searchButton');
+    if (searchButton) {
+        searchButton.addEventListener('click', searchMovies);
+    }
+    
+    // Add back to welcome button listener
+    const backToWelcomeButton = document.getElementById('backToWelcome');
+    if (backToWelcomeButton) {
+        backToWelcomeButton.addEventListener('click', showWelcomeSection);
+    }
+    
+    // Add keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        // ESC key to close modals
+        if (e.key === 'Escape') {
+            hideMediaCarousel();
+        }
+        
+        // Left/Right arrows for carousel navigation
+        if (document.getElementById('mediaCarousel') && document.getElementById('mediaCarousel').style.display !== 'none') {
+            if (e.key === 'ArrowLeft') {
+                showPrevMedia();
+            } else if (e.key === 'ArrowRight') {
+                showNextMedia();
+            }
+        }
+    });
+    
+    // Apply ad-blocking enhancements
+    applyAdBlockingEnhancements();
+    
+    // Add scroll event listener for pagination
+    window.addEventListener('scroll', handleScroll);
+    
+    // ===== GENRE FILTER FUNCTIONALITY =====
+    console.log('🎭 Setting up genre filters...');
+    const genrePills = document.querySelectorAll('.genre-pill');
+    console.log('Found', genrePills.length, 'genre pills');
+    
+    genrePills.forEach(pill => {
+        pill.addEventListener('click', function() {
+            const selectedGenre = this.getAttribute('data-genre');
+            console.log('🎬 Genre pill clicked:', selectedGenre);
+            
+            // Update active state
+            genrePills.forEach(p => {
+                p.classList.remove('active', 'bg-accent', 'text-primary');
+                p.classList.add('bg-secondary', 'text-gray-300');
+            });
+            this.classList.add('active');
+            this.classList.remove('bg-secondary', 'text-gray-300');
+            this.classList.add('bg-accent', 'text-primary');
+            
+            // Call scrapeMovieData with selected genre
+            console.log('🔄 Calling scrapeMovieData with genre:', selectedGenre);
+            scrapeMovieData(selectedGenre);
+        });
+    });
+    
+    // Log initial proxy stats
+    console.log('Intialized proxy system with', CORS_PROXIES.length, 'proxies');
+    displayProxyStats();
+});
+
+// Handle scroll for pagination
+function handleScroll() {
+    // Check if user has scrolled to bottom of page
+    if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 1000) {
+        loadMoreContent();
+    }
+}
+
+// Load more content for pagination
+function loadMoreContent() {
+    // This would be implemented to load more content when user scrolls
+    // For now, we'll just log that we've reached the bottom
+    console.log('Reached bottom of page - would load more content here');
+}
+
+// Display search results
+function displaySearchResults(movies) {
+    const resultsContainer = document.getElementById('resultsContainer');
+    if (!resultsContainer) return;
+    
+    if (!movies || movies.length === 0) {
+        resultsContainer.innerHTML = '<p class="text-center col-span-full">No movies found</p>';
+        return;
+    }
+    
+    resultsContainer.innerHTML = movies.map(movie => {
+        // Provide fallback values for all fields
+        const title = movie['#TITLE'] || 'Unknown Title';
+        const year = movie['#YEAR'] || 'N/A';
+        const rating = movie['#RATING'] || 'N/A';
+        const genres = movie['#GENRES'] || 'N/A';
+        const imdbId = movie['#IMDB_ID'] || 'N/A';
+        const poster = movie['#IMG_POSTER'] || 'https://via.placeholder.com/300x450?text=No+Image';
+        const actors = movie['#ACTORS'] || '';
+        
+        // Build additional info tags
+        let additionalInfo = '';
+        if (rating !== 'N/A') {
+            additionalInfo += `<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">${rating}</span>`;
+        }
+        if (genres !== 'N/A') {
+            additionalInfo += `<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">${genres.split(', ')[0]}</span>`;
+        }
+        
+        // Add actors if available
+        let actorsInfo = '';
+        if (actors) {
+            const actorsList = actors.split(', ').slice(0, 3).join(', ');
+            actorsInfo = `<p class="text-gray-300 text-xs mt-1 truncate">${actorsList}</p>`;
+        }
+        
+        return `
+        <div class="bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1" 
+             onclick="window.location.href='details.html?id=${imdbId}&title=${encodeURIComponent(title)}'">
+            <img src="${poster}" alt="${title}" class="w-full h-72 object-cover" loading="lazy" style="aspect-ratio: 2/3;">
+            <div class="p-3">
+                <h3 class="font-bold text-sm mb-1 truncate">${title}</h3>
+                <p class="text-gray-400 text-xs">${year}</p>
+                ${additionalInfo}
+                ${actorsInfo}
+            </div>
+        </div>
+    `}).join('');
+    
+    // Show search results and hide welcome section
+    document.getElementById('searchResults').style.display = 'block';
+    document.getElementById('welcomeSection').style.display = 'none';
+}
+
+// Fetch movie details
+async function fetchMovieDetails(movieId) {
+    if (!movieId) return;
+    
+    try {
+        // Show loading indicator
+        const movieDetails = document.getElementById('movieDetails');
+        if (movieDetails) {
+            movieDetails.innerHTML = '<div class="container mx-auto px-4 py-8"><p class="text-center">Loading...</p></div>';
+            movieDetails.style.display = 'block';
+        }
+        
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('welcomeSection').style.display = 'none';
+        
+        // Fetch detailed movie information
+        const response = await fetchWithProxy(`${API_BASE}/search?tt=${movieId}`);
+        const data = await response.json();
+        
+        if (data.ok) {
+            displayMovieDetails(data.short, movieId, data);
+        } else {
+            if (movieDetails) {
+                movieDetails.innerHTML = '<div class="container mx-auto px-4 py-8"><p class="text-center text-red-500">Movie not found</p></div>';
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching movie details:', error);
+        const movieDetails = document.getElementById('movieDetails');
+        if (movieDetails) {
+            movieDetails.innerHTML = '<div class="container mx-auto px-4 py-8"><p class="text-center text-red-500">Failed to load movie details</p></div>';
+        }
+    }
+}
+
+// Display movie details
+function displayMovieDetails(movie, movieId, fullData) {
+    if (!movie) return;
+    
+    // Extract key information
+    const title = movie['#TITLE'] || 'N/A';
+    const year = movie['#YEAR'] || 'N/A';
+    const rating = movie['#RATING'] || 'N/A';
+    const duration = movie['#TIME'] || 'N/A';
+    const genres = movie['#GENRES'] || 'N/A';
+    const plot = movie['#PLOT'] || 'No plot available';
+    const poster = movie['#IMG_POSTER'] || 'https://via.placeholder.com/300x450?text=No+Image';
+    const type = movie['@type'] || 'Movie';
+    const imdbId = movieId || 'N/A';
+    
+    // Format duration
+    const formattedDuration = formatDuration(duration);
+    
+    // Update the HTML elements directly with safety checks
+    const movieTitle = document.getElementById('movieTitle');
+    if (movieTitle) movieTitle.textContent = title;
+    
+    const movieYear = document.getElementById('movieYear');
+    if (movieYear) movieYear.textContent = year;
+    
+    const movieRating = document.getElementById('movieRating');
+    if (movieRating) movieRating.textContent = rating;
+    
+    const movieDuration = document.getElementById('movieDuration');
+    if (movieDuration) movieDuration.textContent = formattedDuration;
+    
+    const movieGenres = document.getElementById('movieGenres');
+    if (movieGenres) movieGenres.textContent = genres;
+    
+    const movieImdbId = document.getElementById('movieImdbId');
+    if (movieImdbId) movieImdbId.textContent = imdbId;
+    
+    const movieType = document.getElementById('movieType');
+    if (movieType) movieType.textContent = type === 'TVSeries' ? 'TV Series' : 'Movie';
+    
+    const moviePoster = document.getElementById('moviePoster');
+    if (moviePoster) {
+        moviePoster.src = poster;
+        moviePoster.alt = title;
+    }
+    
+    const moviePlot = document.getElementById('moviePlot');
+    if (moviePlot) moviePlot.textContent = plot;
+    
+    // Update cast information
+    const movieCast = document.getElementById('movieCast');
+    if (movieCast && fullData.cast) {
+        let castHTML = '';
+        if (fullData.cast.star) {
+            fullData.cast.star.slice(0, 5).forEach(actor => {
+                castHTML += `<div class="flex items-center mb-2">
+                    <img src="${actor['#IMG'] || 'https://via.placeholder.com/50x75?text=No+Image'}" alt="${actor['#NAME'] || 'Unknown Actor'}" class="w-10 h-12 object-cover rounded mr-2">
+                    <div>
+                        <p class="font-medium">${actor['#NAME'] || 'Unknown Actor'}</p>
+                        <p class="text-sm text-gray-400">${actor['#CHARACTER'] || 'Unknown Role'}</p>
+                    </div>
+                </div>`;
+            });
+        }
+        movieCast.innerHTML = castHTML;
+    }
+    
+    // Update crew information
+    const movieCrew = document.getElementById('movieCrew');
+    if (movieCrew && fullData.crew) {
+        let crewHTML = '';
+        if (fullData.crew.director) {
+            const directors = fullData.crew.director.map(d => d['#NAME']).join(', ');
+            crewHTML += `<li class="flex">
+                <span class="font-semibold w-24">Director:</span>
+                <span>${directors}</span>
+            </li>`;
+        }
+        if (fullData.crew.writer) {
+            const writers = fullData.crew.writer.map(w => w['#NAME']).join(', ');
+            crewHTML += `<li class="flex">
+                <span class="font-semibold w-24">Writers:</span>
+                <span>${writers}</span>
+            </li>`;
+        }
+        movieCrew.innerHTML = crewHTML;
+    }
+    
+    // Update keywords
+    const movieKeywords = document.getElementById('movieKeywords');
+    if (movieKeywords && fullData.keywords && fullData.keywords.results) {
+        let keywordsHTML = '';
+        fullData.keywords.results.slice(0, 10).forEach(keyword => {
+            keywordsHTML += `<span class="bg-gray-700 text-white text-xs px-2 py-1 rounded mr-2 mb-2 inline-block">${keyword['#TITLE']}</span>`;
+        });
+        movieKeywords.innerHTML = keywordsHTML;
+    }
+    
+    // Show the movie details section
+    const movieDetails = document.getElementById('movieDetails');
+    const searchResults = document.getElementById('searchResults');
+    const welcomeSection = document.getElementById('welcomeSection');
+    
+    if (movieDetails) movieDetails.style.display = 'block';
+    if (searchResults) searchResults.style.display = 'none';
+    if (welcomeSection) welcomeSection.style.display = 'none';
+    
+    // Add event listeners for buttons
+    const backButton = document.getElementById('backButton');
+    if (backButton) backButton.onclick = showSearchResults;
+    
+    const trailerButton = document.getElementById('trailerButton');
+    if (trailerButton) {
+        trailerButton.onclick = function() {
+            if (fullData.media && fullData.media.trailers && fullData.media.trailers.results) {
+                showMediaCarousel(fullData.media.trailers.results, 0, 'Trailers');
+            }
+        };
+    }
+    
+    const photosButton = document.getElementById('photosButton');
+    if (photosButton) {
+        photosButton.onclick = function() {
+            if (fullData.media && fullData.media.photos && fullData.media.photos.results) {
+                showMediaCarousel(fullData.media.photos.results, 0, 'Photos');
+            }
+        };
+    }
+    
+    const streamButton = document.getElementById('streamButton');
+    if (streamButton) {
+        streamButton.onclick = function() {
+            showStreaming(movieId);
+        };
+    }
+    
+    // Load additional content
+    displayAdditionalMedia(fullData);
+    displayCastImages(extractCastWithImages(fullData));
+    
+    // Update type badge
+    updateTypeBadge(movieId);
+}
+
+// Extract cast with images
+function extractCastWithImages(fullData) {
+    if (!fullData || !fullData.cast) return [];
+    
+    const cast = fullData.cast;
+    const castWithImages = [];
+    
+    // Process main cast
+    if (cast.star) {
+        cast.star.forEach(actor => {
+            castWithImages.push({
+                name: actor['#NAME'] || 'Unknown',
+                character: actor['#CHARACTER'] || 'Unknown Role',
+                image: actor['#IMG'] || 'https://via.placeholder.com/100x150?text=No+Image'
+            });
+        });
+    }
+    
+    // Process other cast members
+    if (cast.others && cast.others['#CAST']) {
+        cast.others['#CAST'].forEach(actor => {
+            castWithImages.push({
+                name: actor['#NAME'] || 'Unknown',
+                character: actor['#CHARACTER'] || 'Unknown Role',
+                image: actor['#IMG'] || 'https://via.placeholder.com/100x150?text=No+Image'
+            });
+        });
+    }
+    
+    return castWithImages;
+}
+
+// Display additional media (trailers and photos)
+function displayAdditionalMedia(fullData) {
+    if (!fullData || !fullData.media) return;
+    
+    const media = fullData.media;
+    window.trailers = media.trailers || [];
+    window.photos = media.photos || [];
+}
+
+// Display cast information
+function displayCastInfo(cast) {
+    const castList = document.getElementById('castList');
+    if (!castList) return;
+    
+    if (!cast || !cast.cast) {
+        castList.innerHTML = '<p>No cast information available</p>';
+        return;
+    }
+    
+    let castHTML = '';
+    
+    // Main cast (stars)
+    if (cast.cast.star && cast.cast.star.length > 0) {
+        castHTML += '<h3 class="font-bold mb-2">Main Cast</h3>';
+        cast.cast.star.forEach(actor => {
+            castHTML += `
+                <div class="flex items-center p-2 bg-gray-800 rounded">
+                    <img src="${actor['#IMG'] || 'https://via.placeholder.com/50x75?text=No+Image'}" 
+                         alt="${actor['#NAME'] || 'Unknown Actor'}" 
+                         class="w-12 h-16 object-cover rounded mr-3">
+                    <div>
+                        <p class="font-semibold">${actor['#NAME'] || 'Unknown Actor'}</p>
+                        <p class="text-sm text-gray-400">${actor['#CHARACTER'] || 'Unknown Role'}</p>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    // Other cast members
+    if (cast.cast.others && cast.cast.others['#CAST'] && cast.cast.others['#CAST'].length > 0) {
+        castHTML += '<h3 class="font-bold mb-2 mt-4">Additional Cast</h3>';
+        cast.cast.others['#CAST'].slice(0, 10).forEach(actor => {
+            castHTML += `
+                <div class="flex items-center p-2 bg-gray-800 rounded">
+                    <img src="${actor['#IMG'] || 'https://via.placeholder.com/50x75?text=No+Image'}" 
+                         alt="${actor['#NAME'] || 'Unknown Actor'}" 
+                         class="w-12 h-16 object-cover rounded mr-3">
+                    <div>
+                        <p class="font-semibold">${actor['#NAME'] || 'Unknown Actor'}</p>
+                        <p class="text-sm text-gray-400">${actor['#CHARACTER'] || 'Unknown Role'}</p>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    if (!castHTML) {
+        castList.innerHTML = '<p>No cast information available</p>';
+    } else {
+        castList.innerHTML = castHTML;
+    }
+}
+
+// Display cast images
+function displayCastImages(castWithImages) {
+    // This function is called but the display is handled by displayCastInfo
+    // We could enhance this to show a carousel of cast images if needed
+}
+
+// Display crew information
+function displayCrewInfo(fullData) {
+    const crew = extractCrewInformation(fullData);
+    // This would be used if we want to display crew information separately
+}
+
+// Extract crew information
+function extractCrewInformation(fullData) {
+    if (!fullData || !fullData.crew) return {};
+    
+    const crew = fullData.crew;
+    const crewInfo = {};
+    
+    // Director
+    if (crew.director) {
+        crewInfo.director = crew.director.map(d => d['#NAME']).join(', ');
+    }
+    
+    // Writers
+    if (crew.writer) {
+        crewInfo.writers = crew.writer.map(w => w['#NAME']).join(', ');
+    }
+    
+    return crewInfo;
+}
+
+// Format duration
+function formatDuration(duration) {
+    if (!duration || duration === 'N/A') return 'N/A';
+    
+    // If it's already formatted (e.g., "2h 12m")
+    if (duration.includes('h') || duration.includes('m')) {
+        return duration;
+    }
+    
+    // If it's in minutes, convert to hours and minutes
+    const minutes = parseInt(duration);
+    if (isNaN(minutes)) return duration;
+    
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    
+    if (hours > 0) {
+        return `${hours}h ${remainingMinutes}m`;
+    } else {
+        return `${remainingMinutes}m`;
+    }
+}
+
+// Display keywords
+function displayKeywords(keywords) {
+    // This would be used if we want to display keywords/tags
+}
+
+// Display reviews
+function displayReviews(fullData) {
+    // This would be used if we want to display user reviews
+}
+
+// Display additional information
+function displayAdditionalInfo(fullData) {
+    const additionalInfo = document.getElementById('additionalInfo');
+    if (!additionalInfo) return;
+    
+    if (!fullData) {
+        additionalInfo.innerHTML = '<p>No additional information available</p>';
+        return;
+    }
+    
+    let infoHTML = '';
+    
+    // Director
+    if (fullData.director) {
+        const directors = fullData.director.map(d => d['#NAME']).join(', ');
+        infoHTML += `
+            <div>
+                <h3 class="font-bold mb-1">Director</h3>
+                <p class="text-gray-300">${directors}</p>
+            </div>
+        `;
+    }
+    
+    // Writers
+    if (fullData.writer) {
+        const writers = fullData.writer.map(w => w['#NAME']).join(', ');
+        infoHTML += `
+            <div>
+                <h3 class="font-bold mb-1">Writers</h3>
+                <p class="text-gray-300">${writers}</p>
+            </div>
+        `;
+    }
+    
+    // Box office information
+    displayBoxOfficeInfo(fullData);
+    
+    if (!infoHTML) {
+        additionalInfo.innerHTML = '<p>No additional information available</p>';
+    } else {
+        additionalInfo.innerHTML = infoHTML;
+    }
+}
+
+// Display box office information
+function displayBoxOfficeInfo(fullData) {
+    // This would be used if we want to display box office data
+}
+
+// Show trailer carousel
+function showTrailerCarousel() {
+    if (!window.trailers || window.trailers.length === 0) {
+        alert('No trailers available');
+        return;
+    }
+    
+    showMediaCarousel(window.trailers, 0, 'Trailers');
+}
+
+// Show photos carousel
+function showPhotosCarousel() {
+    if (!window.photos || window.photos.length === 0) {
+        alert('No photos available');
+        return;
+    }
+    
+    showMediaCarousel(window.photos, 0, 'Photos');
+}
+
+// Show streaming
+function showStreaming(imdbId) {
+    if (!imdbId) {
+        alert('Invalid movie ID');
+        return;
+    }
+    
+    // Check if this is a TV series or movie by fetching the type
+    fetch(`${API_BASE}/search?tt=${imdbId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.ok && data.short) {
+                const type = data.short['@type'];
+                if (type === 'TVSeries') {
+                    // For TV series, show episode selection
+                    showEpisodeSelection(imdbId);
+                } else {
+                    // For movies, go directly to streaming
+                    window.open(`https://vidsrc-embed.ru/embed/movie/${imdbId}`, '_blank');
+                }
+            } else {
+                // Default to movie streaming if we can't determine the type
+                window.open(`https://vidsrc-embed.ru/embed/movie/${imdbId}`, '_blank');
+            }
+        })
+        .catch(error => {
+            console.error('Error checking content type:', error);
+            // Default to movie streaming if there's an error
+            window.open(`https://vidsrc-embed.ru/embed/movie/${imdbId}`, '_blank');
+        });
+}
+
+// Show episode selection for TV series
+function showEpisodeSelection(imdbId) {
+    // Redirect to the TV show embed page which handles episode selection
+    window.open(`https://vidsrc-embed.ru/embed/tv/${imdbId}`, '_blank');
+}
+
+// Show media carousel
+function showMediaCarousel(mediaItems, startIndex, title) {
+    window.currentMediaItems = mediaItems;
+    window.currentMediaIndex = startIndex;
+    window.currentMediaTitle = title;
+    
+    const carousel = document.getElementById('mediaCarousel');
+    if (!carousel) return;
+    
+    updateCarousel();
+    carousel.style.display = 'flex';
+}
+
+// Update carousel
+function updateCarousel() {
+    const carousel = document.getElementById('mediaCarousel');
+    if (!carousel || !window.currentMediaItems) return;
+    
+    const currentItem = window.currentMediaItems[window.currentMediaIndex];
+    const title = window.currentMediaTitle;
+    
+    if (currentItem['#CAPTION']) {
+        // Photo
+        carousel.innerHTML = `
+            <button onclick="hideMediaCarousel()" class="absolute top-4 right-4 text-white text-2xl z-10">
+                <i class="fas fa-times"></i>
+            </button>
+            <button onclick="showPrevMedia()" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button onclick="showNextMedia()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <div class="text-center">
+                <h2 class="text-2xl font-bold mb-4">${title}</h2>
+                <img src="${currentItem['#IMG']}" alt="Media" class="max-w-full max-h-full object-contain">
+                <p class="mt-2 text-white">${currentItem['#CAPTION']}</p>
+                <p class="text-gray-400 text-sm">${window.currentMediaIndex + 1} of ${window.currentMediaItems.length}</p>
+            </div>
+        `;
+    } else if (currentItem['#SRC']) {
+        // Trailer
+        carousel.innerHTML = `
+            <button onclick="hideMediaCarousel()" class="absolute top-4 right-4 text-white text-2xl z-10">
+                <i class="fas fa-times"></i>
+            </button>
+            <button onclick="showPrevMedia()" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button onclick="showNextMedia()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <div class="text-center w-full h-full">
+                <h2 class="text-2xl font-bold mb-4">${title}</h2>
+                <div class="w-full h-4/5 flex items-center justify-center">
+                    <iframe src="${currentItem['#SRC']}" class="w-full h-full max-w-4xl" frameborder="0" allowfullscreen></iframe>
+                </div>
+                <p class="mt-2 text-white">${currentItem['#NAME'] || 'Trailer'}</p>
+                <p class="text-gray-400 text-sm">${window.currentMediaIndex + 1} of ${window.currentMediaItems.length}</p>
+            </div>
+        `;
+    }
+}
+
+// Show previous media
+function showPrevMedia() {
+    if (!window.currentMediaItems) return;
+    
+    window.currentMediaIndex = (window.currentMediaIndex - 1 + window.currentMediaItems.length) % window.currentMediaItems.length;
+    updateCarousel();
+}
+
+// Show next media
+function showNextMedia() {
+    if (!window.currentMediaItems) return;
+    
+    window.currentMediaIndex = (window.currentMediaIndex + 1) % window.currentMediaItems.length;
+    updateCarousel();
+}
+
+// Hide media carousel
+function hideMediaCarousel() {
+    const carousel = document.getElementById('mediaCarousel');
+    if (carousel) {
+        carousel.style.display = 'none';
+    }
+    window.currentMediaItems = null;
+    window.currentMediaIndex = 0;
+    window.currentMediaTitle = '';
+}
+
+// Show search results
+function showSearchResults() {
+    document.getElementById('movieDetails').style.display = 'none';
+    document.getElementById('searchResults').style.display = 'block';
+    document.getElementById('welcomeSection').style.display = 'none';
+}
+
+// Show welcome section
+function showWelcomeSection() {
+    document.getElementById('movieDetails').style.display = 'none';
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('welcomeSection').style.display = 'block';
+}
+
+// Apply ad-blocking enhancements
+function applyAdBlockingEnhancements() {
+    // Remove common ad containers
+    const adSelectors = [
+        'iframe[src*="ads"]',
+        'div[class*="ad"]',
+        'div[id*="ad"]',
+        '.advertisement',
+        '.sponsor',
+        '[class*="popup"]',
+        '[id*="popup"]'
+    ];
+    
+    adSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+            element.style.display = 'none';
+        });
+    });
+    
+    // Block common ad scripts
+    const adScripts = document.querySelectorAll('script[src*="ads"], script[src*="doubleclick"], script[src*="googlesyndication"]');
+    adScripts.forEach(script => {
+        script.remove();
+    });
+}
+
+// Web scraper for fetching movie and TV show data
+async function scrapeMovieData(genre = null) {
+    try {
+        console.log('🎬 scrapeMovieData called with genre:', genre);
+        
+        // Show loading indicators
+        const containers = [
+            'popularContainer', 
+            'latestContainer',
+            'comingSoonContainer'
+        ];
+        
+        containers.forEach(containerId => {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = '<p class="text-center col-span-full">Loading data...</p>';
+            }
+        });
+        
+        // If genre is selected, fetch genre-specific content
+        if (genre && genre !== 'all') {
+            console.log('✅ Calling scrapeByGenre for:', genre);
+            await scrapeByGenre(genre);
+            return; // IMPORTANT: Stop here, don't continue to popular/latest/upcoming
+        }
+        
+        // Restore section headers for "All" view
+        showSectionHeaders();
+        
+        console.log('📺 Fetching all content (no genre filter)');
+        
+        // Fetch all data in parallel to improve performance
+        const [
+            popularResult,
+            latestResult,
+            comingSoonResult
+        ] = await Promise.allSettled([
+            scrapePopular(),
+            scrapeLatest(),
+            scrapeComingSoon()
+        ]);
+        
+        console.log('All scraping results:', {
+            popularResult,
+            latestResult,
+            comingSoonResult
+        });
+        
+        // Progressive rendering handles display automatically
+        // No need to call displayPopularContent here
+        
+        console.log('Finished progressive loading all content');
+    } catch (error) {
+        console.error('Error in web scraper:', error);
+        
+        // Show error message instead of fallback content
+        const containers = [
+            'popularContainer', 
+            'latestContainer',
+            'comingSoonContainer'
+        ];
+        
+        containers.forEach(containerId => {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = '<p class="text-center col-span-full text-red-500">Failed to load data. Please try again later.</p>';
+            }
+        });
+    }
+}
+
+// Scrape content by genre
+async function scrapeByGenre(genre) {
+    try {
+        console.log(`🎭 SCRAPING BY GENRE: ${genre}`);
+        
+        // Map frontend genre names to API genre names
+        const genreMap = {
+            'action': 'action',
+            'comedy': 'comedy',
+            'drama': 'drama',
+            'horror': 'horror',
+            'sci-fi': 'sci_fi',  // API uses underscore
+            'thriller': 'thriller',
+            'romance': 'romance',
+            'animation': 'animation'
+        };
+        
+        const apiGenre = genreMap[genre] || genre;
+        const apiUrl = `${SCRAPER_API_BASE}/by_genre/${apiGenre}`;
+        
+        console.log(`🔗 Fetching from: ${apiUrl}`);
+        
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+            throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log(`✅ API Response for ${genre}:`, data);
+        console.log(`📦 Items received: ${data.items ? data.items.length : 0}`);
+        
+        if (data.items && data.items.length > 0) {
+            // Hide section headers and show single grid
+            hideSectionHeaders();
+            
+            // Update header with genre name
+            const popularSection = document.querySelector('#popularContainer').closest('.mb-12');
+            const popularHeader = popularSection.querySelector('h2');
+            if (popularHeader) {
+                // Capitalize genre name
+                const genreName = genre.split('-').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                ).join('-');
+                popularHeader.innerHTML = `<i class="fas fa-film mr-2"></i>Popular ${genreName} Movies`;
+            }
+            
+            // Clear containers
+            document.getElementById('popularContainer').innerHTML = '<p class="text-center col-span-full text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Loading movies...</p>';
+            document.getElementById('latestContainer').innerHTML = '';
+            document.getElementById('comingSoonContainer').innerHTML = '';
+            
+            // Get all items (up to 25)
+            const allItems = data.items.slice(0, 25);
+            
+            console.log(`📦 Fetching ${allItems.length} ${genre} movies with progressive display`);
+            
+            // Clear loading message
+            document.getElementById('popularContainer').innerHTML = '';
+            
+            // Fetch details WITH progressive rendering (cards appear one by one)
+            await fetchDetailsSequentially(
+                allItems.map(item => item.title.replace(/^\d+\.\s*/, '')),
+                null,
+                'popularContainer',
+                true  // Enable progressive loading
+            );
+            
+            console.log(`✅ Finished displaying ${genre} content progressively`);
+        } else {
+            console.warn(`⚠️ No items found for genre: ${genre}`);
+            showSectionHeaders();
+            document.getElementById('popularContainer').innerHTML = `<p class="text-center col-span-full text-gray-400">No ${genre} content found</p>`;
+            document.getElementById('latestContainer').innerHTML = '';
+            document.getElementById('comingSoonContainer').innerHTML = '';
+        }
+    } catch (error) {
+        console.error(`❌ Error fetching ${genre} content:`, error);
+        console.error('Error details:', error.message);
+        showSectionHeaders();
+        document.getElementById('popularContainer').innerHTML = `<p class="text-center col-span-full text-red-500">Failed to load ${genre} content. ${error.message}</p>`;
+        document.getElementById('latestContainer').innerHTML = '';
+        document.getElementById('comingSoonContainer').innerHTML = '';
+    }
+}
+
+// Hide section headers for genre view
+function hideSectionHeaders() {
+    // Get all section divs (they have class mb-12)
+    const popularSection = document.querySelector('#popularContainer').closest('.mb-12');
+    const latestSection = document.querySelector('#latestContainer').closest('.mb-12');
+    const comingSoonSection = document.querySelector('#comingSoonContainer').closest('.mb-12');
+    
+    // Change Popular header to "All Movies" (will be updated with genre name later)
+    const popularHeader = popularSection.querySelector('h2');
+    if (popularHeader) {
+        // Store original for later use
+        popularHeader.dataset.originalText = popularHeader.innerHTML;
+    }
+    
+    // Hide Latest and Coming Soon sections
+    if (latestSection) latestSection.style.display = 'none';
+    if (comingSoonSection) comingSoonSection.style.display = 'none';
+}
+
+// Show section headers for normal view
+function showSectionHeaders() {
+    // Get all section divs
+    const popularSection = document.querySelector('#popularContainer').closest('.mb-12');
+    const latestSection = document.querySelector('#latestContainer').closest('.mb-12');
+    const comingSoonSection = document.querySelector('#comingSoonContainer').closest('.mb-12');
+    
+    // Show all sections
+    if (popularSection) popularSection.style.display = 'block';
+    if (latestSection) latestSection.style.display = 'block';
+    if (comingSoonSection) comingSoonSection.style.display = 'block';
+    
+    // Restore Popular header
+    const popularHeader = popularSection.querySelector('h2');
+    if (popularHeader) {
+        popularHeader.innerHTML = '<i class="fas fa-fire mr-2"></i>Popular';
+    }
+}
+
+// Scrape popular content (movies and TV shows combined)
+// WITH progressive rendering
+async function scrapePopular() {
+    try {
+        console.log('Fetching popular content from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        const data = await response.json();
+        console.log('Scraper API response for popular:', data);
+        
+        if (data.items) {
+            // Extract titles - remove numbering prefix
+            const titles = data.items.slice(0, 5).map(item => 
+                item.title.replace(/^\d+\.\s*/, '')
+            );
+            console.log('Extracted titles:', titles);
+            
+            // Clear container and show loading
+            document.getElementById('popularContainer').innerHTML = '';
+            
+            // Fetch details WITH progressive rendering
+            await fetchDetailsSequentially(titles, null, 'popularContainer', true);
+            
+            console.log('Progressive popular content displayed');
+            return sectionPagination.popular.items;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching popular content:', error);
+        return [];
+    }
+}
+
+// Scrape latest content (movies and TV shows combined)
+// WITH progressive rendering
+async function scrapeLatest() {
+    try {
+        console.log('Fetching latest content from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        const data = await response.json();
+        console.log('Scraper API response for latest:', data);
+        
+        if (data.items) {
+            // Extract titles - skip first 5, get next 5
+            const titles = data.items.slice(5, 10).map(item => 
+                item.title.replace(/^\d+\.\s*/, '')
+            );
+            console.log('Extracted titles:', titles);
+            
+            // Clear container and show loading
+            document.getElementById('latestContainer').innerHTML = '';
+            
+            // Fetch details WITH progressive rendering
+            await fetchDetailsSequentially(titles, null, 'latestContainer', true);
+            
+            console.log('Progressive latest content displayed');
+            return sectionPagination.latest.items;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching latest content:', error);
+        return [];
+    }
+}
+
+// Scrape coming soon content (movies and TV shows combined)
+// WITH progressive rendering
+async function scrapeComingSoon() {
+    try {
+        console.log('Fetching coming soon content from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+        const data = await response.json();
+        console.log('Scraper API response for coming soon:', data);
+        
+        if (data.items) {
+            // Extract titles - remove numbering prefix
+            const titles = data.items.slice(0, 5).map(item => 
+                item.title.replace(/^\d+\.\s*/, '')
+            );
+            console.log('Extracted titles:', titles);
+            
+            // Clear container and show loading
+            document.getElementById('comingSoonContainer').innerHTML = '';
+            
+            // Fetch details WITH progressive rendering
+            await fetchDetailsSequentially(titles, null, 'comingSoonContainer', true);
+            
+            console.log('Progressive coming soon content displayed');
+            return sectionPagination.comingSoon.items;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching coming soon content:', error);
+        // Show error message in the container
+        const container = document.getElementById('comingSoonContainer');
+        if (container) {
+            container.innerHTML = '<p class="text-center col-span-full text-red-500">Failed to load coming soon content. Please try again later.</p>';
+        }
+        return [];
+    }
+}
+
+// Display popular content (only real data, no fallback)
+// Show 5 items per section with pagination support
+function displayPopularContent(contentList, containerId) {
+    console.log(`Displaying content for ${containerId}:`, contentList);
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`Container ${containerId} not found!`);
+        return;
+    }
+    
+    container.innerHTML = '';
+
+    // Always display the actual content cards (even if empty)
+    if (contentList && contentList.length > 0) {
+        // Show only first 5 items initially
+        const itemsToShow = contentList.slice(0, 5);
+        
+        itemsToShow.forEach(item => {
+            const contentCard = document.createElement('div');
+            contentCard.className = 'bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1';
+            
+            // Build the HTML with additional information
+            let additionalInfo = '';
+            if (item.type) {
+                additionalInfo += `<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.type}</span>`;
+            }
+            if (item.rating && item.rating !== 'N/A') {
+                additionalInfo += `<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.rating}</span>`;
+            }
+            
+            // Add actors if available
+            let actorsInfo = '';
+            if (item.actors && item.actors.length > 0) {
+                const actors = item.actors.slice(0, 3).join(', ');
+                actorsInfo = `<p class="text-gray-300 text-xs mt-1 truncate">${actors}</p>`;
+            }
+            
+            console.log('Processing homepage item:', item);
+            
+            const linkUrl = `details.html?id=${item.id}&title=${encodeURIComponent(item.title || 'Unknown Title')}`;
+            console.log('Generated homepage link URL:', linkUrl);
+            
+            contentCard.innerHTML = `
+                <img src="${item.image}" alt="${item.title}" class="w-full h-48 object-cover" loading="lazy">
+                <div class="p-3">
+                    <h4 class="font-bold text-sm mb-1 truncate">${item.title || 'Unknown Title'}</h4>
+                    <p class="text-gray-400 text-xs">${item.year || 'N/A'}</p>
+                    ${additionalInfo}
+                    ${actorsInfo}
+                </div>
+            `;
+            
+            contentCard.addEventListener('click', () => {
+                console.log('Navigating to:', linkUrl);
+                window.location.href = linkUrl;
+            });
+            
+            container.appendChild(contentCard);
+        });
+        
+        // Add "Load More" button if there are more items
+        if (contentList.length > 5) {
+            const loadMoreButton = document.createElement('div');
+            loadMoreButton.className = 'col-span-full text-center mt-4';
+            loadMoreButton.innerHTML = `
+                <button id="loadMore${containerId}" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300">
+                    Load More
+                </button>
+            `;
+            container.appendChild(loadMoreButton);
+            
+            // Add event listener for load more button
+            document.getElementById(`loadMore${containerId}`).addEventListener('click', () => {
+                loadMoreItems(containerId);
+            });
+        }
+    } else {
+        // Show message when no content is available
+        container.innerHTML = '<p class="text-center col-span-full text-gray-500">No content available at this time.</p>';
+    }
+}
+
+// Display genre content (shows ALL movies without 5-item limit)
+function displayGenreContent(contentList, containerId) {
+    console.log(`Displaying ALL genre content for ${containerId}:`, contentList);
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`Container ${containerId} not found!`);
+        return;
+    }
+    
+    container.innerHTML = '';
+
+    if (contentList && contentList.length > 0) {
+        // Display ALL items (no 5-item limit for genre view)
+        contentList.forEach(item => {
+            const contentCard = document.createElement('div');
+            contentCard.className = 'bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1';
+            
+            // Build the HTML with additional information
+            let additionalInfo = '';
+            if (item.type) {
+                additionalInfo += `<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.type}</span>`;
+            }
+            if (item.rating && item.rating !== 'N/A') {
+                additionalInfo += `<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.rating}</span>`;
+            }
+            
+            // Add actors if available
+            let actorsInfo = '';
+            if (item.actors && item.actors.length > 0) {
+                const actors = item.actors.slice(0, 3).join(', ');
+                actorsInfo = `<p class="text-gray-300 text-xs mt-1 truncate">${actors}</p>`;
+            }
+            
+            const linkUrl = `details.html?id=${item.id}&title=${encodeURIComponent(item.title || 'Unknown Title')}`;
+            
+            contentCard.innerHTML = `
+                <img src="${item.image}" alt="${item.title}" class="w-full h-48 object-cover" loading="lazy">
+                <div class="p-3">
+                    <h4 class="font-bold text-sm mb-1 truncate">${item.title || 'Unknown Title'}</h4>
+                    <p class="text-gray-400 text-xs">${item.year || 'N/A'}</p>
+                    ${additionalInfo}
+                    ${actorsInfo}
+                </div>
+            `;
+            
+            contentCard.addEventListener('click', () => {
+                window.location.href = linkUrl;
+            });
+            
+            container.appendChild(contentCard);
+        });
+    } else {
+        container.innerHTML = '<p class="text-center col-span-full text-gray-500">No content available.</p>';
+    }
+}
+
+// Load more items for a section
+function loadMoreItems(containerId) {
+    console.log('Loading more items for:', containerId);
+    // Determine which section we're loading more for
+    let sectionKey = '';
+    if (containerId.includes('popular')) sectionKey = 'popular';
+    else if (containerId.includes('latest')) sectionKey = 'latest';
+    else if (containerId.includes('comingSoon')) sectionKey = 'comingSoon';
+    
+    if (!sectionKey) return;
+    
+    // Get current page and items
+    const sectionData = sectionPagination[sectionKey];
+    console.log('Section data:', sectionData);
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // Remove the load more button
+    const loadMoreButton = document.getElementById(`loadMore${containerId}`);
+    if (loadMoreButton) {
+        loadMoreButton.remove();
+    }
+    
+    // Show next 5 items
+    const startIndex = sectionData.page * 5;
+    const endIndex = startIndex + 5;
+    const nextItems = sectionData.items.slice(startIndex, endIndex);
+    console.log('Next items to load:', nextItems);
+    
+    // Add new items to container
+    nextItems.forEach(item => {
+        const contentCard = document.createElement('div');
+        contentCard.className = 'bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1';
+        
+        // Build the HTML with additional information
+        let additionalInfo = '';
+        if (item.type) {
+            additionalInfo += `<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.type}</span>`;
+        }
+        if (item.rating && item.rating !== 'N/A') {
+            additionalInfo += `<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.rating}</span>`;
+        }
+        
+        // Add actors if available
+        let actorsInfo = '';
+        if (item.actors && item.actors.length > 0) {
+            const actors = item.actors.slice(0, 3).join(', ');
+            actorsInfo = `<p class="text-gray-300 text-xs mt-1 truncate">${actors}</p>`;
+        }
+        
+        console.log('Processing load more item:', item);
+        
+        const linkUrl = `details.html?id=${item.id}&title=${encodeURIComponent(item.title || 'Unknown Title')}`;
+        console.log('Generated load more link URL:', linkUrl);
+        
+        contentCard.innerHTML = `
+            <img src="${item.image}" alt="${item.title}" class="w-full h-48 object-cover" loading="lazy">
+            <div class="p-3">
+                <h4 class="font-bold text-sm mb-1 truncate">${item.title || 'Unknown Title'}</h4>
+                <p class="text-gray-400 text-xs">${item.year || 'N/A'}</p>
+                ${additionalInfo}
+                ${actorsInfo}
+            </div>
+        `;
+        
+        contentCard.addEventListener('click', () => {
+            console.log('Navigating to:', linkUrl);
+            window.location.href = linkUrl;
+        });
+        
+        container.appendChild(contentCard);
+    });
+    
+    // Increment page
+    sectionData.page++;
+    
+    // Add new load more button if there are more items
+    if (sectionData.items.length > endIndex) {
+        const loadMoreButton = document.createElement('div');
+        loadMoreButton.className = 'col-span-full text-center mt-4';
+        loadMoreButton.innerHTML = `
+            <button id="loadMore${containerId}" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300">
+                Load More
+            </button>
+        `;
+        container.appendChild(loadMoreButton);
+        
+        // Add event listener for load more button
+        document.getElementById(`loadMore${containerId}`).addEventListener('click', () => {
+            loadMoreItems(containerId);
+        });
+    }
+}
+
+// Function to display proxy performance statistics (for debugging)
+function displayProxyStats() {
+    console.log('=== Proxy Performance Statistics ===');
+    CORS_PROXIES.forEach((proxy, index) => {
+        const successes = proxySuccessCount[index];
+        const failures = proxyFailCount[index];
+        const total = successes + failures;
+        const successRate = total > 0 ? (successes / total * 100).toFixed(2) : '0.00';
+        
+        console.log(`Proxy ${index + 1}: ${proxy.substring(0, 30)}...`);
+        console.log(`  Successes: ${successes}, Failures: ${failures}, Success Rate: ${successRate}%`);
+    });
+    console.log('====================================');
+}
+
+// Add periodic stats logging
+setInterval(displayProxyStats, 300000); // Log every 5 minutes

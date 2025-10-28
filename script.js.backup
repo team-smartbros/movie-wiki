@@ -1,0 +1,2596 @@
+// API base URL
+const API_BASE = 'https://imdb.iamidiotareyoutoo.com';
+const STREAMING_BASE = 'https://vidsrc-embed.ru/embed/movie';
+
+// Cache configuration
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache duration
+const MAX_CACHE_ENTRIES = 50; // Maximum number of cache entries
+
+// Simple caching mechanism using localStorage
+function getCacheKey(functionName, params) {
+    return `movie_cache_${functionName}_${JSON.stringify(params)}`;
+}
+
+function getCachedData(key) {
+    try {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+            const data = JSON.parse(cached);
+            const now = Date.now();
+            
+            // Check if cache is still valid (less than 30 minutes old)
+            if (now - data.timestamp < CACHE_DURATION) {
+                console.log(`Cache hit for ${key}`);
+                return data.value;
+            } else {
+                // Remove expired cache entry
+                localStorage.removeItem(key);
+            }
+        }
+    } catch (error) {
+        console.error('Error reading cache:', error);
+    }
+    return null;
+}
+
+function setCachedData(key, value) {
+    try {
+        // Don't cache empty data
+        if (!value || (Array.isArray(value) && value.length === 0)) {
+            return;
+        }
+        
+        // Clean up old cache entries if we have too many
+        const keys = Object.keys(localStorage);
+        const cacheKeys = keys.filter(k => k.startsWith('movie_cache_'));
+        
+        if (cacheKeys.length >= MAX_CACHE_ENTRIES) {
+            // Remove oldest entries
+            const sortedKeys = cacheKeys
+                .map(k => ({ key: k, timestamp: JSON.parse(localStorage.getItem(k)).timestamp }))
+                .sort((a, b) => a.timestamp - b.timestamp);
+            
+            // Remove the oldest 10 entries
+            for (let i = 0; i < Math.min(10, sortedKeys.length); i++) {
+                localStorage.removeItem(sortedKeys[i].key);
+            }
+        }
+        
+        // Store new cache entry
+        const cacheEntry = {
+            value: value,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(key, JSON.stringify(cacheEntry));
+        console.log(`Cache set for ${key}`);
+    } catch (error) {
+        console.error('Error setting cache:', error);
+    }
+}
+
+// DOM Elements
+const searchInput = document.getElementById('searchInput');
+const searchButton = document.getElementById('searchButton');
+const resultsContainer = document.getElementById('resultsContainer');
+const searchResults = document.getElementById('searchResults');
+const movieDetails = document.getElementById('movieDetails');
+const welcomeSection = document.getElementById('welcomeSection');
+const backButton = document.getElementById('backButton');
+const backToWelcome = document.getElementById('backToWelcome');
+const trailerButton = document.getElementById('trailerButton');
+const photosButton = document.getElementById('photosButton');
+const streamButton = document.getElementById('streamButton');
+const mediaCarouselSection = document.getElementById('mediaCarouselSection');
+const closeCarouselButton = document.getElementById('closeCarouselButton');
+const prevMediaButton = document.getElementById('prevMediaButton');
+const nextMediaButton = document.getElementById('nextMediaButton');
+const carouselTitle = document.getElementById('carouselTitle');
+const carouselMediaContainer = document.getElementById('carouselMediaContainer');
+const carouselIndicators = document.getElementById('carouselIndicators');
+
+// Current movie data
+let currentMovieId = null;
+let currentMediaItems = [];
+let currentMediaIndex = 0;
+let currentMovieData = null;
+
+// Event Listeners
+searchButton.addEventListener('click', searchMovies);
+searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        searchMovies();
+    }
+});
+backButton.addEventListener('click', showSearchResults);
+backToWelcome.addEventListener('click', showWelcomeSection);
+trailerButton.addEventListener('click', showTrailerCarousel);
+photosButton.addEventListener('click', showPhotosCarousel);
+streamButton.addEventListener('click', showStreaming);
+closeCarouselButton.addEventListener('click', hideMediaCarousel);
+prevMediaButton.addEventListener('click', showPrevMedia);
+nextMediaButton.addEventListener('click', showNextMedia);
+
+// Search for movies
+async function searchMovies() {
+    const query = searchInput.value.trim();
+    if (!query) return;
+
+    try {
+        // Show loading state
+        resultsContainer.innerHTML = '<p class="text-center col-span-full">Searching...</p>';
+        searchResults.classList.remove('hidden');
+        movieDetails.classList.add('hidden');
+        welcomeSection.classList.add('hidden');
+
+        // Fetch search results
+        const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+
+        if (data.ok && data.description && data.description.length > 0) {
+            displaySearchResults(data.description);
+        } else {
+            resultsContainer.innerHTML = '<p class="text-center col-span-full">No movies found. Please try another search.</p>';
+        }
+    } catch (error) {
+        console.error('Error searching movies:', error);
+        resultsContainer.innerHTML = '<p class="text-center col-span-full">Error searching for movies. Please try again.</p>';
+    }
+}
+
+// Update type badge for a movie/series
+async function updateTypeBadge(imdbId) {
+    try {
+        // Fetch detailed movie/series information to determine type
+        const response = await fetch(`${API_BASE}/search?tt=${imdbId}`);
+        const data = await response.json();
+
+        if (data.ok && data.short) {
+            // Get the type badge element
+            const typeBadge = document.querySelector(`.type-badge[data-imdb-id="${imdbId}"]`);
+            if (typeBadge) {
+                // Determine if it's a movie or series
+                const isSeries = data.short['@type'] === 'TVSeries';
+                const typeText = isSeries ? 'Web Series' : 'Movie';
+                const typeClass = isSeries ? 'bg-purple-600' : 'bg-blue-600';
+                
+                typeBadge.textContent = typeText;
+                typeBadge.classList.remove('bg-gray-700');
+                typeBadge.classList.add(typeClass);
+            }
+        }
+    } catch (error) {
+        console.error('Error updating type badge for', imdbId, error);
+        // Set to unknown if there's an error
+        const typeBadge = document.querySelector(`.type-badge[data-imdb-id="${imdbId}"]`);
+        if (typeBadge) {
+            typeBadge.textContent = 'Unknown';
+            typeBadge.classList.remove('bg-gray-700');
+            typeBadge.classList.add('bg-red-600');
+        }
+    }
+}
+
+// Test the APIs when the page loads
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('Testing APIs...');
+    
+    // Test scraper API
+    try {
+        const scraperResponse = await fetch('https://web-1-production.up.railway.app/top');
+        const scraperData = await scraperResponse.json();
+        console.log('Scraper API test result:', scraperData);
+    } catch (error) {
+        console.error('Scraper API test failed:', error);
+    }
+    
+    // Test movie API
+    try {
+        const movieResponse = await fetch('https://imdb.iamidiotareyoutoo.com/search?q=batman');
+        const movieData = await movieResponse.json();
+        console.log('Movie API test result:', movieData);
+    } catch (error) {
+        console.error('Movie API test failed:', error);
+    }
+    
+    // Start the normal scraping process
+    scrapeMovieData();
+});
+
+
+// Display search results
+function displaySearchResults(movies) {
+    console.log('Displaying search results:', movies);
+    resultsContainer.innerHTML = '';
+    
+    // Update all type badges in parallel
+    Promise.all(movies.map(movie => updateTypeBadge(movie['#IMDB_ID'])))
+        .catch(error => console.error('Error updating type badges:', error));
+    
+    movies.forEach(movie => {
+        const movieCard = document.createElement('div');
+        movieCard.className = 'bg-secondary rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1';
+        // Determine if this is a movie or series based on the IMDB ID pattern and title
+        // For now, we'll add a placeholder that will be updated when we fetch detailed data
+        movieCard.innerHTML = `
+            <img src="${movie['#IMG_POSTER']}" alt="${movie['#TITLE']}" class="w-full h-64 object-cover">
+            <div class="p-4">
+                <h3 class="font-bold text-lg mb-2 truncate">${movie['#TITLE']}</h3>
+                <p class="text-gray-400 text-sm mb-2">${movie['#YEAR']}</p>
+                <p class="text-gray-300 text-sm mb-3 line-clamp-2">${movie['#ACTORS']}</p>
+                <div class="flex justify-between items-center">
+                    <span class="bg-accent text-white text-xs px-2 py-1 rounded">IMDb: ${movie['#IMDB_ID']}</span>
+                    <button class="text-accent hover:text-white text-sm font-semibold">
+                        View Details <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <span class="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded type-badge" data-imdb-id="${movie['#IMDB_ID']}">Loading type...</span>
+                </div>
+            </div>
+        `;
+        
+        movieCard.addEventListener('click', () => {
+            fetchMovieDetails(movie['#IMDB_ID']);
+        });
+        
+        resultsContainer.appendChild(movieCard);
+    });
+}
+
+// Fetch movie details
+async function fetchMovieDetails(movieId) {
+    try {
+        // Show loading state
+        document.getElementById('movieTitle').textContent = 'Loading...';
+        movieDetails.classList.remove('hidden');
+        searchResults.classList.add('hidden');
+        welcomeSection.classList.add('hidden');
+
+        // Fetch detailed movie information
+        const response = await fetch(`${API_BASE}/search?tt=${movieId}`);
+        const data = await response.json();
+
+        if (data.ok && data.short) {
+            // Debug: Log cast-related data to understand structure
+            console.log('=== CAST DATA DEBUG ===');
+            if (data.top) {
+                console.log('top.castPageTitle:', data.top.castPageTitle);
+                console.log('top.castV2:', data.top.castV2);
+                if (data.top.castPageTitle && data.top.castPageTitle.edges) {
+                    console.log('Sample cast edge:', data.top.castPageTitle.edges[0]);
+                }
+            }
+            
+            displayMovieDetails(data.short, movieId, data);
+            currentMovieId = movieId;
+            currentMovieData = data;
+        } else {
+            document.getElementById('movieTitle').textContent = 'Movie not found';
+        }
+    } catch (error) {
+        console.error('Error fetching movie details:', error);
+        document.getElementById('movieTitle').textContent = 'Error loading movie details';
+    }
+}
+
+// Display movie details
+function displayMovieDetails(movie, movieId, fullData) {
+    // Store movie data for streaming
+    currentMovieData = fullData;
+    
+    // Basic information
+    document.getElementById('movieTitle').textContent = movie.name;
+    document.getElementById('moviePoster').src = movie.image;
+    document.getElementById('movieYear').textContent = movie.datePublished;
+    
+    // Fix rating display - check multiple sources
+    let ratingValue = 'N/A';
+    let ratingCount = 0;
+    
+    if (movie.aggregateRating) {
+        ratingValue = movie.aggregateRating.ratingValue || 'N/A';
+        ratingCount = movie.aggregateRating.ratingCount || 0;
+    }
+    
+    // Display rating
+    document.getElementById('movieRating').textContent = `${ratingValue} (${ratingCount.toLocaleString()} votes)`;
+    
+    // Determine if it's a movie or series
+    const isSeries = movie['@type'] === 'TVSeries';
+    
+    // For series, show number of episodes; for movies, show duration
+    if (isSeries && fullData.main && fullData.main.episodes && fullData.main.episodes.totalEpisodes) {
+        const episodeCount = fullData.main.episodes.totalEpisodes.total || 'N/A';
+        document.getElementById('movieDuration').textContent = `${episodeCount} episodes`;
+    } else {
+        document.getElementById('movieDuration').textContent = formatDuration(movie.duration);
+    }
+    
+    const typeText = isSeries ? 'Web Series' : 'Movie';
+    document.getElementById('movieType').textContent = typeText;
+    document.getElementById('movieGenres').textContent = movie.genre?.join(', ') || 'N/A';
+    document.getElementById('movieImdbId').textContent = movieId;
+    
+    document.getElementById('moviePlot').textContent = movie.description || 'N/A';
+    
+    // Additional information
+    const keywords = movie.keywords ? movie.keywords.split(',') : [];
+    displayKeywords(keywords);
+    
+    // Extract cast information
+    const castData = extractCastWithImages(fullData);
+    displayCastInfo(castData.cast);
+    displayCastImages(castData.castWithImages);
+    
+    // Extract crew information
+    displayCrewInfo(fullData);
+    
+    // Display additional media
+    displayAdditionalMedia(fullData);
+    
+    // Reviews
+    displayReviews(fullData);
+    
+    // Additional information
+    displayAdditionalInfo(fullData);
+    
+    // Box office information
+    displayBoxOfficeInfo(fullData);
+}
+
+// Extract cast with images - improve extraction logic
+function extractCastWithImages(fullData) {
+    let cast = [];
+    let castWithImages = [];
+    
+    // Check for cast information in top
+    if (fullData.top) {
+        // First try castPageTitle
+        if (fullData.top.castPageTitle && fullData.top.castPageTitle.edges) {
+            cast = fullData.top.castPageTitle.edges.map(edge => {
+                const actor = edge.node.name.nameText.text;
+                let character = '';
+                let imageUrl = '';
+                
+                // Try to get character information
+                if (edge.node.creditedRoles && edge.node.creditedRoles.edges && edge.node.creditedRoles.edges.length > 0) {
+                    if (edge.node.creditedRoles.edges[0].node.characters && edge.node.creditedRoles.edges[0].node.characters.edges && edge.node.creditedRoles.edges[0].node.characters.edges.length > 0) {
+                        character = edge.node.creditedRoles.edges[0].node.characters.edges[0].node.name;
+                    }
+                }
+                
+                // Try to get image URL from multiple sources
+                if (edge.node.name.primaryImage && edge.node.name.primaryImage.url) {
+                    imageUrl = edge.node.name.primaryImage.url;
+                } else if (edge.node.name && edge.node.name.url) {
+                    // Sometimes image info is in a different structure
+                    // This is a placeholder - actual implementation would depend on API structure
+                }
+                
+                return { actor, character, imageUrl };
+            });
+        }
+        // Fallback to castV2
+        else if (fullData.top.castV2 && fullData.top.castV2.length > 0) {
+            // Look for "Top Cast" or "Stars" group
+            const castGroups = fullData.top.castV2.filter(group => 
+                group.grouping && 
+                (group.grouping.text === "Top Cast" || group.grouping.text === "Stars")
+            );
+            
+            if (castGroups.length > 0) {
+                // Use the first matching group
+                const castGroup = castGroups[0];
+                if (castGroup.credits) {
+                    cast = castGroup.credits.map(credit => {
+                        const actor = credit.name.nameText.text;
+                        let imageUrl = '';
+                        
+                        // Try to get image URL
+                        if (credit.name.primaryImage && credit.name.primaryImage.url) {
+                            imageUrl = credit.name.primaryImage.url;
+                        }
+                        
+                        return { actor, character: '', imageUrl };
+                    });
+                }
+            }
+        }
+        
+        // Filter cast with images
+        castWithImages = cast.filter(person => person.imageUrl);
+    }
+    
+    // Also check main data as fallback
+    if (castWithImages.length === 0 && fullData.main) {
+        if (fullData.main.castV2 && fullData.main.castV2.length > 0) {
+            const castGroups = fullData.main.castV2.filter(group => 
+                group.grouping && 
+                (group.grouping.text === "Top Cast" || group.grouping.text === "Stars")
+            );
+            
+            if (castGroups.length > 0) {
+                const castGroup = castGroups[0];
+                if (castGroup.credits) {
+                    cast = castGroup.credits.map(credit => {
+                        const actor = credit.name.nameText.text;
+                        let imageUrl = '';
+                        
+                        if (credit.name.primaryImage && credit.name.primaryImage.url) {
+                            imageUrl = credit.name.primaryImage.url;
+                        }
+                        
+                        return { actor, character: '', imageUrl };
+                    });
+                    
+                    castWithImages = cast.filter(person => person.imageUrl);
+                }
+            }
+        }
+    }
+    
+    console.log('Cast with images:', castWithImages); // Debug log
+    return { cast, castWithImages };
+}
+
+// Display additional media
+function displayAdditionalMedia(fullData) {
+    const additionalMediaSection = document.getElementById('additionalMediaSection');
+    const additionalMediaContainer = document.getElementById('additionalMediaContainer');
+    
+    if (!additionalMediaSection || !additionalMediaContainer) return;
+    
+    let mediaItems = [];
+    
+    // Check for images in top
+    if (fullData.top && fullData.top.images && fullData.top.images.edges) {
+        mediaItems = fullData.top.images.edges.map(edge => {
+            if (edge.node.url) {
+                return {
+                    type: 'image',
+                    url: edge.node.url,
+                    caption: edge.node.caption?.plainText || ''
+                };
+            }
+        }).filter(item => item && item.url);
+    }
+    
+    // Also check for primary image if no other images found
+    if (mediaItems.length === 0 && fullData.top && fullData.top.primaryImage && fullData.top.primaryImage.url) {
+        mediaItems.push({
+            type: 'image',
+            url: fullData.top.primaryImage.url,
+            caption: fullData.top.primaryImage.caption?.plainText || 'Primary Image'
+        });
+    }
+    
+    // Check for videos and extract thumbnails
+    if (fullData.top && fullData.top.videos && fullData.top.videos.edges) {
+        const videoItems = fullData.top.videos.edges.map(edge => {
+            if (edge.node.playbackURLs && edge.node.playbackURLs.length > 0) {
+                // Try to get thumbnail from edge.node.thumbnail or edge.node.image
+                let thumbnailUrl = '';
+                if (edge.node.thumbnail && edge.node.thumbnail.url) {
+                    thumbnailUrl = edge.node.thumbnail.url;
+                } else if (edge.node.image && edge.node.image.url) {
+                    thumbnailUrl = edge.node.image.url;
+                }
+                
+                return {
+                    type: 'video',
+                    url: edge.node.playbackURLs[0].url,
+                    thumbnail: thumbnailUrl,
+                    caption: edge.node.name?.plainText || 'Video'
+                };
+            }
+        }).filter(item => item && item.url);
+        
+        mediaItems = [...mediaItems, ...videoItems];
+    }
+    
+    // Check for primary videos
+    if (fullData.top && fullData.top.primaryVideos && fullData.top.primaryVideos.edges) {
+        const primaryVideoItems = fullData.top.primaryVideos.edges.map(edge => {
+            if (edge.node.playbackURLs && edge.node.playbackURLs.length > 0) {
+                // Try to get thumbnail from edge.node.thumbnail or edge.node.image
+                let thumbnailUrl = '';
+                if (edge.node.thumbnail && edge.node.thumbnail.url) {
+                    thumbnailUrl = edge.node.thumbnail.url;
+                } else if (edge.node.image && edge.node.image.url) {
+                    thumbnailUrl = edge.node.image.url;
+                }
+                
+                return {
+                    type: 'video',
+                    url: edge.node.playbackURLs[0].url,
+                    thumbnail: thumbnailUrl,
+                    caption: edge.node.name?.plainText || 'Primary Video'
+                };
+            }
+        }).filter(item => item && item.url);
+        
+        mediaItems = [...mediaItems, ...primaryVideoItems];
+    }
+    
+    if (mediaItems.length > 0) {
+        additionalMediaContainer.innerHTML = '';
+        
+        mediaItems.slice(0, 15).forEach((item, index) => {
+            const mediaElement = document.createElement('div');
+            mediaElement.className = 'flex-shrink-0 w-48 cursor-pointer';
+            mediaElement.innerHTML = `
+                <div class="cast-image bg-gray-800 rounded-lg overflow-hidden">
+                    ${item.type === 'image' ? 
+                        `<img src="${item.url}" alt="${item.caption || 'Media'}" class="w-full h-32 object-cover">` :
+                        `<div class="relative">
+                            ${item.thumbnail ? 
+                                `<img src="${item.thumbnail}" alt="${item.caption || 'Video'}" class="w-full h-32 object-cover">` :
+                                `<div class="w-full h-32 bg-gray-700 flex items-center justify-center">
+                                    <i class="fas fa-play-circle text-3xl text-accent"></i>
+                                </div>`
+                            }
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <i class="fas fa-play-circle text-3xl text-white opacity-80"></i>
+                            </div>
+                        </div>`
+                    }
+                    <div class="p-2">
+                        <p class="text-xs text-gray-300 truncate">${item.caption || (item.type === 'video' ? 'Video' : 'Image')}</p>
+                        <p class="text-xs text-gray-500 capitalize">${item.type}</p>
+                    </div>
+                </div>
+            `;
+            
+            mediaElement.addEventListener('click', () => {
+                showMediaCarousel(mediaItems, index, 'Additional Media');
+            });
+            
+            additionalMediaContainer.appendChild(mediaElement);
+        });
+        
+        additionalMediaSection.classList.remove('hidden');
+    } else {
+        additionalMediaSection.classList.add('hidden');
+    }
+}
+
+// Display cast information - show in rows with up to 6 names per row
+function displayCastInfo(cast) {
+    const castList = document.getElementById('movieCast');
+    castList.innerHTML = '';
+    
+    if (cast.length > 0) {
+        // Create rows with up to 6 names each
+        const namesPerRow = 6;
+        
+        for (let i = 0; i < cast.length; i += namesPerRow) {
+            const rowElement = document.createElement('div');
+            rowElement.className = 'grid grid-cols-6 gap-2 mb-2';
+            
+            // Add up to 6 names to this row
+            for (let j = 0; j < namesPerRow; j++) {
+                const index = i + j;
+                if (index < cast.length) {
+                    const { actor, character } = cast[index];
+                    const castItem = document.createElement('div');
+                    castItem.className = 'text-sm';
+                    if (character) {
+                        castItem.innerHTML = `<div class="font-medium">${actor}</div><div class="text-gray-400 text-xs">as ${character}</div>`;
+                    } else {
+                        castItem.innerHTML = `<div class="font-medium">${actor}</div>`;
+                    }
+                    rowElement.appendChild(castItem);
+                } else {
+                    // Add empty divs to maintain grid structure
+                    const emptyDiv = document.createElement('div');
+                    rowElement.appendChild(emptyDiv);
+                }
+            }
+            
+            castList.appendChild(rowElement);
+        }
+    } else {
+        castList.innerHTML = '<div class="text-gray-400">Cast information not available</div>';
+    }
+}
+
+// Display cast images - improve display
+function displayCastImages(castWithImages) {
+    const castImagesSection = document.getElementById('castImagesSection');
+    const castImagesContainer = document.getElementById('castImagesContainer');
+    
+    if (!castImagesSection || !castImagesContainer) return;
+    
+    if (castWithImages.length > 0) {
+        castImagesContainer.innerHTML = '';
+        
+        castWithImages.forEach(({ actor, character, imageUrl }) => {
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'flex-shrink-0 w-32 cursor-pointer';
+            imageContainer.innerHTML = `
+                <div class="cast-image bg-gray-800 rounded-lg overflow-hidden">
+                    <img src="${imageUrl}" alt="${actor}" class="w-full h-48 object-cover">
+                    <div class="p-2">
+                        <p class="text-xs font-semibold truncate">${actor}</p>
+                        ${character ? `<p class="text-xs text-gray-400 truncate">${character}</p>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Add click event to view in carousel
+            imageContainer.addEventListener('click', () => {
+                const mediaItems = castWithImages.map(person => ({
+                    type: 'image',
+                    url: person.imageUrl,
+                    caption: `${person.actor}${person.character ? ` as ${person.character}` : ''}`
+                }));
+                
+                const currentIndex = castWithImages.findIndex(person => person.actor === actor);
+                showMediaCarousel(mediaItems, currentIndex, 'Cast Photos');
+            });
+            
+            castImagesContainer.appendChild(imageContainer);
+        });
+        
+        castImagesSection.classList.remove('hidden');
+    } else {
+        castImagesSection.classList.add('hidden');
+    }
+}
+
+// Display crew information - improve formatting
+function displayCrewInfo(fullData) {
+    const crewContainer = document.getElementById('movieCrew');
+    if (!crewContainer) return;
+    
+    const crewResult = extractCrewInformation(fullData);
+    const director = crewResult.director;
+    const writer = crewResult.writer;
+    
+    // Create a more compact display
+    let crewHTML = '';
+    
+    if (director !== 'N/A') {
+        crewHTML += `<li><span class="font-medium">Director:</span> ${director}</li>`;
+    }
+    
+    if (writer !== 'N/A') {
+        crewHTML += `<li><span class="font-medium">Writer:</span> ${writer}</li>`;
+    }
+    
+    if (crewHTML === '') {
+        crewHTML = '<li class="text-gray-400">Crew information not available</li>';
+    }
+    
+    crewContainer.innerHTML = crewHTML;
+}
+
+// Extract crew information - improve writer extraction
+function extractCrewInformation(fullData) {
+    let director = 'N/A';
+    let writer = 'N/A';
+    
+    // Check for crew information in top
+    if (fullData.top) {
+        // Check for directorsPageTitle
+        if (fullData.top.directorsPageTitle && fullData.top.directorsPageTitle.length > 0) {
+            if (fullData.top.directorsPageTitle[0].credits && fullData.top.directorsPageTitle[0].credits.length > 0) {
+                director = fullData.top.directorsPageTitle[0].credits[0].name.nameText.text;
+            }
+        }
+        // Check for crewV2
+        else if (fullData.top.crewV2) {
+            // Look for Director group
+            const directorGroup = fullData.top.crewV2.find(group => 
+                group.grouping && 
+                (group.grouping.text === "Director" || group.grouping.text === "Directors")
+            );
+            
+            if (directorGroup && directorGroup.credits && directorGroup.credits.length > 0) {
+                director = directorGroup.credits[0].name.nameText.text;
+            }
+            
+            // Look for Writer groups - check multiple variations
+            const writerGroups = ["Writer", "Writers", "Screenplay", "Story", "Screenwriter"];
+            for (const writerType of writerGroups) {
+                const writerGroup = fullData.top.crewV2.find(group => 
+                    group.grouping && group.grouping.text === writerType
+                );
+                
+                if (writerGroup && writerGroup.credits && writerGroup.credits.length > 0) {
+                    writer = writerGroup.credits.map(credit => credit.name.nameText.text).join(', ');
+                    break;
+                }
+            }
+        }
+    }
+    
+    // If we still don't have a writer, check principalCreditsV2
+    if (writer === 'N/A' && fullData.top && fullData.top.principalCreditsV2) {
+        const writerGroups = ["Writer", "Writers", "Screenplay", "Story", "Screenwriter"];
+        for (const writerType of writerGroups) {
+            const writerGroup = fullData.top.principalCreditsV2.find(group => 
+                group.grouping && group.grouping.text === writerType
+            );
+            
+            if (writerGroup && writerGroup.credits && writerGroup.credits.length > 0) {
+                writer = writerGroup.credits.map(credit => credit.name.nameText.text).join(', ');
+                break;
+            }
+        }
+    }
+    
+    return { director, writer };
+}
+
+// Format duration
+function formatDuration(duration) {
+    if (!duration) return 'N/A';
+    
+    const hoursMatch = duration.match(/(\d+)H/);
+    const minutesMatch = duration.match(/(\d+)M/);
+    
+    const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
+    const minutes = minutesMatch ? parseInt(minutesMatch[1]) : 0;
+    
+    if (hours > 0 && minutes > 0) {
+        return `${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+        return `${hours}h`;
+    } else if (minutes > 0) {
+        return `${minutes}m`;
+    } else {
+        return 'N/A';
+    }
+}
+
+// Display keywords
+function displayKeywords(keywords) {
+    const keywordsContainer = document.getElementById('movieKeywords');
+    if (!keywordsContainer) return;
+    
+    if (keywords.length > 0) {
+        keywordsContainer.innerHTML = keywords.map(keyword => 
+            `<span class="bg-gray-700 text-white text-xs px-2 py-1 rounded mr-2 mb-2 inline-block">${keyword.trim()}</span>`
+        ).join('');
+    } else {
+        keywordsContainer.innerHTML = '<span class="text-gray-400">No keywords available</span>';
+    }
+}
+
+// Display reviews
+function displayReviews(fullData) {
+    const reviewsContainer = document.getElementById('movieReviews');
+    if (!reviewsContainer) return;
+    
+    // Extract featured reviews
+    let reviews = [];
+    
+    if (fullData.top && fullData.top.featuredReviews && fullData.top.featuredReviews.edges) {
+        reviews = fullData.top.featuredReviews.edges;
+    } else if (fullData.main && fullData.main.featuredReviews && fullData.main.featuredReviews.edges) {
+        reviews = fullData.main.featuredReviews.edges;
+    }
+    
+    if (reviews.length > 0) {
+        // Display the first review
+        const review = reviews[0].node;
+        const author = review.author?.username?.text || 'Anonymous';
+        const summary = review.summary?.originalText || 'No summary';
+        const text = review.text?.originalText?.plainText || 'No review text';
+        const rating = review.authorRating?.value ?? 'N/A'; // Use nullish coalescing to handle null/undefined
+        
+        // Create review element
+        const reviewElement = document.createElement('div');
+        reviewElement.className = 'bg-gray-800 rounded-lg p-4';
+        reviewElement.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <h4 class="font-semibold">${summary}</h4>
+                ${rating !== 'N/A' ? `<span class="bg-accent text-primary text-xs px-2 py-1 rounded">Rating: ${rating}/10</span>` : ''}
+            </div>
+            <p class="text-gray-300 text-sm mb-2">by ${author}</p>
+            <p class="text-gray-200" id="reviewText">${text.substring(0, 300)}${text.length > 300 ? '...' : ''}</p>
+            ${text.length > 300 ? `<button class="text-accent text-sm mt-2" id="readMoreButton">Read more</button>` : ''}
+        `;
+        
+        reviewsContainer.innerHTML = '';
+        reviewsContainer.appendChild(reviewElement);
+        
+        // Add event listener for "Read more" button
+        const readMoreButton = reviewElement.querySelector('#readMoreButton');
+        if (readMoreButton) {
+            readMoreButton.addEventListener('click', function() {
+                const reviewText = reviewElement.querySelector('#reviewText');
+                reviewText.textContent = text; // Show full text
+                this.remove(); // Remove the "Read more" button
+            });
+        }
+    } else {
+        reviewsContainer.innerHTML = '<p class="text-gray-400">No reviews available</p>';
+    }
+}
+
+// Display additional information
+function displayAdditionalInfo(fullData) {
+    const additionalInfoSection = document.getElementById('additionalInfoSection');
+    if (!additionalInfoSection) return;
+    
+    // Extract certificate/rating information
+    let certificate = 'N/A';
+    let releaseDate = 'N/A';
+    let productionCompanies = 'N/A';
+    
+    // Check in fullData.top first
+    if (fullData.top) {
+        // Certificate
+        if (fullData.top.certificate && fullData.top.certificate.rating) {
+            certificate = fullData.top.certificate.rating;
+        }
+        
+        // Release date
+        if (fullData.top.releaseDate) {
+            const date = fullData.top.releaseDate;
+            if (date.day && date.month && date.year) {
+                releaseDate = `${date.day}/${date.month}/${date.year}`;
+            }
+        }
+        
+        // Production companies
+        if (fullData.top.production && fullData.top.production.edges) {
+            productionCompanies = fullData.top.production.edges.map(edge => 
+                edge.node.company.companyText.text
+            ).join(', ');
+        }
+    }
+    
+    // Add content to the section
+    additionalInfoSection.innerHTML = `
+        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Additional Information</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <h4 class="font-semibold">Certificate:</h4>
+                <p>${certificate}</p>
+            </div>
+            <div>
+                <h4 class="font-semibold">Release Date:</h4>
+                <p>${releaseDate}</p>
+            </div>
+            <div>
+                <h4 class="font-semibold">Production Companies:</h4>
+                <p>${productionCompanies}</p>
+            </div>
+        </div>
+    `;
+}
+
+// Display box office information
+function displayBoxOfficeInfo(fullData) {
+    const boxOfficeSection = document.getElementById('boxOfficeSection');
+    const boxOfficeInfo = document.getElementById('boxOfficeInfo');
+    
+    if (!boxOfficeSection || !boxOfficeInfo) return;
+    
+    // Extract box office information
+    let budget = 'N/A';
+    let worldwideGross = 'N/A';
+    let openingWeekend = 'N/A';
+    
+    // Check in fullData.top first
+    if (fullData.top) {
+        // Budget
+        if (fullData.top.productionBudget && fullData.top.productionBudget.budget) {
+            const budgetData = fullData.top.productionBudget.budget;
+            if (budgetData.amount && budgetData.currency) {
+                budget = `${budgetData.currency} ${budgetData.amount.toLocaleString()}`;
+            }
+        }
+        
+        // Worldwide gross
+        if (fullData.top.worldwideGross && fullData.top.worldwideGross.total) {
+            const grossData = fullData.top.worldwideGross.total;
+            if (grossData.amount && grossData.currency) {
+                worldwideGross = `${grossData.currency} ${grossData.amount.toLocaleString()}`;
+            }
+        }
+        
+        // Opening weekend
+        if (fullData.top.openingWeekendGross && fullData.top.openingWeekendGross.gross && fullData.top.openingWeekendGross.gross.total) {
+            const openingData = fullData.top.openingWeekendGross.gross.total;
+            if (openingData.amount && openingData.currency) {
+                openingWeekend = `${openingData.currency} ${openingData.amount.toLocaleString()}`;
+            }
+        }
+    }
+    
+    // Also check in fullData.main
+    if (fullData.main) {
+        // Budget
+        if (budget === 'N/A' && fullData.main.productionBudget && fullData.main.productionBudget.budget) {
+            const budgetData = fullData.main.productionBudget.budget;
+            if (budgetData.amount && budgetData.currency) {
+                budget = `${budgetData.currency} ${budgetData.amount.toLocaleString()}`;
+            }
+        }
+        
+        // Worldwide gross
+        if (worldwideGross === 'N/A' && fullData.main.worldwideGross && fullData.main.worldwideGross.total) {
+            const grossData = fullData.main.worldwideGross.total;
+            if (grossData.amount && grossData.currency) {
+                worldwideGross = `${grossData.currency} ${grossData.amount.toLocaleString()}`;
+            }
+        }
+        
+        // Opening weekend
+        if (openingWeekend === 'N/A' && fullData.main.openingWeekendGross && fullData.main.openingWeekendGross.gross && fullData.main.openingWeekendGross.gross.total) {
+            const openingData = fullData.main.openingWeekendGross.gross.total;
+            if (openingData.amount && openingData.currency) {
+                openingWeekend = `${openingData.currency} ${openingData.amount.toLocaleString()}`;
+            }
+        }
+    }
+    
+    // Only show box office section if we have some data
+    if (budget !== 'N/A' || worldwideGross !== 'N/A' || openingWeekend !== 'N/A') {
+        boxOfficeInfo.innerHTML = `
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="font-semibold mb-2">Budget</h4>
+                <p>${budget}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="font-semibold mb-2">Worldwide Gross</h4>
+                <p>${worldwideGross}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="font-semibold mb-2">Opening Weekend</h4>
+                <p>${openingWeekend}</p>
+            </div>
+        `;
+        boxOfficeSection.classList.remove('hidden');
+    } else {
+        boxOfficeSection.classList.add('hidden');
+    }
+}
+
+// Show trailer carousel
+function showTrailerCarousel() {
+    if (!currentMovieId) return;
+    
+    const mediaItems = [
+        {
+            type: 'trailer',
+            url: `${API_BASE}/media/${currentMovieId}`,
+            title: 'Movie Trailer'
+        }
+    ];
+    
+    showMediaCarousel(mediaItems, 0, 'Movie Trailer');
+}
+
+// Show photos carousel - create a proper photo gallery like additional media
+function showPhotosCarousel() {
+    if (!currentMovieId) return;
+    
+    // Create media items for photo viewing - larger and better display
+    const mediaItems = [
+        {
+            type: 'photo',
+            url: `${API_BASE}/photo/${currentMovieId}`,
+            title: 'Movie Photos'
+        }
+    ];
+    
+    showMediaCarousel(mediaItems, 0, 'Movie Photos');
+}
+
+// Show streaming - redirect to streaming page with generic service
+function showStreaming() {
+    if (!currentMovieId || !currentMovieData) return;
+    
+    // Get movie title
+    const movieTitle = document.getElementById('movieTitle').textContent;
+    
+    // Check if it's a series
+    const isSeries = currentMovieData.short && currentMovieData.short['@type'] === 'TVSeries';
+    
+    if (isSeries) {
+        // For TV series, show episode selection
+        showEpisodeSelection();
+    } else {
+        // For movies, redirect to streaming page
+        window.location.href = `stream.html?imdb=${currentMovieId}&title=${encodeURIComponent(movieTitle)}&service=thirdparty&isSeries=false`;
+    }
+}
+
+// Show episode selection for TV series
+function showEpisodeSelection() {
+    if (!currentMovieId || !currentMovieData) return;
+    
+    // Get movie title
+    const movieTitle = document.getElementById('movieTitle').textContent;
+    
+    // Create episode selection UI
+    const mediaItems = [
+        {
+            type: 'episodeSelection',
+            title: `${movieTitle} - Episode Selection`,
+            imdbId: currentMovieId,
+            isSeries: true
+        }
+    ];
+    
+    showMediaCarousel(mediaItems, 0, 'Episode Selection');
+}
+
+// Show media carousel
+function showMediaCarousel(mediaItems, startIndex, title) {
+    currentMediaItems = mediaItems;
+    currentMediaIndex = startIndex;
+    carouselTitle.textContent = title;
+    
+    updateCarousel();
+    mediaCarouselSection.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+// Update carousel display - add streaming support with ad blocking
+function updateCarousel() {
+    if (currentMediaItems.length === 0) return;
+    
+    const currentItem = currentMediaItems[currentMediaIndex];
+    
+    if (currentItem.type === 'image' || currentItem.type === 'photo') {
+        carouselMediaContainer.innerHTML = `
+            <div class="w-full h-full flex items-center justify-center p-4">
+                <img src="${currentItem.url}" alt="${currentItem.caption || 'Media'}" class="max-w-full max-h-full object-contain rounded-lg">
+            </div>
+        `;
+    } else if (currentItem.type === 'video') {
+        carouselMediaContainer.innerHTML = `
+            <div class="w-full h-full flex items-center justify-center p-4">
+                <video controls class="max-w-full max-h-full rounded-lg">
+                    <source src="${currentItem.url}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        `;
+    } else if (currentItem.type === 'trailer') {
+        carouselMediaContainer.innerHTML = `
+            <div class="w-full h-full flex items-center justify-center p-4">
+                <iframe 
+                    src="${currentItem.url}" 
+                    class="w-full h-[80vh] rounded-lg"
+                    allowfullscreen
+                    title="${currentItem.title}">
+                </iframe>
+            </div>
+        `;
+    } else if (currentItem.type === 'stream') {
+        carouselMediaContainer.innerHTML = `
+            <div class="w-full h-full flex flex-col">
+                <div class="p-4 bg-secondary flex justify-between items-center">
+                    <h3 class="text-xl font-bold">${currentItem.title}</h3>
+                    <div class="text-sm text-gray-300">Streaming from GoDrivePlayer</div>
+                </div>
+                <div class="flex-grow flex items-center justify-center p-4 bg-dark relative" id="streamingContainer">
+                    <iframe 
+                        src="${currentItem.url}" 
+                        class="w-full h-full rounded-lg"
+                        allowfullscreen
+                        title="${currentItem.title}"
+                        id="streamingIframe">
+                    </iframe>
+                    <div id="adBlockerWarning" class="absolute top-4 right-4 bg-red-600 text-white px-3 py-1 rounded text-sm hidden">
+                        Ad Blocker Active
+                    </div>
+                </div>
+                <div class="p-4 bg-secondary text-sm text-gray-300">
+                    <p>Note: This streaming service may contain advertisements. Please be aware that clicking on ads may redirect you to external sites.</p>
+                </div>
+            </div>
+        `;
+    } else if (currentItem.type === 'episodeSelection') {
+        // Show episode selection UI for TV series
+        carouselMediaContainer.innerHTML = `
+            <div class="w-full h-full flex flex-col">
+                <div class="p-4 bg-secondary flex justify-between items-center">
+                    <h3 class="text-xl font-bold">${currentItem.title}</h3>
+                    <div class="text-sm text-gray-300">Select Episode</div>
+                </div>
+                <div class="flex-grow flex items-center justify-center p-4 bg-dark relative" id="episodeSelectionContainer">
+                    <div class="w-full max-w-2xl bg-secondary rounded-lg p-6">
+                        <h4 class="text-lg font-bold mb-4">Episode Selection</h4>
+                        <div class="mb-4">
+                            <label class="block text-gray-300 mb-2">Season:</label>
+                            <select id="seasonSelect" class="w-full bg-gray-700 text-white rounded px-3 py-2">
+                                <option value="1">Season 1</option>
+                                <option value="2">Season 2</option>
+                                <option value="3">Season 3</option>
+                                <option value="4">Season 4</option>
+                                <option value="5">Season 5</option>
+                            </select>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-gray-300 mb-2">Episode:</label>
+                            <select id="episodeSelect" class="w-full bg-gray-700 text-white rounded px-3 py-2">
+                                <option value="1">Episode 1</option>
+                                <option value="2">Episode 2</option>
+                                <option value="3">Episode 3</option>
+                                <option value="4">Episode 4</option>
+                                <option value="5">Episode 5</option>
+                                <option value="6">Episode 6</option>
+                                <option value="7">Episode 7</option>
+                                <option value="8">Episode 8</option>
+                                <option value="9">Episode 9</option>
+                                <option value="10">Episode 10</option>
+                            </select>
+                        </div>
+                        <button id="watchEpisodeButton" class="w-full bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-4 rounded-lg transition duration-300">
+                            Watch Episode
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add event listener for the watch button
+        setTimeout(() => {
+            const watchButton = document.getElementById('watchEpisodeButton');
+            if (watchButton) {
+                watchButton.addEventListener('click', () => {
+                    const season = document.getElementById('seasonSelect').value;
+                    const episode = document.getElementById('episodeSelect').value;
+                    
+                    // Redirect to streaming page with episode information
+                    const movieTitle = document.getElementById('movieTitle').textContent;
+                    window.location.href = `stream.html?imdb=${currentItem.imdbId}&title=${encodeURIComponent(movieTitle)}&service=thirdparty&isSeries=true&season=${season}&episode=${episode}`;
+                });
+            }
+        }, 100);
+        
+        // Apply ad blocking enhancements
+        setTimeout(() => {
+            applyAdBlockingEnhancements();
+        }, 2000);
+    }
+    
+    // Update indicators
+    carouselIndicators.innerHTML = '';
+    currentMediaItems.forEach((item, index) => {
+        const indicator = document.createElement('div');
+        indicator.className = `w-3 h-3 rounded-full ${index === currentMediaIndex ? 'bg-accent' : 'bg-gray-600'}`;
+        indicator.addEventListener('click', () => {
+            currentMediaIndex = index;
+            updateCarousel();
+        });
+        carouselIndicators.appendChild(indicator);
+    });
+    
+    // Update navigation buttons
+    prevMediaButton.disabled = currentMediaIndex === 0;
+    nextMediaButton.disabled = currentMediaIndex === currentMediaItems.length - 1;
+}
+
+// Apply ad blocking enhancements
+function applyAdBlockingEnhancements() {
+    try {
+        // Add warning if ad blocker is detected
+        const adBlockerWarning = document.getElementById('adBlockerWarning');
+        if (adBlockerWarning) {
+            // Simple check for ad blocker
+            const testAd = document.createElement('div');
+            testAd.innerHTML = '&nbsp;';
+            testAd.className = 'adsbox';
+            document.body.appendChild(testAd);
+            
+            setTimeout(() => {
+                const isAdBlocked = testAd.offsetHeight === 0;
+                document.body.removeChild(testAd);
+                
+                if (isAdBlocked) {
+                    adBlockerWarning.classList.remove('hidden');
+                    console.log('Ad blocker detected - showing warning');
+                }
+            }, 100);
+        }
+        
+        // Add click protection for common ad areas
+        const iframe = document.getElementById('streamingIframe');
+        if (iframe) {
+            // Add overlay to prevent accidental clicks on ads
+            const container = document.getElementById('streamingContainer');
+            if (container) {
+                // Add key listeners to prevent ad redirects
+                document.addEventListener('keydown', function(e) {
+                    if (e.altKey || e.ctrlKey || e.shiftKey) {
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+            }
+        }
+    } catch (e) {
+        console.log('Ad blocking enhancements applied with limitations due to browser security');
+    }
+}
+
+// Show previous media
+function showPrevMedia() {
+    if (currentMediaIndex > 0) {
+        currentMediaIndex--;
+        updateCarousel();
+    }
+}
+
+// Show next media
+function showNextMedia() {
+    if (currentMediaIndex < currentMediaItems.length - 1) {
+        currentMediaIndex++;
+        updateCarousel();
+    }
+}
+
+// Hide media carousel
+function hideMediaCarousel() {
+    mediaCarouselSection.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// Show search results
+function showSearchResults() {
+    movieDetails.classList.add('hidden');
+    searchResults.classList.remove('hidden');
+}
+
+// Show welcome section
+function showWelcomeSection() {
+    movieDetails.classList.add('hidden');
+    searchResults.classList.add('hidden');
+    welcomeSection.classList.remove('hidden');
+}
+
+// Web scraper for fetching movie and TV show data
+// Now using the new IMDb Unlimited Scraper API
+const SCRAPER_API_BASE = 'https://web-1-production.up.railway.app';
+
+async function scrapeMovieData() {
+    try {
+        console.log('Starting movie data scraping...');
+        
+        // Show loading indicators
+        const containers = [
+            'popularMoviesContainer', 
+            'popularTVShowsContainer',
+            'latestMoviesContainer',
+            'latestTVShowsContainer',
+            'comingSoonMoviesContainer',
+            'comingSoonTVShowsContainer'
+        ];
+        
+        containers.forEach(containerId => {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = '<p class="text-center col-span-full">Loading data...</p>';
+            }
+        });
+        
+        // Fetch all data in parallel to improve performance
+        const [
+            popularMoviesResult,
+            popularTVShowsResult,
+            latestMoviesResult,
+            latestTVShowsResult,
+            comingSoonMoviesResult,
+            comingSoonTVShowsResult
+        ] = await Promise.allSettled([
+            scrapePopularMovies(),
+            scrapePopularTVShows(),
+            scrapeLatestMovies(),
+            scrapeLatestTVShows(),
+            scrapeComingSoonMovies(),
+            scrapeComingSoonTVShows()
+        ]);
+        
+        console.log('All scraping results:', {
+            popularMoviesResult,
+            popularTVShowsResult,
+            latestMoviesResult,
+            latestTVShowsResult,
+            comingSoonMoviesResult,
+            comingSoonTVShowsResult
+        });
+        
+        // Extract results or use empty arrays for failed requests
+        const popularMovies = popularMoviesResult.status === 'fulfilled' ? popularMoviesResult.value : [];
+        const popularTVShows = popularTVShowsResult.status === 'fulfilled' ? popularTVShowsResult.value : [];
+        const latestMovies = latestMoviesResult.status === 'fulfilled' ? latestMoviesResult.value : [];
+        const latestTVShows = latestTVShowsResult.status === 'fulfilled' ? latestTVShowsResult.value : [];
+        const comingSoonMovies = comingSoonMoviesResult.status === 'fulfilled' ? comingSoonMoviesResult.value : [];
+        const comingSoonTVShows = comingSoonTVShowsResult.status === 'fulfilled' ? comingSoonTVShowsResult.value : [];
+        
+        console.log('Extracted data:', {
+            popularMovies,
+            popularTVShows,
+            latestMovies,
+            latestTVShows,
+            comingSoonMovies,
+            comingSoonTVShows
+        });
+        
+        // Check if we have any data to display
+        const hasData = 
+            popularMovies.length > 0 || 
+            popularTVShows.length > 0 || 
+            latestMovies.length > 0 || 
+            latestTVShows.length > 0 || 
+            comingSoonMovies.length > 0 || 
+            comingSoonTVShows.length > 0;
+        
+        if (hasData) {
+            // Display the content
+            displayPopularContent(popularMovies, 'popularMoviesContainer');
+            displayPopularContent(popularTVShows, 'popularTVShowsContainer');
+            displayPopularContent(latestMovies, 'latestMoviesContainer');
+            displayPopularContent(latestTVShows, 'latestTVShowsContainer');
+            displayPopularContent(comingSoonMovies, 'comingSoonMoviesContainer');
+            displayPopularContent(comingSoonTVShows, 'comingSoonTVShowsContainer');
+            
+            console.log('Finished displaying all content');
+        } else {
+            // Only show fallback if we have no data at all
+            console.log('No data found, showing fallback content');
+            loadFallbackContent();
+        }
+    } catch (error) {
+        console.error('Error in web scraper:', error);
+        
+        // Fallback to curated lists if scraping fails
+        loadFallbackContent();
+    }
+}
+
+// Scrape popular movies names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using individual searches
+// Implements caching to reduce API calls
+async function scrapePopularMovies() {
+    const cacheKey = getCacheKey('scrapePopularMovies', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        // Only return cached data if it's not empty
+        if (cachedData.length > 0) {
+            console.log('Using cached data for popular movies:', cachedData);
+            return cachedData;
+        }
+        // If cached data is empty, remove it and fetch fresh data
+        localStorage.removeItem(cacheKey);
+    }
+    
+    try {
+        console.log('Fetching popular movies from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/top`);
+        const data = await response.json();
+        console.log('Scraper API response for popular movies:', data);
+        
+        if (data.items) {
+            // Extract titles - limit to first 3 for better performance
+            // Remove the numbering prefix (e.g., "1. ", "2. ") from titles
+            const titles = data.items.slice(0, 3).map(item => {
+                const title = item.title;
+                // Remove numbering prefix if present
+                return title.replace(/^\d+\.\s*/, '');
+            });
+            console.log('Extracted titles:', titles);
+            
+            // Try searching for each title individually
+            const detailedMovies = [];
+            for (const title of titles) {
+                try {
+                    console.log(`Searching for: ${title}`);
+                    const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(title)}`);
+                    const searchData = await searchResponse.json();
+                    console.log(`Search result for ${title}:`, searchData);
+                    
+                    if (searchData.ok && searchData.description && searchData.description.length > 0) {
+                        // Use the first search result
+                        const movie = searchData.description[0];
+                        detailedMovies.push({
+                            id: movie['#IMDB_ID'],
+                            title: movie['#TITLE'],
+                            year: movie['#YEAR'],
+                            image: movie['#IMG_POSTER'],
+                            type: 'movie',
+                            actors: movie['#ACTORS'] ? movie['#ACTORS'].split(', ') : [],
+                            rating: movie['#RATING'] || ''
+                        });
+                        console.log(`Found movie: ${movie['#TITLE']}`);
+                    }
+                } catch (searchError) {
+                    console.error(`Error searching for ${title}:`, searchError);
+                }
+            }
+            
+            console.log('Detailed movies found:', detailedMovies);
+            
+            // Only cache if we have data
+            if (detailedMovies.length > 0) {
+                setCachedData(cacheKey, detailedMovies);
+            }
+            return detailedMovies;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching popular movies:', error);
+        return [];
+    }
+}
+
+// Scrape popular TV shows names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using individual searches
+// Implements caching to reduce API calls
+async function scrapePopularTVShows() {
+    const cacheKey = getCacheKey('scrapePopularTVShows', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        // Only return cached data if it's not empty
+        if (cachedData.length > 0) {
+            console.log('Using cached data for popular TV shows:', cachedData);
+            return cachedData;
+        }
+        // If cached data is empty, remove it and fetch fresh data
+        localStorage.removeItem(cacheKey);
+    }
+    
+    try {
+        console.log('Fetching popular TV shows from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        const data = await response.json();
+        console.log('Scraper API response for popular TV shows:', data);
+        
+        if (data.items) {
+            // Extract titles - limit to first 3 for better performance
+            // Remove the numbering prefix (e.g., "1. ", "2. ") from titles
+            const titles = data.items.slice(0, 3).map(item => {
+                const title = item.title;
+                // Remove numbering prefix if present
+                return title.replace(/^\d+\.\s*/, '');
+            });
+            console.log('Extracted titles:', titles);
+            
+            // Try searching for each title individually
+            const detailedShows = [];
+            for (const title of titles) {
+                try {
+                    console.log(`Searching for: ${title}`);
+                    const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(title)}`);
+                    const searchData = await searchResponse.json();
+                    console.log(`Search result for ${title}:`, searchData);
+                    
+                    if (searchData.ok && searchData.description && searchData.description.length > 0) {
+                        // Use the first search result
+                        const show = searchData.description[0];
+                        detailedShows.push({
+                            id: show['#IMDB_ID'],
+                            title: show['#TITLE'],
+                            year: show['#YEAR'],
+                            image: show['#IMG_POSTER'],
+                            type: 'tv',
+                            actors: show['#ACTORS'] ? show['#ACTORS'].split(', ') : [],
+                            rating: show['#RATING'] || ''
+                        });
+                        console.log(`Found show: ${show['#TITLE']}`);
+                    }
+                } catch (searchError) {
+                    console.error(`Error searching for ${title}:`, searchError);
+                }
+            }
+            
+            console.log('Detailed shows found:', detailedShows);
+            
+            // Only cache if we have data
+            if (detailedShows.length > 0) {
+                setCachedData(cacheKey, detailedShows);
+            }
+            return detailedShows;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching popular TV shows:', error);
+        return [];
+    }
+}
+
+// Scrape coming soon TV shows names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using a combined search
+// Implements caching to reduce API calls
+async function scrapeComingSoonTVShows() {
+    const cacheKey = getCacheKey('scrapeComingSoonTVShows', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        // Only return cached data if it's not empty
+        if (cachedData.length > 0) {
+            return cachedData;
+        }
+        // If cached data is empty, remove it and fetch fresh data
+        localStorage.removeItem(cacheKey);
+    }
+    
+    try {
+        const response = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+        const data = await response.json();
+        
+        if (data.items) {
+            // Extract titles - limit to first 5 for better performance
+            const titles = data.items.slice(0, 5).map(item => item.title);
+            
+            // Create a combined search query to reduce API calls
+            const combinedQuery = titles.join(' ');
+            const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(combinedQuery)}`);
+            const searchData = await searchResponse.json();
+            
+            if (searchData.ok && searchData.description) {
+                // Process search results and map back to our titles
+                const detailedShows = [];
+                const searchResults = searchData.description;
+                
+                // For each title from scraper, find the best matching result
+                titles.forEach(title => {
+                    // Find the best match for this title
+                    const bestMatch = searchResults.find(show => 
+                        show['#TITLE'].toLowerCase().includes(title.toLowerCase()) ||
+                        title.toLowerCase().includes(show['#TITLE'].toLowerCase())
+                    );
+                    
+                    if (bestMatch) {
+                        detailedShows.push({
+                            id: bestMatch['#IMDB_ID'],
+                            title: bestMatch['#TITLE'],
+                            year: bestMatch['#YEAR'],
+                            image: bestMatch['#IMG_POSTER'],
+                            type: 'tv',
+                            actors: bestMatch['#ACTORS'] ? bestMatch['#ACTORS'].split(', ') : [],
+                            rating: bestMatch['#RATING'] || ''
+                        });
+                    }
+                });
+                
+                // Only cache if we have data
+                if (detailedShows.length > 0) {
+                    setCachedData(cacheKey, detailedShows);
+                }
+                return detailedShows;
+            }
+            
+            return [];
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching coming soon TV shows:', error);
+        return [];
+    }
+}
+
+
+// Scrape latest movies names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using a combined search
+// Implements caching to reduce API calls
+async function scrapeLatestMovies() {
+    const cacheKey = getCacheKey('scrapeLatestMovies', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        return cachedData;
+    }
+    
+    try {
+        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        const data = await response.json();
+        
+        if (data.items) {
+            // Extract titles - limit to first 5 for better performance
+            const titles = data.items.slice(0, 5).map(item => item.title);
+            
+            // Create a combined search query to reduce API calls
+            const combinedQuery = titles.join(' ');
+            const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(combinedQuery)}`);
+            const searchData = await searchResponse.json();
+            
+            if (searchData.ok && searchData.description) {
+                // Process search results and map back to our titles
+                const detailedMovies = [];
+                const searchResults = searchData.description;
+                
+                // For each title from scraper, find the best matching result
+                titles.forEach(title => {
+                    // Find the best match for this title
+                    const bestMatch = searchResults.find(movie => 
+                        movie['#TITLE'].toLowerCase().includes(title.toLowerCase()) ||
+                        title.toLowerCase().includes(movie['#TITLE'].toLowerCase())
+                    );
+                    
+                    if (bestMatch) {
+                        detailedMovies.push({
+                            id: bestMatch['#IMDB_ID'],
+                            title: bestMatch['#TITLE'],
+                            year: bestMatch['#YEAR'],
+                            image: bestMatch['#IMG_POSTER'],
+                            type: 'movie',
+                            actors: bestMatch['#ACTORS'] ? bestMatch['#ACTORS'].split(', ') : [],
+                            rating: bestMatch['#RATING'] || ''
+                        });
+                    }
+                });
+                
+                // Cache the results
+                setCachedData(cacheKey, detailedMovies);
+                return detailedMovies;
+            }
+            
+            return [];
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching latest movies:', error);
+        return [];
+    }
+}
+
+// Scrape coming soon movies names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using a combined search
+// Implements caching to reduce API calls
+async function scrapeComingSoonMovies() {
+    const cacheKey = getCacheKey('scrapeComingSoonMovies', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        return cachedData;
+    }
+    
+    try {
+        const response = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+        const data = await response.json();
+        
+        if (data.items) {
+            // Extract titles - limit to first 5 for better performance
+            const titles = data.items.slice(0, 5).map(item => item.title);
+            
+            // Create a combined search query to reduce API calls
+            const combinedQuery = titles.join(' ');
+            const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(combinedQuery)}`);
+            const searchData = await searchResponse.json();
+            
+            if (searchData.ok && searchData.description) {
+                // Process search results and map back to our titles
+                const detailedMovies = [];
+                const searchResults = searchData.description;
+                
+                // For each title from scraper, find the best matching result
+                titles.forEach(title => {
+                    // Find the best match for this title
+                    const bestMatch = searchResults.find(movie => 
+                        movie['#TITLE'].toLowerCase().includes(title.toLowerCase()) ||
+                        title.toLowerCase().includes(movie['#TITLE'].toLowerCase())
+                    );
+                    
+                    if (bestMatch) {
+                        detailedMovies.push({
+                            id: bestMatch['#IMDB_ID'],
+                            title: bestMatch['#TITLE'],
+                            year: bestMatch['#YEAR'],
+                            image: bestMatch['#IMG_POSTER'],
+                            type: 'movie',
+                            actors: bestMatch['#ACTORS'] ? bestMatch['#ACTORS'].split(', ') : [],
+                            rating: bestMatch['#RATING'] || ''
+                        });
+                    }
+                });
+                
+                // Cache the results
+                setCachedData(cacheKey, detailedMovies);
+                return detailedMovies;
+            }
+            
+            return [];
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching coming soon movies:', error);
+        return [];
+    }
+}
+
+// Scrape coming soon TV shows names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using a combined search
+// Implements caching to reduce API calls
+async function scrapeComingSoonTVShows() {
+    const cacheKey = getCacheKey('scrapeComingSoonTVShows', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        return cachedData;
+    }
+    
+    try {
+        const response = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+        const data = await response.json();
+        
+        if (data.items) {
+            // Extract titles - limit to first 5 for better performance
+            const titles = data.items.slice(0, 5).map(item => item.title);
+            
+            // Create a combined search query to reduce API calls
+            const combinedQuery = titles.join(' ');
+            const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(combinedQuery)}`);
+            const searchData = await searchResponse.json();
+            
+            if (searchData.ok && searchData.description) {
+                // Process search results and map back to our titles
+                const detailedShows = [];
+                const searchResults = searchData.description;
+                
+                // For each title from scraper, find the best matching result
+                titles.forEach(title => {
+                    // Find the best match for this title
+                    const bestMatch = searchResults.find(show => 
+                        show['#TITLE'].toLowerCase().includes(title.toLowerCase()) ||
+                        title.toLowerCase().includes(show['#TITLE'].toLowerCase())
+                    );
+                    
+                    if (bestMatch) {
+                        detailedShows.push({
+                            id: bestMatch['#IMDB_ID'],
+                            title: bestMatch['#TITLE'],
+                            year: bestMatch['#YEAR'],
+                            image: bestMatch['#IMG_POSTER'],
+                            type: 'tv',
+                            actors: bestMatch['#ACTORS'] ? bestMatch['#ACTORS'].split(', ') : [],
+                            rating: bestMatch['#RATING'] || ''
+                        });
+                    }
+                });
+                
+                // Cache the results
+                setCachedData(cacheKey, detailedShows);
+                return detailedShows;
+            }
+            
+            return [];
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching coming soon TV shows:', error);
+        return [];
+    }
+}
+
+// Scrape latest TV shows names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using a combined search
+// Implements caching to reduce API calls
+async function scrapeLatestTVShows() {
+    const cacheKey = getCacheKey('scrapeLatestTVShows', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        return cachedData;
+    }
+    
+    try {
+        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        const data = await response.json();
+        
+        if (data.items) {
+            // Extract titles - limit to first 5 for better performance
+            const titles = data.items.slice(0, 5).map(item => item.title);
+            
+            // Create a combined search query to reduce API calls
+            const combinedQuery = titles.join(' ');
+            const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(combinedQuery)}`);
+            const searchData = await searchResponse.json();
+            
+            if (searchData.ok && searchData.description) {
+                // Process search results and map back to our titles
+                const detailedShows = [];
+                const searchResults = searchData.description;
+                
+                // For each title from scraper, find the best matching result
+                titles.forEach(title => {
+                    // Find the best match for this title
+                    const bestMatch = searchResults.find(show => 
+                        show['#TITLE'].toLowerCase().includes(title.toLowerCase()) ||
+                        title.toLowerCase().includes(show['#TITLE'].toLowerCase())
+                    );
+                    
+                    if (bestMatch) {
+                        detailedShows.push({
+                            id: bestMatch['#IMDB_ID'],
+                            title: bestMatch['#TITLE'],
+                            year: bestMatch['#YEAR'],
+                            image: bestMatch['#IMG_POSTER'],
+                            type: 'tv',
+                            actors: bestMatch['#ACTORS'] ? bestMatch['#ACTORS'].split(', ') : [],
+                            rating: bestMatch['#RATING'] || ''
+                        });
+                    }
+                });
+                
+                // Cache the results
+                setCachedData(cacheKey, detailedShows);
+                return detailedShows;
+            }
+            
+            return [];
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching latest TV shows:', error);
+        return [];
+    }
+}
+
+// Scrape popular TV shows names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using a combined search
+// Implements caching to reduce API calls
+async function scrapePopularTVShows() {
+    const cacheKey = getCacheKey('scrapePopularTVShows', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        return cachedData;
+    }
+    
+    try {
+        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        const data = await response.json();
+        
+        if (data.items) {
+            // Extract titles - limit to first 5 for better performance
+            const titles = data.items.slice(0, 5).map(item => item.title);
+            
+            // Create a combined search query to reduce API calls
+            const combinedQuery = titles.join(' ');
+            const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(combinedQuery)}`);
+            const searchData = await searchResponse.json();
+            
+            if (searchData.ok && searchData.description) {
+                // Process search results and map back to our titles
+                const detailedShows = [];
+                const searchResults = searchData.description;
+                
+                // For each title from scraper, find the best matching result
+                titles.forEach(title => {
+                    // Find the best match for this title
+                    const bestMatch = searchResults.find(show => 
+                        show['#TITLE'].toLowerCase().includes(title.toLowerCase()) ||
+                        title.toLowerCase().includes(show['#TITLE'].toLowerCase())
+                    );
+                    
+                    if (bestMatch) {
+                        detailedShows.push({
+                            id: bestMatch['#IMDB_ID'],
+                            title: bestMatch['#TITLE'],
+                            year: bestMatch['#YEAR'],
+                            image: bestMatch['#IMG_POSTER'],
+                            type: 'tv',
+                            actors: bestMatch['#ACTORS'] ? bestMatch['#ACTORS'].split(', ') : [],
+                            rating: bestMatch['#RATING'] || ''
+                        });
+                    }
+                });
+                
+                // Cache the results
+                setCachedData(cacheKey, detailedShows);
+                return detailedShows;
+            }
+            
+            return [];
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching popular TV shows:', error);
+        return [];
+    }
+}
+
+// Scrape latest movies names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using a combined search
+// Implements caching to reduce API calls
+async function scrapeLatestMovies() {
+    const cacheKey = getCacheKey('scrapeLatestMovies', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        return cachedData;
+    }
+    
+    try {
+        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        const data = await response.json();
+        
+        if (data.items) {
+            // Extract titles - limit to first 5 for better performance
+            const titles = data.items.slice(0, 5).map(item => item.title);
+            
+            // Create a combined search query to reduce API calls
+            const combinedQuery = titles.join(' ');
+            const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(combinedQuery)}`);
+            const searchData = await searchResponse.json();
+            
+            if (searchData.ok && searchData.description) {
+                // Process search results and map back to our titles
+                const detailedMovies = [];
+                const searchResults = searchData.description;
+                
+                // For each title from scraper, find the best matching result
+                titles.forEach(title => {
+                    // Find the best match for this title
+                    const bestMatch = searchResults.find(movie => 
+                        movie['#TITLE'].toLowerCase().includes(title.toLowerCase()) ||
+                        title.toLowerCase().includes(movie['#TITLE'].toLowerCase())
+                    );
+                    
+                    if (bestMatch) {
+                        detailedMovies.push({
+                            id: bestMatch['#IMDB_ID'],
+                            title: bestMatch['#TITLE'],
+                            year: bestMatch['#YEAR'],
+                            image: bestMatch['#IMG_POSTER'],
+                            type: 'movie',
+                            actors: bestMatch['#ACTORS'] ? bestMatch['#ACTORS'].split(', ') : [],
+                            rating: bestMatch['#RATING'] || ''
+                        });
+                    }
+                });
+                
+                // Cache the results
+                setCachedData(cacheKey, detailedMovies);
+                return detailedMovies;
+            }
+            
+            return [];
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching latest movies:', error);
+        return [];
+    }
+}
+
+// Scrape latest TV shows names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using individual searches
+// Implements caching to reduce API calls
+async function scrapeLatestTVShows() {
+    const cacheKey = getCacheKey('scrapeLatestTVShows', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        // Only return cached data if it's not empty
+        if (cachedData.length > 0) {
+            console.log('Using cached data for latest TV shows:', cachedData);
+            return cachedData;
+        }
+        // If cached data is empty, remove it and fetch fresh data
+        localStorage.removeItem(cacheKey);
+    }
+    
+    try {
+        console.log('Fetching latest TV shows from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        const data = await response.json();
+        console.log('Scraper API response for latest TV shows:', data);
+        
+        if (data.items) {
+            // Extract titles - limit to first 3 for better performance
+            const titles = data.items.slice(0, 3).map(item => item.title);
+            console.log('Extracted titles:', titles);
+            
+            // Try searching for each title individually
+            const detailedShows = [];
+            for (const title of titles) {
+                try {
+                    console.log(`Searching for: ${title}`);
+                    const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(title)}`);
+                    const searchData = await searchResponse.json();
+                    console.log(`Search result for ${title}:`, searchData);
+                    
+                    if (searchData.ok && searchData.description && searchData.description.length > 0) {
+                        // Use the first search result
+                        const show = searchData.description[0];
+                        detailedShows.push({
+                            id: show['#IMDB_ID'],
+                            title: show['#TITLE'],
+                            year: show['#YEAR'],
+                            image: show['#IMG_POSTER'],
+                            type: 'tv',
+                            actors: show['#ACTORS'] ? show['#ACTORS'].split(', ') : [],
+                            rating: show['#RATING'] || ''
+                        });
+                        console.log(`Found show: ${show['#TITLE']}`);
+                    }
+                } catch (searchError) {
+                    console.error(`Error searching for ${title}:`, searchError);
+                }
+            }
+            
+            console.log('Detailed shows found:', detailedShows);
+            
+            // Only cache if we have data
+            if (detailedShows.length > 0) {
+                setCachedData(cacheKey, detailedShows);
+            }
+            return detailedShows;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching latest TV shows:', error);
+        return [];
+    }
+}
+
+// Scrape coming soon TV shows names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using individual searches
+// Implements caching to reduce API calls
+async function scrapeComingSoonTVShows() {
+    const cacheKey = getCacheKey('scrapeComingSoonTVShows', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        // Only return cached data if it's not empty
+        if (cachedData.length > 0) {
+            console.log('Using cached data for coming soon TV shows:', cachedData);
+            return cachedData;
+        }
+        // If cached data is empty, remove it and fetch fresh data
+        localStorage.removeItem(cacheKey);
+    }
+    
+    try {
+        console.log('Fetching coming soon TV shows from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+        const data = await response.json();
+        console.log('Scraper API response for coming soon TV shows:', data);
+        
+        if (data.items) {
+            // Extract titles - limit to first 3 for better performance
+            const titles = data.items.slice(0, 3).map(item => item.title);
+            console.log('Extracted titles:', titles);
+            
+            // Try searching for each title individually
+            const detailedShows = [];
+            for (const title of titles) {
+                try {
+                    console.log(`Searching for: ${title}`);
+                    const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(title)}`);
+                    const searchData = await searchResponse.json();
+                    console.log(`Search result for ${title}:`, searchData);
+                    
+                    if (searchData.ok && searchData.description && searchData.description.length > 0) {
+                        // Use the first search result
+                        const show = searchData.description[0];
+                        detailedShows.push({
+                            id: show['#IMDB_ID'],
+                            title: show['#TITLE'],
+                            year: show['#YEAR'],
+                            image: show['#IMG_POSTER'],
+                            type: 'tv',
+                            actors: show['#ACTORS'] ? show['#ACTORS'].split(', ') : [],
+                            rating: show['#RATING'] || ''
+                        });
+                        console.log(`Found show: ${show['#TITLE']}`);
+                    }
+                } catch (searchError) {
+                    console.error(`Error searching for ${title}:`, searchError);
+                }
+            }
+            
+            console.log('Detailed shows found:', detailedShows);
+            
+            // Only cache if we have data
+            if (detailedShows.length > 0) {
+                setCachedData(cacheKey, detailedShows);
+            }
+            return detailedShows;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching coming soon TV shows:', error);
+        return [];
+    }
+}
+
+// Scrape latest movies names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using individual searches
+// Implements caching to reduce API calls
+async function scrapeLatestMovies() {
+    const cacheKey = getCacheKey('scrapeLatestMovies', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        // Only return cached data if it's not empty
+        if (cachedData.length > 0) {
+            console.log('Using cached data for latest movies:', cachedData);
+            return cachedData;
+        }
+        // If cached data is empty, remove it and fetch fresh data
+        localStorage.removeItem(cacheKey);
+    }
+    
+    try {
+        console.log('Fetching latest movies from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        const data = await response.json();
+        console.log('Scraper API response for latest movies:', data);
+        
+        if (data.items) {
+            // Extract titles - limit to first 3 for better performance
+            const titles = data.items.slice(0, 3).map(item => item.title);
+            console.log('Extracted titles:', titles);
+            
+            // Try searching for each title individually
+            const detailedMovies = [];
+            for (const title of titles) {
+                try {
+                    console.log(`Searching for: ${title}`);
+                    const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(title)}`);
+                    const searchData = await searchResponse.json();
+                    console.log(`Search result for ${title}:`, searchData);
+                    
+                    if (searchData.ok && searchData.description && searchData.description.length > 0) {
+                        // Use the first search result
+                        const movie = searchData.description[0];
+                        detailedMovies.push({
+                            id: movie['#IMDB_ID'],
+                            title: movie['#TITLE'],
+                            year: movie['#YEAR'],
+                            image: movie['#IMG_POSTER'],
+                            type: 'movie',
+                            actors: movie['#ACTORS'] ? movie['#ACTORS'].split(', ') : [],
+                            rating: movie['#RATING'] || ''
+                        });
+                    }
+                } catch (searchError) {
+                    console.error(`Error searching for ${title}:`, searchError);
+                }
+            }
+            
+            // Cache the results
+            setCachedData(cacheKey, detailedMovies);
+            return detailedMovies;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching latest movies:', error);
+        return [];
+    }
+}
+
+// Scrape popular TV shows names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using individual searches
+// Implements caching to reduce API calls
+async function scrapePopularTVShows() {
+    const cacheKey = getCacheKey('scrapePopularTVShows', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        // Only return cached data if it's not empty
+        if (cachedData.length > 0) {
+            console.log('Using cached data for popular TV shows:', cachedData);
+            return cachedData;
+        }
+        // If cached data is empty, remove it and fetch fresh data
+        localStorage.removeItem(cacheKey);
+    }
+    
+    try {
+        console.log('Fetching popular TV shows from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        const data = await response.json();
+        console.log('Scraper API response for popular TV shows:', data);
+        
+        if (data.items) {
+            // Extract titles - limit to first 3 for better performance
+            // Remove the numbering prefix (e.g., "1. ", "2. ") from titles
+            const titles = data.items.slice(0, 3).map(item => {
+                const title = item.title;
+                // Remove numbering prefix if present
+                return title.replace(/^\d+\.\s*/, '');
+            });
+            console.log('Extracted titles:', titles);
+            
+            // Try searching for each title individually
+            const detailedShows = [];
+            for (const title of titles) {
+                try {
+                    console.log(`Searching for: ${title}`);
+                    const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(title)}`);
+                    const searchData = await searchResponse.json();
+                    console.log(`Search result for ${title}:`, searchData);
+                    
+                    if (searchData.ok && searchData.description && searchData.description.length > 0) {
+                        // Use the first search result
+                        const show = searchData.description[0];
+                        detailedShows.push({
+                            id: show['#IMDB_ID'],
+                            title: show['#TITLE'],
+                            year: show['#YEAR'],
+                            image: show['#IMG_POSTER'],
+                            type: 'tv',
+                            actors: show['#ACTORS'] ? show['#ACTORS'].split(', ') : [],
+                            rating: show['#RATING'] || ''
+                        });
+                        console.log(`Found show: ${show['#TITLE']}`);
+                    }
+                } catch (searchError) {
+                    console.error(`Error searching for ${title}:`, searchError);
+                }
+            }
+            
+            console.log('Detailed shows found:', detailedShows);
+            
+            // Only cache if we have data
+            if (detailedShows.length > 0) {
+                setCachedData(cacheKey, detailedShows);
+            }
+            return detailedShows;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching popular TV shows:', error);
+        return [];
+    }
+}
+
+// Scrape popular movies names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using individual searches
+// Implements caching to reduce API calls
+async function scrapePopularMovies() {
+    const cacheKey = getCacheKey('scrapePopularMovies', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        // Only return cached data if it's not empty
+        if (cachedData.length > 0) {
+            console.log('Using cached data for popular movies:', cachedData);
+            return cachedData;
+        }
+        // If cached data is empty, remove it and fetch fresh data
+        localStorage.removeItem(cacheKey);
+    }
+    
+    try {
+        console.log('Fetching popular movies from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/top`);
+        const data = await response.json();
+        console.log('Scraper API response for popular movies:', data);
+        
+        if (data.items) {
+            // Extract titles - limit to first 3 for better performance
+            // Remove the numbering prefix (e.g., "1. ", "2. ") from titles
+            const titles = data.items.slice(0, 3).map(item => {
+                const title = item.title;
+                // Remove numbering prefix if present
+                return title.replace(/^\d+\.\s*/, '');
+            });
+            console.log('Extracted titles:', titles);
+            
+            // Try searching for each title individually
+            const detailedMovies = [];
+            for (const title of titles) {
+                try {
+                    console.log(`Searching for: ${title}`);
+                    const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(title)}`);
+                    const searchData = await searchResponse.json();
+                    console.log(`Search result for ${title}:`, searchData);
+                    
+                    if (searchData.ok && searchData.description && searchData.description.length > 0) {
+                        // Use the first search result
+                        const movie = searchData.description[0];
+                        detailedMovies.push({
+                            id: movie['#IMDB_ID'],
+                            title: movie['#TITLE'],
+                            year: movie['#YEAR'],
+                            image: movie['#IMG_POSTER'],
+                            type: 'movie',
+                            actors: movie['#ACTORS'] ? movie['#ACTORS'].split(', ') : [],
+                            rating: movie['#RATING'] || ''
+                        });
+                    }
+                } catch (searchError) {
+                    console.error(`Error searching for ${title}:`, searchError);
+                }
+            }
+            
+            // Cache the results
+            setCachedData(cacheKey, detailedMovies);
+            return detailedMovies;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching latest movies:', error);
+        return [];
+    }
+}
+
+// Scrape coming soon movies names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using individual searches
+// Implements caching to reduce API calls
+async function scrapeComingSoonMovies() {
+    const cacheKey = getCacheKey('scrapeComingSoonMovies', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        // Only return cached data if it's not empty
+        if (cachedData.length > 0) {
+            console.log('Using cached data for coming soon movies:', cachedData);
+            return cachedData;
+        }
+        // If cached data is empty, remove it and fetch fresh data
+        localStorage.removeItem(cacheKey);
+    }
+    
+    try {
+        console.log('Fetching coming soon movies from scraper API...');
+        const response = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+        const data = await response.json();
+        console.log('Scraper API response for coming soon movies:', data);
+        
+        if (data.items) {
+            // Extract titles - limit to first 3 for better performance
+            const titles = data.items.slice(0, 3).map(item => item.title);
+            console.log('Extracted titles:', titles);
+            
+            // Try searching for each title individually
+            const detailedMovies = [];
+            for (const title of titles) {
+                try {
+                    console.log(`Searching for: ${title}`);
+                    const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(title)}`);
+                    const searchData = await searchResponse.json();
+                    console.log(`Search result for ${title}:`, searchData);
+                    
+                    if (searchData.ok && searchData.description && searchData.description.length > 0) {
+                        // Use the first search result
+                        const movie = searchData.description[0];
+                        detailedMovies.push({
+                            id: movie['#IMDB_ID'],
+                            title: movie['#TITLE'],
+                            year: movie['#YEAR'],
+                            image: movie['#IMG_POSTER'],
+                            type: 'movie',
+                            actors: movie['#ACTORS'] ? movie['#ACTORS'].split(', ') : [],
+                            rating: movie['#RATING'] || ''
+                        });
+                        console.log(`Found movie: ${movie['#TITLE']}`);
+                    }
+                } catch (searchError) {
+                    console.error(`Error searching for ${title}:`, searchError);
+                }
+            }
+            
+            console.log('Detailed movies found:', detailedMovies);
+            
+            // Only cache if we have data
+            if (detailedMovies.length > 0) {
+                setCachedData(cacheKey, detailedMovies);
+            }
+            return detailedMovies;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching coming soon movies:', error);
+        return [];
+    }
+}
+
+// Scrape coming soon TV shows names using the new IMDb Unlimited API
+// Then use the actual movie API to fetch detailed information
+// Optimized to reduce total number of API calls by using a combined search
+// Implements caching to reduce API calls
+async function scrapeComingSoonTVShows() {
+    const cacheKey = getCacheKey('scrapeComingSoonTVShows', {});
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+        // Only return cached data if it's not empty
+        if (cachedData.length > 0) {
+            return cachedData;
+        }
+        // If cached data is empty, remove it and fetch fresh data
+        localStorage.removeItem(cacheKey);
+    }
+    
+    try {
+        const response = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+        const data = await response.json();
+        
+        if (data.items) {
+            // Extract titles - limit to first 5 for better performance
+            const titles = data.items.slice(0, 5).map(item => item.title);
+            
+            // Create a combined search query to reduce API calls
+            const combinedQuery = titles.join(' ');
+            const searchResponse = await fetch(`${API_BASE}/search?q=${encodeURIComponent(combinedQuery)}`);
+            const searchData = await searchResponse.json();
+            
+            if (searchData.ok && searchData.description) {
+                // Process search results and map back to our titles
+                const detailedShows = [];
+                const searchResults = searchData.description;
+                
+                // For each title from scraper, find the best matching result
+                titles.forEach(title => {
+                    // Find the best match for this title
+                    const bestMatch = searchResults.find(show => 
+                        show['#TITLE'].toLowerCase().includes(title.toLowerCase()) ||
+                        title.toLowerCase().includes(show['#TITLE'].toLowerCase())
+                    );
+                    
+                    if (bestMatch) {
+                        detailedShows.push({
+                            id: bestMatch['#IMDB_ID'],
+                            title: bestMatch['#TITLE'],
+                            year: bestMatch['#YEAR'],
+                            image: bestMatch['#IMG_POSTER'],
+                            type: 'tv',
+                            actors: bestMatch['#ACTORS'] ? bestMatch['#ACTORS'].split(', ') : [],
+                            rating: bestMatch['#RATING'] || ''
+                        });
+                    }
+                });
+                
+                // Only cache if we have data
+                if (detailedShows.length > 0) {
+                    setCachedData(cacheKey, detailedShows);
+                }
+                return detailedShows;
+            }
+            
+            return [];
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching coming soon TV shows:', error);
+        return [];
+    }
+}
+
+// Load fallback content if scraping fails
+function loadFallbackContent() {
+    // Popular movies data (curated list)
+    const popularMovies = [
+        { id: 'tt0111161', title: 'The Shawshank Redemption', year: '1994', image: 'https://m.media-amazon.com/images/M/MV5BNDE3ODcxYzMtY2YzZC00NmNlLWJiNDMtZDViZWM2MzIxZDYwXkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt0068646', title: 'The Godfather', year: '1972', image: 'https://m.media-amazon.com/images/M/MV5BM2MyNjYxNmUtYTAwNi00MTYxLWJmNWYtYzZlODY3ZTk3OTFlXkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt0468569', title: 'The Dark Knight', year: '2008', image: 'https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_.jpg' },
+        { id: 'tt0076759', title: 'Star Wars', year: '1977', image: 'https://m.media-amazon.com/images/M/MV5BNzVlY2MwMjktM2E4OS00Y2Y3LWE3ZjctYzhkZGM3YzA1ZWM2XkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt0109830', title: 'Forrest Gump', year: '1994', image: 'https://m.media-amazon.com/images/M/MV5BNWIwODRlZTUtY2U3ZS00Yzg1LWJhNzYtMmZiYmEyNmU1NjMzXkEyXkFqcGc@._V1_.jpg' }
+    ];
+    
+    // Popular TV shows data (curated list)
+    const popularTVShows = [
+        { id: 'tt0944947', title: 'Game of Thrones', year: '2011', image: 'https://m.media-amazon.com/images/M/MV5BYTRiNDQwYzAtMzVlZS00NTI5LWJjYjUtMzkwNTU5M2FhN2I1XkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt0903747', title: 'Breaking Bad', year: '2008', image: 'https://m.media-amazon.com/images/M/MV5BMjhiMzgxZTctNDc1Ni00OTIxLTlhMTYtZTA3ZWFkODRkNmE2XkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt4574334', title: 'Stranger Things', year: '2016', image: 'https://m.media-amazon.com/images/M/MV5BN2ZmNjQ2MzAtNDlhNi00MmQyLWJhZDMtNmJiMjFlOWY4MzcxXkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt1475582', title: 'Sherlock', year: '2010', image: 'https://m.media-amazon.com/images/M/MV5BMWY3NTljMjEtYzRiMi00NWM2LTkzNjItZTVmZjE0MTdjMjJhL2ltYWdlL2ltYWdlXkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt8111088', title: 'The Mandalorian', year: '2019', image: 'https://m.media-amazon.com/images/M/MV5BZDhlMzY0ZGItZTcyNS00ZTAxLWIyMmYtZGQ2ODg5OWZiYmJkXkEyXkFqcGc@._V1_.jpg' }
+    ];
+    
+    // Latest movies (curated list)
+    const latestMovies = [
+        { id: 'tt10872600', title: 'Spider-Man: No Way Home', year: '2021', image: 'https://m.media-amazon.com/images/M/MV5BZWMyYzFjYTYtNTRjYi00OGExLWE2YzgtZDUxYjg2MjI4MzhkXkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt9114286', title: 'Top Gun: Maverick', year: '2022', image: 'https://m.media-amazon.com/images/M/MV5BOWQwOTA1ZDQtNzk3Yi00ZmVmLWFiZGYtNjdjNThiYjJhNzRjXkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt10954984', title: 'Nope', year: '2022', image: 'https://m.media-amazon.com/images/M/MV5BMGIyNTI3NWItNTJkOS00MGYyLWE4NjgtZDhjMWQ4Y2JkZTU5XkEyXkFqcGc@._V1_.jpg' }
+    ];
+    
+    // Latest TV shows (curated list)
+    const latestTVShows = [
+        { id: 'tt14452776', title: 'The Last of Us', year: '2023', image: 'https://m.media-amazon.com/images/M/MV5BZGUzYTI3M2EtZmM0Yy00NGU4LWJiYWItMjM1MGRjYzliZjRjXkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt13058266', title: 'Wednesday', year: '2022', image: 'https://m.media-amazon.com/images/M/MV5BMTJmZWNlYzAtNzE5Zi00NzQ1LWE1ZjMtY2U5Y2U1MzhkMDYwXkEyXkFqcGc@._V1_.jpg' }
+    ];
+    
+    // Coming soon movies (curated list)
+    const comingSoonMovies = [
+        { id: 'tt10954600', title: 'Ant-Man and the Wasp: Quantumania', year: '2023', image: 'https://m.media-amazon.com/images/M/MV5BODZhNzQ2ZTItMDk1MS00NzMzLWIxYjItYjg5YjFjMDk1ZjNjXkEyXkFqcGc@._V1_.jpg' },
+        { id: 'tt9114286', title: 'Guardians of the Galaxy Vol. 3', year: '2023', image: 'https://m.media-amazon.com/images/M/MV5BZGMwOGIwZjUtOWM1Mi00YzJmLWE1NjAtMzUyOTc0OTRlYjRjXkEyXkFqcGc@._V1_.jpg' }
+    ];
+    
+    // Coming soon TV shows (curated list)
+    const comingSoonTVShows = [
+        { id: 'tt11280740', title: 'Severance', year: '2022', image: 'https://m.media-amazon.com/images/M/MV5BMjkwZjcwMGYtNjc1NS00NmMyLWE1NjAtMzUyOTc0OTRlYjRjXkEyXkFqcGc@._V1_.jpg' }
+    ];
+    
+    // Display the fallback content
+    displayPopularContent(popularMovies, 'popularMoviesContainer');
+    displayPopularContent(popularTVShows, 'popularTVShowsContainer');
+    displayPopularContent(latestMovies, 'latestMoviesContainer');
+    displayPopularContent(latestTVShows, 'latestTVShowsContainer');
+    displayPopularContent(comingSoonMovies, 'comingSoonMoviesContainer');
+    displayPopularContent(comingSoonTVShows, 'comingSoonTVShowsContainer');
+    
+    // Show error message
+    const containers = [
+        'popularMoviesContainer', 
+        'popularTVShowsContainer',
+        'latestMoviesContainer',
+        'latestTVShowsContainer',
+        'comingSoonMoviesContainer',
+        'comingSoonTVShowsContainer'
+    ];
+    
+    containers.forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (container) {
+            const errorMessage = document.createElement('p');
+            errorMessage.className = 'text-center col-span-full text-red-500';
+            errorMessage.textContent = 'Failed to scrape live data. Showing curated content.';
+            container.appendChild(errorMessage);
+        }
+    });
+}
+
+// Display popular content
+// Show actual content cards on homepage
+function displayPopularContent(contentList, containerId) {
+    console.log(`Displaying content for ${containerId}:`, contentList);
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`Container ${containerId} not found!`);
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    // Always display the actual content cards
+    contentList.forEach(item => {
+        const contentCard = document.createElement('div');
+        contentCard.className = 'bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1';
+        
+        // Build the HTML with additional information
+        let additionalInfo = '';
+        if (item.type) {
+            additionalInfo += `<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.type}</span>`;
+        }
+        if (item.rating) {
+            additionalInfo += `<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.rating}</span>`;
+        }
+        
+        contentCard.innerHTML = `
+            <img src="${item.image}" alt="${item.title}" class="w-full h-48 object-cover">
+            <div class="p-3">
+                <h4 class="font-bold text-sm mb-1 truncate">${item.title}</h4>
+                <p class="text-gray-400 text-xs">${item.year}</p>
+                ${additionalInfo}
+                ${item.actors && item.actors.length > 0 ? `<p class="text-gray-300 text-xs mt-1 truncate">${item.actors.slice(0, 3).join(', ')}</p>` : ''}
+            </div>
+        `;
+        
+        contentCard.addEventListener('click', () => {
+            fetchMovieDetails(item.id);
+        });
+        
+        container.appendChild(contentCard);
+    });
+}
+

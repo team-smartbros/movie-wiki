@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Genre API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">🧪 Genre API Tester</h1>
+        
+        <div class="mb-6">
+            <label class="block mb-2">Select Genre:</label>
+            <select id="genreSelect" class="bg-gray-800 text-white px-4 py-2 rounded">
+                <option value="action">Action</option>
+                <option value="comedy">Comedy</option>
+                <option value="drama">Drama</option>
+                <option value="horror">Horror</option>
+                <option value="sci_fi">Sci-Fi</option>
+                <option value="thriller">Thriller</option>
+                <option value="romance">Romance</option>
+                <option value="animation">Animation</option>
+            </select>
+            <button id="testBtn" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded ml-4">
+                Test API
+            </button>
+        </div>
+        
+        <div id="results" class="bg-gray-800 p-6 rounded-lg">
+            <p class="text-gray-400">Click "Test API" to see results...</p>
+        </div>
+    </div>
+    
+    <script>
+        const SCRAPER_API_BASE = 'https://web-1-production.up.railway.app';
+        
+        document.getElementById('testBtn').addEventListener('click', async function() {
+            const genre = document.getElementById('genreSelect').value;
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = '<p class="text-yellow-400">⏳ Loading...</p>';
+            
+            try {
+                const url = `${SCRAPER_API_BASE}/by_genre/${genre}`;
+                console.log('🔗 Fetching:', url);
+                
+                const response = await fetch(url);
+                
+                console.log('📡 Response status:', response.status);
+                console.log('📡 Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`API returned ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                console.log('✅ Data received:', data);
+                
+                let html = `
+                    <h2 class="text-2xl font-bold mb-4 text-green-400">✅ Success!</h2>
+                    <div class="mb-4">
+                        <p><strong>API URL:</strong> <code class="bg-gray-700 px-2 py-1 rounded">${url}</code></p>
+                        <p><strong>Items Count:</strong> ${data.items ? data.items.length : 0}</p>
+                    </div>
+                `;
+                
+                if (data.items && data.items.length > 0) {
+                    html += '<h3 class="text-xl font-bold mb-3">First 5 Items:</h3>';
+                    html += '<div class="space-y-3">';
+                    
+                    data.items.slice(0, 5).forEach((item, index) => {
+                        html += `
+                            <div class="bg-gray-700 p-3 rounded">
+                                <p><strong>${index + 1}. ${item.title}</strong></p>
+                                <p class="text-sm text-gray-400">Year: ${item.year || 'N/A'}</p>
+                                <p class="text-sm text-gray-400">Rating: ${item.rating || 'N/A'}</p>
+                                <p class="text-sm text-gray-400">IMDb ID: ${item.imdb_id || 'N/A'}</p>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                } else {
+                    html += '<p class="text-yellow-400">⚠️ No items found</p>';
+                }
+                
+                html += `
+                    <div class="mt-6">
+                        <h3 class="text-lg font-bold mb-2">Full JSON Response:</h3>
+                        <pre class="bg-gray-900 p-4 rounded overflow-x-auto text-xs">${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                resultsDiv.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-4 text-red-400">❌ Error!</h2>
+                    <p class="mb-2"><strong>Error Message:</strong> ${error.message}</p>
+                    <p class="mb-2"><strong>API URL:</strong> <code class="bg-gray-700 px-2 py-1 rounded">${SCRAPER_API_BASE}/by_genre/${genre}</code></p>
+                    <p class="text-sm text-gray-400 mt-4">Check browser console for more details (F12)</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

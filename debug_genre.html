@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genre Debug Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0c1221 0%, #1a1f3a 100%);
+            padding: 20px;
+        }
+        .genre-pill {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            z-index: 10;
+            pointer-events: auto;
+        }
+        .genre-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+        }
+        .genre-pill.active {
+            background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%) !important;
+            color: #0f172a !important;
+            font-weight: 600;
+        }
+        #debugOutput {
+            background: rgba(30, 41, 59, 0.9);
+            border: 2px solid #22d3ee;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="text-white">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6 text-cyan-400">🐛 Genre Filter Debug Test</h1>
+        
+        <div class="mb-8 bg-gray-800 p-6 rounded-lg">
+            <h2 class="text-xl font-bold mb-4">📊 Debug Output:</h2>
+            <div id="debugOutput" class="text-green-400 text-sm">
+Initializing debug test...
+            </div>
+        </div>
+        
+        <div class="mb-8">
+            <h2 class="text-xl font-bold mb-4">🎭 Genre Filter Pills:</h2>
+            <div class="flex flex-wrap gap-3">
+                <button class="genre-pill active px-4 py-2 rounded-full bg-gray-700 border border-cyan-400 text-cyan-400" data-genre="all">
+                    <i class="fas fa-globe mr-1"></i>All
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-gray-700 border border-gray-600 text-gray-300" data-genre="action">
+                    <i class="fas fa-fist-raised mr-1"></i>Action
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-gray-700 border border-gray-600 text-gray-300" data-genre="comedy">
+                    <i class="fas fa-laugh mr-1"></i>Comedy
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-gray-700 border border-gray-600 text-gray-300" data-genre="drama">
+                    <i class="fas fa-theater-masks mr-1"></i>Drama
+                </button>
+            </div>
+        </div>
+        
+        <div id="resultsSection" class="hidden">
+            <h2 class="text-xl font-bold mb-4">✅ API Results:</h2>
+            <div id="apiResults" class="bg-gray-800 p-6 rounded-lg text-sm"></div>
+        </div>
+    </div>
+    
+    <script>
+        const debugOutput = document.getElementById('debugOutput');
+        const API_BASE = 'https://web-1-production.up.railway.app';
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugOutput.innerHTML += `\n[${timestamp}] ${message}`;
+            debugOutput.scrollTop = debugOutput.scrollHeight;
+            console.log(message);
+        }
+        
+        // TEST 1: Check if pills exist
+        const pills = document.querySelectorAll('.genre-pill');
+        log(`✅ Found ${pills.length} genre pills`);
+        
+        // TEST 2: Check CSS properties
+        pills.forEach((pill, index) => {
+            const style = window.getComputedStyle(pill);
+            log(`Pill ${index}: cursor=${style.cursor}, pointer-events=${style.pointerEvents}, z-index=${style.zIndex}`);
+        });
+        
+        // TEST 3: Add click listeners
+        log('\n🔗 Attaching click listeners...');
+        pills.forEach(pill => {
+            pill.addEventListener('click', async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const genre = this.getAttribute('data-genre');
+                log(`\n🎬 CLICKED: ${genre}`);
+                log(`Event: ${e.type}, Target: ${e.target.tagName}`);
+                
+                // Update active state
+                pills.forEach(p => {
+                    p.classList.remove('active', 'bg-cyan-400', 'text-gray-900');
+                    p.classList.add('bg-gray-700', 'text-gray-300');
+                });
+                this.classList.add('active');
+                this.classList.remove('bg-gray-700', 'text-gray-300');
+                this.classList.add('bg-cyan-400', 'text-gray-900');
+                
+                // Test API call
+                if (genre !== 'all') {
+                    log(`\n🌐 Testing API: ${API_BASE}/by_genre/${genre}`);
+                    try {
+                        const url = `${API_BASE}/by_genre/${genre}`;
+                        const response = await fetch(url);
+                        log(`📡 Response status: ${response.status} ${response.statusText}`);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            log(`✅ Data received: ${data.items ? data.items.length : 0} items`);
+                            
+                            // Show results
+                            document.getElementById('resultsSection').classList.remove('hidden');
+                            const resultsDiv = document.getElementById('apiResults');
+                            resultsDiv.innerHTML = `
+                                <p class="text-green-400 mb-2">✅ API Call Successful!</p>
+                                <p>URL: ${url}</p>
+                                <p>Status: ${response.status}</p>
+                                <p>Items: ${data.items.length}</p>
+                                <p class="mt-4 text-cyan-400">First 3 movies:</p>
+                                <ul class="ml-4 mt-2">
+                                    ${data.items.slice(0, 3).map(item => `<li>• ${item.title} (${item.year || 'N/A'})</li>`).join('')}
+                                </ul>
+                            `;
+                        } else {
+                            log(`❌ API Error: ${response.status}`);
+                        }
+                    } catch (error) {
+                        log(`❌ Fetch failed: ${error.message}`);
+                    }
+                } else {
+                    log(`ℹ️ "All" selected - would show all content`);
+                }
+            });
+            
+            log(`✓ Listener attached to: ${pill.getAttribute('data-genre')}`);
+        });
+        
+        log('\n✅ Setup complete! Try clicking the genre pills above.');
+        log('Expected: You should see logs when clicking each pill.');
+        
+        // TEST 4: Programmatic click test
+        setTimeout(() => {
+            log('\n🤖 AUTO-TEST: Programmatically clicking "Action" in 3 seconds...');
+            setTimeout(() => {
+                const actionPill = document.querySelector('[data-genre="action"]');
+                if (actionPill) {
+                    log('🤖 Simulating click...');
+                    actionPill.click();
+                }
+            }, 3000);
+        }, 1000);
+    </script>
+</body>
+</html>

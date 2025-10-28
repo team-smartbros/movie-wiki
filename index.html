@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Wiki</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#22d3ee',
+                        dark: '#0c1221'
+                    },
+                    fontFamily: {
+                        'sans': ['Poppins', 'sans-serif'],
+                        'body': ['Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Modern gradient background */
+        body {
+            background: linear-gradient(135deg, #0c1221 0%, #1a1f3a 100%);
+            background-attachment: fixed;
+            padding-bottom: 70px; /* Space for mobile nav */
+        }
+        
+        /* Mobile bottom navigation */
+        .mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(34, 211, 238, 0.2);
+            z-index: 1000;
+        }
+        
+        @media (min-width: 768px) {
+            .mobile-nav {
+                display: none;
+            }
+            body {
+                padding-bottom: 0;
+            }
+        }
+        
+        /* Glassmorphism cards */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(34, 211, 238, 0.1);
+        }
+        
+        /* Genre filter pills */
+        .genre-pill {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            z-index: 10;
+            pointer-events: auto;
+        }
+        .genre-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+        }
+        .genre-pill.active {
+            background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%) !important;
+            color: #0f172a !important;
+            font-weight: 600;
+        }
+        
+        /* Movie card hover effects */
+        .movie-card {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .movie-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .movie-card:hover::before {
+            opacity: 1;
+        }
+        .movie-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+        }
+        
+        .carousel-container {
+            scroll-behavior: smooth;
+        }
+        .cast-image {
+            transition: all 0.3s ease;
+        }
+        .cast-image:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        .media-carousel::-webkit-scrollbar {
+            height: 8px;
+        }
+        .media-carousel::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .media-carousel::-webkit-scrollbar-thumb {
+            background: #22d3ee;
+            border-radius: 4px;
+        }
+        .section-divider {
+            border-top: 1px solid #334155;
+        }
+        
+        /* Improved search bar */
+        .search-container {
+            position: relative;
+        }
+        .search-container input:focus {
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2);
+        }
+        
+        /* Share button animation */
+        .share-btn {
+            transition: all 0.3s ease;
+        }
+        .share-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Comments section */
+        .comment-card {
+            background: rgba(30, 41, 59, 0.5);
+            border-left: 3px solid #22d3ee;
+            transition: all 0.3s ease;
+        }
+        .comment-card:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-left-color: #06b6d4;
+        }
+        
+        /* Ensure media elements fit within carousel - larger iframes */
+        #carouselMediaContainer img,
+        #carouselMediaContainer video {
+            max-width: 90vw;
+            max-height: 70vh;
+            object-fit: contain;
+        }
+        #carouselMediaContainer iframe {
+            width: 90vw;
+            height: 80vh;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        /* Cast images sizing */
+        #castImagesContainer img {
+            object-fit: cover;
+        }
+        #additionalMediaContainer img {
+            object-fit: cover;
+        }
+        /* Video thumbnails */
+        .video-thumbnail {
+            position: relative;
+        }
+        .video-thumbnail .play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            opacity: 0.8;
+            font-size: 2rem;
+        }
+        /* Fix cast & crew layout */
+        #movieCast li, #movieCrew li {
+            line-height: 1.4;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .md\:grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="bg-primary text-white min-h-screen font-body">
+    <!-- Navigation Bar -->
+    <nav class="glass-card sticky top-0 z-50 border-b border-gray-700">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-film text-accent text-2xl"></i>
+                    <h1 class="text-2xl font-bold text-accent font-sans">Movie Wiki</h1>
+                </div>
+                <div class="hidden md:flex items-center gap-4">
+                    <a href="./index.html" class="text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="./forum.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-comments"></i>
+                        <span>Forum</span>
+                    </a>
+                    <button id="loginBtn" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-user"></i>
+                        <span id="userNameDisplay">Login</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-nav md:hidden">
+        <div class="flex justify-around items-center py-3">
+            <a href="./index.html" class="flex flex-col items-center gap-1 text-accent">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="#genreFilters" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-filter text-xl"></i>
+                <span class="text-xs">Filter</span>
+            </a>
+            <a href="./forum.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-comments text-xl"></i>
+                <span class="text-xs">Forum</span>
+            </a>
+            <button id="mobileLoginBtn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-user text-xl"></i>
+                <span class="text-xs" id="mobileUserName">Login</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Welcome Section -->
+    <section id="welcomeSection" class="container mx-auto px-4 py-16 text-center">
+        <h1 class="text-4xl md:text-6xl font-bold mb-6 text-accent font-sans">Movie Wiki</h1>
+        <p class="text-xl mb-8 max-w-2xl mx-auto text-gray-300">Discover detailed information about your favorite movies and web series</p>
+        
+        <!-- Search Bar -->
+        <div class="max-w-2xl mx-auto mb-8">
+            <div class="search-container flex gap-2">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Search for movies and web series..." 
+                    class="flex-grow px-4 py-3 rounded-lg bg-secondary text-white focus:outline-none focus:ring-2 focus:ring-accent border border-gray-700"
+                >
+                <button 
+                    id="searchButton" 
+                    class="bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center"
+                >
+                    <i class="fas fa-search mr-2"></i>Search
+                </button>
+            </div>
+        </div>
+        
+        <!-- Genre Filters -->
+        <div class="mb-12">
+            <h3 class="text-lg font-semibold mb-4 text-gray-300 flex items-center justify-center gap-2">
+                <i class="fas fa-filter"></i>
+                Filter by Genre
+            </h3>
+            <div id="genreFilters" class="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
+                <button class="genre-pill active px-4 py-2 rounded-full bg-secondary border border-accent text-accent" data-genre="all">
+                    <i class="fas fa-globe mr-1"></i>All
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="action">
+                    <i class="fas fa-fist-raised mr-1"></i>Action
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="comedy">
+                    <i class="fas fa-laugh mr-1"></i>Comedy
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="drama">
+                    <i class="fas fa-theater-masks mr-1"></i>Drama
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="horror">
+                    <i class="fas fa-ghost mr-1"></i>Horror
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="sci-fi">
+                    <i class="fas fa-rocket mr-1"></i>Sci-Fi
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="thriller">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>Thriller
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="romance">
+                    <i class="fas fa-heart mr-1"></i>Romance
+                </button>
+                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="animation">
+                    <i class="fas fa-star mr-1"></i>Animation
+                </button>
+            </div>
+        </div>
+        
+        <!-- Popular, Latest and Coming Soon Sections -->
+        <div class="mt-16">
+            <!-- Popular Section -->
+            <div class="mb-12">
+                <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-fire mr-2"></i>Popular</h2>
+                <div id="popularContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <!-- Popular content will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Latest Section -->
+            <div class="mb-12">
+                <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-clock mr-2"></i>Latest</h2>
+                <div id="latestContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <!-- Latest content will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Coming Soon Section -->
+            <div class="mb-12">
+                <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-calendar-alt mr-2"></i>Coming Soon</h2>
+                <div id="comingSoonContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <!-- Coming soon content will be populated here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search Results -->
+    <section id="searchResults" class="container mx-auto px-4 py-8 hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-accent font-sans">Search Results</h2>
+            <button id="backToWelcome" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>New Search
+            </button>
+        </div>
+        <div id="resultsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Movie cards will be populated here -->
+        </div>
+    </section>
+
+    <!-- Movie Details -->
+    <section id="movieDetails" class="container mx-auto px-4 py-8 hidden">
+        <div class="bg-secondary rounded-xl shadow-lg overflow-hidden">
+            <div class="md:flex">
+                <div class="md:w-1/3 p-6 flex justify-center">
+                    <img id="moviePoster" src="" alt="Movie Poster" class="rounded-lg shadow-lg w-full max-w-md">
+                </div>
+                <div class="md:w-2/3 p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 id="movieTitle" class="text-3xl font-bold text-accent font-sans"></h2>
+                        <button id="backButton" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i>Back
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Movie Information</h3>
+                            <ul class="space-y-2">
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Year:</span>
+                                    <span id="movieYear"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Rating:</span>
+                                    <span id="movieRating"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Length:</span>
+                                    <span id="movieDuration"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Genres:</span>
+                                    <span id="movieGenres"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">IMDb ID:</span>
+                                    <span id="movieImdbId"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Type:</span>
+                                    <span id="movieType"></span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Cast & Crew</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <h4 class="font-semibold text-gray-300 mb-1">Cast</h4>
+                                    <div id="movieCast" class="space-y-1">
+                                        <!-- Cast will be populated here -->
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-300 mb-1">Crew</h4>
+                                    <ul id="movieCrew" class="space-y-1">
+                                        <!-- Crew will be populated here -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        <button id="trailerButton" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-play-circle mr-2"></i>Watch Trailer
+                        </button>
+                        <button id="photosButton" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-images mr-2"></i>View Photos
+                        </button>
+                        <button id="streamButton" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-film mr-2"></i>Stream Movie
+                        </button>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Plot</h3>
+                        <p id="moviePlot" class="leading-relaxed"></p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Keywords</h3>
+                        <div id="movieKeywords" class="flex flex-wrap">
+                            <!-- Keywords will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cast Images Section -->
+            <div id="castImagesSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Cast Images</h3>
+                <div id="castImagesContainer" class="flex overflow-x-auto space-x-4 pb-4 media-carousel">
+                    <!-- Cast images will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Additional Media Section -->
+            <div id="additionalMediaSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Additional Media</h3>
+                <div id="additionalMediaContainer" class="flex overflow-x-auto space-x-4 pb-4 media-carousel">
+                    <!-- Additional media will be populated here -->
+                </div>
+            </div>
+            
+            <div class="section-divider my-6"></div>
+            
+            <!-- Additional Information Section -->
+            <div id="additionalInfoSection" class="px-6 pb-6">
+                <!-- Additional information will be populated here -->
+            </div>
+            
+            <!-- Reviews Section -->
+            <div id="reviewsSection" class="px-6 pb-6">
+                <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Featured Review</h3>
+                <div id="movieReviews">
+                    <!-- Reviews will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Box Office Section -->
+            <div id="boxOfficeSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Box Office</h3>
+                <div id="boxOfficeInfo" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Box office info will be populated here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Media Carousel Section -->
+    <section id="mediaCarouselSection" class="fixed inset-0 bg-dark bg-opacity-95 z-50 hidden">
+        <div class="w-full h-full flex flex-col">
+            <div class="flex justify-between items-center p-4 bg-secondary">
+                <h2 id="carouselTitle" class="text-2xl font-bold text-accent font-sans"></h2>
+                <button id="closeCarouselButton" class="text-white hover:text-accent text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex-grow flex items-center">
+                <button id="prevMediaButton" class="text-white text-3xl mx-4 hover:text-accent">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div id="carouselMediaContainer" class="flex-grow flex justify-center items-center h-full p-4">
+                    <!-- Carousel media will be populated here -->
+                </div>
+                <button id="nextMediaButton" class="text-white text-3xl mx-4 hover:text-accent">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div id="carouselIndicators" class="flex justify-center p-4 space-x-2">
+                <!-- Carousel indicators will be populated here -->
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeTE5otOE58jq1-bIPNbiYdwiwX88iT00",
+            authDomain: "movie-wiki-86d4d.firebaseapp.com",
+            projectId: "movie-wiki-86d4d",
+            storageBucket: "movie-wiki-86d4d.firebasestorage.app",
+            messagingSenderId: "453451714779",
+            appId: "1:453451714779:web:e94ad0ef8df299b733fcfe",
+            measurementId: "G-91SHQF7F4P"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        
+        let currentUser = null;
+        
+        // Google Sign-In
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    console.log('✅ Signed in:', result.user.displayName);
+                })
+                .catch((error) => {
+                    console.error('Sign-in error:', error);
+                    alert('Failed to sign in. Please try again.');
+                });
+        }
+        
+        // Auth State Observer
+        auth.onAuthStateChanged((user) => {
+            currentUser = user;
+            updateAuthUI(user);
+        });
+        
+        // Update UI based on auth state
+        function updateAuthUI(user) {
+            const loginBtn = document.getElementById('loginBtn');
+            const mobileLoginBtn = document.getElementById('mobileLoginBtn');
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            const mobileUserName = document.getElementById('mobileUserName');
+            
+            if (user) {
+                const displayName = user.displayName || 'User';
+                const shortName = displayName.split(' ')[0];
+                
+                userNameDisplay.textContent = shortName;
+                mobileUserName.textContent = shortName;
+                loginBtn.innerHTML = `<i class="fas fa-user-circle"></i><span id="userNameDisplay">${shortName}</span>`;
+            } else {
+                userNameDisplay.textContent = 'Login';
+                mobileUserName.textContent = 'Login';
+                loginBtn.innerHTML = `<i class="fas fa-user"></i><span id="userNameDisplay">Login</span>`;
+            }
+        }
+        
+        // Login button handlers
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            if (currentUser) {
+                if (confirm(`Sign out ${currentUser.displayName}?`)) {
+                    auth.signOut();
+                }
+            } else {
+                signInWithGoogle();
+            }
+        });
+        
+        document.getElementById('mobileLoginBtn').addEventListener('click', () => {
+            if (currentUser) {
+                if (confirm(`Sign out ${currentUser.displayName}?`)) {
+                    auth.signOut();
+                }
+            } else {
+                signInWithGoogle();
+            }
+        });
+    </script>
+    <script src="script.js"></script>
+    
+    <!-- Footer -->
+    <footer class="glass-card border-t border-gray-700 py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-film text-accent"></i>
+                        <span class="font-bold text-accent">Movie Wiki</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-2">&copy; 2025 Movie Wiki. All rights reserved.</p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a href="privacy-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Privacy Policy</a>
+                    <a href="terms-of-service.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Terms of Service</a>
+                    <a href="disclaimer.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Disclaimer</a>
+                    <a href="cookie-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
