@@ -682,7 +682,16 @@ function loadMoreContent() {
     console.log('Reached bottom of page - would load more content here');
 }
 
-// Display search results
+// Search movies using the API
+async function searchMovies() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) return;
+    
+    // Redirect to search.html with the query parameter
+    window.location.href = `search.html?q=${encodeURIComponent(query)}`;
+}
+
+// Display search results (this function will be used in search.html)
 function displaySearchResults(movies) {
     const resultsContainer = document.getElementById('resultsContainer');
     if (!resultsContainer) return;
@@ -719,7 +728,7 @@ function displaySearchResults(movies) {
         }
         
         return `
-        <div class="bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1" 
+        <div class="movie-card" 
              onclick="window.location.href='details.html?id=${imdbId}&title=${encodeURIComponent(title)}'">
             <img src="${poster}" alt="${title}" class="w-full h-72 object-cover" loading="lazy" style="aspect-ratio: 2/3;">
             <div class="p-3">
@@ -730,10 +739,6 @@ function displaySearchResults(movies) {
             </div>
         </div>
     `}).join('');
-    
-    // Show search results and hide welcome section
-    document.getElementById('searchResults').style.display = 'block';
-    document.getElementById('welcomeSection').style.display = 'none';
 }
 
 // Fetch movie details
