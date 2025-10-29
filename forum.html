@@ -60,34 +60,126 @@
             }
         }
         
+        /* Glass card styling */
         .glass-card {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(34, 211, 238, 0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            transition: all 0.3s ease;
         }
         
+        .glass-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(34, 211, 238, 0.2);
+            border-color: rgba(34, 211, 238, 0.3);
+        }
+        
+        /* Form elements */
+        input, select, textarea {
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        /* Buttons */
+        .filter-btn {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .filter-btn.active {
+            box-shadow: 0 6px 12px rgba(34, 211, 238, 0.3);
+        }
+        
+        /* Suggestion cards */
         .suggestion-card {
             background: rgba(30, 41, 59, 0.5);
             border-left: 3px solid #22d3ee;
             transition: all 0.3s ease;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
         
         .suggestion-card:hover {
             background: rgba(30, 41, 59, 0.8);
             border-left-color: #06b6d4;
-            transform: translateX(4px);
+            transform: translateX(5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
         }
         
+        /* Upvote button */
         .upvote-btn {
             transition: all 0.2s ease;
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 8px;
+            padding: 0.5rem;
         }
         
         .upvote-btn:hover {
             transform: scale(1.1);
+            background: rgba(34, 211, 238, 0.2);
         }
         
         .upvote-btn.upvoted {
             color: #22d3ee;
+            background: rgba(34, 211, 238, 0.3);
+        }
+        
+        /* Responsive banner ads */
+        .banner-ad-container {
+            width: 100%;
+            max-width: 728px;
+            margin: 0 auto;
+            min-height: 90px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .banner-ad-container ins {
+            display: block;
+            width: 100% !important;
+            height: 90px !important;
+            min-height: 90px;
+            max-width: 728px;
+        }
+        
+        /* Mobile ad adjustments */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+                min-height: 60px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100%;
+                width: 100% !important;
+                height: 60px !important;
+                min-height: 60px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-ad-container {
+                min-height: 50px;
+            }
+            
+            .banner-ad-container ins {
+                height: 50px !important;
+                min-height: 50px;
+            }
         }
     </style>
 </head>
@@ -125,6 +217,10 @@
                 <i class="fas fa-home text-xl"></i>
                 <span class="text-xs">Home</span>
             </a>
+            <a href="#suggestionForm" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-lightbulb text-xl"></i>
+                <span class="text-xs">Suggest</span>
+            </a>
             <a href="#" class="flex flex-col items-center gap-1 text-accent">
                 <i class="fas fa-comments text-xl"></i>
                 <span class="text-xs">Forum</span>
@@ -136,15 +232,17 @@
         </div>
     </div>
     
-    <!-- Forum Header -->
-    <div class="container mx-auto px-4 py-12">
-        <div class="text-center mb-12">
-            <h1 class="text-4xl md:text-5xl font-bold mb-4 text-accent font-sans">
-                <i class="fas fa-comments mr-3"></i>Community Forum
-            </h1>
-            <p class="text-xl text-gray-300 max-w-2xl mx-auto">
-                Share your suggestions, report issues, and help us improve Movie Wiki
-            </p>
+    <!-- Banner Ad -->
+    <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container">
+        <ins style="width: 728px;height:90px" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"><script src="//data527.click/js/responsive.js" async></script></ins>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Hero Section -->
+        <div class="max-w-3xl mx-auto mb-12 text-center">
+            <h1 class="text-4xl font-bold mb-4 text-accent font-sans">Community Forum</h1>
+            <p class="text-xl text-gray-300">Share ideas, report bugs, and help improve Movie Wiki</p>
         </div>
         
         <!-- New Suggestion Form -->

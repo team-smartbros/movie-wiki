@@ -148,6 +148,13 @@
         /* Improved search bar */
         .search-container {
             position: relative;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .search-container:hover {
+            box-shadow: 0 15px 30px rgba(34, 211, 238, 0.2);
         }
         .search-container input:focus {
             box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2);
@@ -161,6 +168,19 @@
             transform: scale(1.1);
         }
         
+        /* Genre pills styling */
+        .genre-pill {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .genre-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        .genre-pill.active {
+            box-shadow: 0 6px 12px rgba(34, 211, 238, 0.3);
+        }
+        
         /* Comments section */
         .comment-card {
             background: rgba(30, 41, 59, 0.5);
@@ -170,6 +190,42 @@
         .comment-card:hover {
             background: rgba(30, 41, 59, 0.8);
             border-left-color: #06b6d4;
+            transform: translateX(5px);
+        }
+        
+        /* Movie cards */
+        .movie-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        .movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(34, 211, 238, 0.2);
+        }
+        .movie-card img {
+            transition: transform 0.3s ease;
+        }
+        .movie-card:hover img {
+            transform: scale(1.05);
+        }
+        
+        /* Section titles */
+        .section-title {
+            position: relative;
+            padding-bottom: 15px;
+        }
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, #22d3ee, #06b6d4);
+            border-radius: 2px;
         }
         
         /* Ensure media elements fit within carousel - larger iframes */
@@ -215,6 +271,53 @@
                 grid-template-columns: 1fr;
             }
         }
+        
+               /* Responsive banner ads */
+        .banner-ad-container {
+            width: 100%;
+            max-width: 728px;
+            margin: 0 auto;
+            min-height: 90px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .banner-ad-container ins {
+            display: block;
+            width: 100% !important;
+            height: 90px !important;
+            min-height: 90px;
+            max-width: 728px;
+        }
+        
+        /* Mobile ad adjustments */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+                min-height: 60px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100%;
+                width: 100% !important;
+                height: 60px !important;
+                min-height: 60px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-ad-container {
+                min-height: 50px;
+            }
+            
+            .banner-ad-container ins {
+                height: 50px !important;
+                min-height: 50px;
+            }
+        }
+        
     </style>
 </head>
 <body class="bg-primary text-white min-h-screen font-body">
@@ -288,9 +391,14 @@
                 </button>
             </div>
         </div>
+
+    <!-- Banner Ad -->
+    <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container">
+        <ins style="width: 728px;height:90px" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"><script src="//data527.click/js/responsive.js" async></script></ins>
+    </div>
         
         <!-- Genre Filters -->
-        <div class="mb-12">
+        <div class="mb-8">
             <h3 class="text-lg font-semibold mb-4 text-gray-300 flex items-center justify-center gap-2">
                 <i class="fas fa-filter"></i>
                 Filter by Genre
@@ -325,9 +433,10 @@
                 </button>
             </div>
         </div>
+    </section>
         
         <!-- Popular, Latest and Coming Soon Sections -->
-        <div class="mt-16">
+        <div class="container mx-auto px-4 mt-8">
             <!-- Popular Section -->
             <div class="mb-12">
                 <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-fire mr-2"></i>Popular</h2>

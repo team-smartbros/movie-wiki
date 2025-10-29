@@ -122,24 +122,91 @@
             justify-content: center;
             z-index: 10;
             border-radius: 12px;
+            backdrop-filter: blur(5px);
         }
         
         .loading-overlay.hidden {
             display: none;
         }
         
+        /* Login overlay */
+        #loginRequiredOverlay {
+            backdrop-filter: blur(10px);
+        }
+        
+        #loginRequiredOverlay .bg-gray-800 {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        #loginRequiredOverlay .bg-gray-800:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(34, 211, 238, 0.3);
+        }
+        
+        /* Banner ad positioning */
+        .banner-ad-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 728px;
+            margin: 0 auto;
+            min-height: 90px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .banner-ad-container ins {
+            display: block;
+            width: 100% !important;
+            height: 90px !important;
+            min-height: 90px;
+            max-width: 728px;
+        }
+        
+        /* Mobile ad adjustments */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+                min-height: 60px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100%;
+                width: 100% !important;
+                height: 60px !important;
+                min-height: 60px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-ad-container {
+                min-height: 50px;
+            }
+            
+            .banner-ad-container ins {
+                height: 50px !important;
+                min-height: 50px;
+            }
+        }
+        
         /* YouTube-style info cards */
         .info-card {
             background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(34, 211, 238, 0.1);
         }
         
         .info-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+            border-color: rgba(34, 211, 238, 0.3);
         }
         
         /* Chip/tag style */
@@ -149,26 +216,51 @@
             border-radius: 16px;
             font-size: 0.75rem;
             font-weight: 500;
-            background: rgba(34, 211, 238, 0.1);
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%);
             color: #22d3ee;
-            border: 1px solid rgba(34, 211, 238, 0.2);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
         /* Modern gradient buttons */
         .gradient-button {
             background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
             transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+            border-radius: 10px;
         }
         
         .gradient-button:hover {
             background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(34, 211, 238, 0.4);
+        }
+        
+        .gradient-button:active {
+            transform: translateY(0);
+        }
+        
+        /* Form inputs */
+        input, select {
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        input:focus, select:focus {
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.3);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.4);
         }
         
         /* Smooth animations */
         * {
-            transition: background-color 0.2s ease, color 0.2s ease;
+            transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        /* Video container */
+        .video-container {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
         
         /* No protection overlay needed */
@@ -230,7 +322,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="container mx-auto px-2 md:px-6 py-3 md:py-6 max-w-7xl">
         
         <!-- YouTube-style video container -->
@@ -243,6 +335,19 @@
                         <div class="animate-spin rounded-full h-12 w-12 md:h-16 md:w-16 border-b-2 border-accent mx-auto mb-4"></div>
                         <p class="text-white font-medium text-sm md:text-base">Loading video player...</p>
                         <p class="text-gray-400 text-xs md:text-sm mt-2">Free streaming service</p>
+                    </div>
+                </div>
+                
+                <!-- Login Required Overlay -->
+                <div id="loginRequiredOverlay" class="absolute inset-0 bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center z-20 hidden">
+                    <div class="text-center p-6 rounded-xl bg-gray-800 border border-accent max-w-md mx-4">
+                        <i class="fas fa-lock text-accent text-4xl mb-4"></i>
+                        <h3 class="text-2xl font-bold text-white mb-2">Login Required</h3>
+                        <p class="text-gray-300 mb-6">Please sign in to watch this content</p>
+                        <button id="streamLoginBtn" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-6 rounded-lg transition flex items-center gap-2 mx-auto">
+                            <i class="fab fa-google"></i>
+                            Sign in with Google
+                        </button>
                     </div>
                 </div>
                 
@@ -282,6 +387,33 @@
                 </div>
             </div>
             
+            <!-- Language Selector for Movies -->
+            <div id="movieLanguageSelector" class="px-3 md:px-6 pb-4 hidden">
+                <div class="bg-gray-800 rounded-xl p-4">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <label class="text-sm font-medium text-gray-300">Subtitle Language:</label>
+                        <select id="movieLanguageSelect" class="bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600 focus:border-accent focus:ring-2 focus:ring-accent focus:ring-opacity-50 focus:outline-none text-sm">
+                            <option value="">Default</option>
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="fr">French</option>
+                            <option value="de">German</option>
+                            <option value="it">Italian</option>
+                            <option value="pt">Portuguese</option>
+                            <option value="ru">Russian</option>
+                            <option value="zh">Chinese</option>
+                            <option value="ja">Japanese</option>
+                            <option value="ko">Korean</option>
+                            <option value="ar">Arabic</option>
+                            <option value="hi">Hindi</option>
+                        </select>
+                        <button id="applyMovieLanguage" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg text-sm transition">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- TV Show Episode Selector - YouTube style -->
             <div id="episodeSelector" class="px-3 md:px-6 pb-4 md:pb-6 hidden">
                 <div class="bg-gray-800 rounded-xl p-4 md:p-5">
@@ -289,7 +421,7 @@
                         <i class="fas fa-list text-accent"></i>
                         Select Episode
                     </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
                         <div>
                             <label class="block text-xs md:text-sm font-medium mb-2 text-gray-300">Season</label>
                             <input type="number" id="seasonInput" min="1" placeholder="1" 
@@ -300,6 +432,24 @@
                             <input type="number" id="episodeInput" min="1" placeholder="1" 
                                    class="w-full bg-gray-700 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-lg border border-gray-600 focus:border-accent focus:ring-2 focus:ring-accent focus:ring-opacity-50 focus:outline-none text-sm md:text-base transition-all">
                         </div>
+                        <div>
+                            <label class="block text-xs md:text-sm font-medium mb-2 text-gray-300">Language</label>
+                            <select id="languageSelect" class="w-full bg-gray-700 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-lg border border-gray-600 focus:border-accent focus:ring-2 focus:ring-accent focus:ring-opacity-50 focus:outline-none text-sm md:text-base transition-all">
+                                <option value="">Default</option>
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="ru">Russian</option>
+                                <option value="zh">Chinese</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="ar">Arabic</option>
+                                <option value="hi">Hindi</option>
+                            </select>
+                        </div>
                         <div class="flex items-end">
                             <button id="loadEpisodeButton" class="w-full gradient-button text-primary font-bold py-2.5 md:py-3 px-4 md:px-6 rounded-lg text-sm md:text-base shadow-lg">
                                 <i class="fas fa-play mr-2"></i>Load Episode
@@ -308,6 +458,11 @@
                     </div>
                 </div>
             </div>
+        </div>
+        
+        <!-- Banner Ad -->
+        <div class="container mx-auto px-2 md:px-6 py-3 flex justify-center mb-4 md:mb-6 banner-ad-container">
+            <ins style="width: 728px;height:90px" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"><script src="//data527.click/js/responsive.js" async></script></ins>
         </div>
             
         <!-- Information sections - YouTube style cards -->
@@ -611,68 +766,7 @@
         
         const iframe = document.getElementById('streamingIframe');
         const loadingOverlay = document.getElementById('loadingOverlay');
-        
-        if (movieId) {
-            // Set movie title
-            document.getElementById('movieTitle').textContent = title;
-            
-            // Hide loading overlay after iframe loads
-            iframe.addEventListener('load', function() {
-                console.log('✅ Video player loaded');
-                setTimeout(() => {
-                    loadingOverlay.classList.add('hidden');
-                }, 1000);
-            });
-            
-            // Fallback: Hide loading overlay after 5 seconds
-            setTimeout(() => {
-                loadingOverlay.classList.add('hidden');
-            }, 5000);
-            
-            if (contentType === 'tv') {
-                // Show episode selector for TV shows
-                document.getElementById('episodeSelector').classList.remove('hidden');
-                
-                // Load episode when button clicked
-                document.getElementById('loadEpisodeButton').addEventListener('click', function() {
-                    const season = document.getElementById('seasonInput').value;
-                    const episode = document.getElementById('episodeInput').value;
-                    
-                    if (season && episode) {
-                        iframe.src = `https://vidsrc-embed.ru/embed/tv/${movieId}/${season}-${episode}`;
-                        console.log(`Loading TV Show: ${title} - S${season}E${episode}`);
-                    } else {
-                        alert('Please enter both season and episode numbers');
-                    }
-                });
-                
-                // Allow Enter key to load episode
-                document.getElementById('seasonInput').addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        document.getElementById('episodeInput').focus();
-                    }
-                });
-                
-                document.getElementById('episodeInput').addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        document.getElementById('loadEpisodeButton').click();
-                    }
-                });
-                
-                // Default to showing TV show landing page
-                iframe.src = `https://vidsrc-embed.ru/embed/tv/${movieId}`;
-                console.log(`Loading TV Show: ${title}`);
-            } else {
-                // For movies - direct embed
-                iframe.src = `https://vidsrc-embed.ru/embed/movie/${movieId}`;
-                console.log(`Loading Movie: ${title}`);
-            }
-        } else {
-            document.getElementById('movieTitle').textContent = 'Invalid Movie ID';
-            loadingOverlay.classList.add('hidden');
-        }
-        
-        // ===== FIREBASE & COMMENTS =====
+        const loginRequiredOverlay = document.getElementById('loginRequiredOverlay');
         
         // Firebase Configuration
         const firebaseConfig = {
@@ -697,23 +791,122 @@
             if (user) {
                 document.getElementById('streamCommentFormAuth').classList.remove('hidden');
                 document.getElementById('streamCommentFormGuest').classList.add('hidden');
+                // Hide login overlay if user is authenticated
+                loginRequiredOverlay.classList.add('hidden');
+                // Load video content
+                loadVideoContent();
             } else {
                 document.getElementById('streamCommentFormAuth').classList.add('hidden');
                 document.getElementById('streamCommentFormGuest').classList.remove('hidden');
+                // Show login overlay
+                loginRequiredOverlay.classList.remove('hidden');
+                loadingOverlay.classList.add('hidden');
             }
             if (user && movieId) {
                 loadStreamComments(movieId);
             }
         });
         
-        // Login
-        document.getElementById('streamGuestLoginBtn').addEventListener('click', () => {
+        // Login button event
+        document.getElementById('streamLoginBtn').addEventListener('click', () => {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).catch(error => {
                 console.error('Login error:', error);
                 alert('Failed to sign in');
             });
         });
+        
+        // Function to load video content after authentication
+        function loadVideoContent() {
+            if (movieId) {
+                // Set movie title
+                document.getElementById('movieTitle').textContent = title;
+                
+                // Hide loading overlay after iframe loads
+                iframe.addEventListener('load', function() {
+                    console.log('✅ Video player loaded');
+                    setTimeout(() => {
+                        loadingOverlay.classList.add('hidden');
+                    }, 1000);
+                });
+                
+                // Fallback: Hide loading overlay after 5 seconds
+                setTimeout(() => {
+                    loadingOverlay.classList.add('hidden');
+                }, 5000);
+                
+                if (contentType === 'tv') {
+                    // Show episode selector for TV shows
+                    document.getElementById('episodeSelector').classList.remove('hidden');
+                    
+                    // Load episode when button clicked
+                    document.getElementById('loadEpisodeButton').addEventListener('click', function() {
+                        const season = document.getElementById('seasonInput').value;
+                        const episode = document.getElementById('episodeInput').value;
+                        const language = document.getElementById('languageSelect').value;
+                        
+                        if (season && episode) {
+                            let url = `https://vidsrc-embed.ru/embed/tv/${movieId}/${season}-${episode}`;
+                            if (language) {
+                                url += `?ds_lang=${language}`;
+                            }
+                            iframe.src = url;
+                            console.log(`Loading TV Show: ${title} - S${season}E${episode}${language ? ' (' + language + ')' : ''}`);
+                        } else {
+                            alert('Please enter both season and episode numbers');
+                        }
+                    });
+                    
+                    // Allow Enter key to load episode
+                    document.getElementById('seasonInput').addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            document.getElementById('episodeInput').focus();
+                        }
+                    });
+                    
+                    document.getElementById('episodeInput').addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            document.getElementById('loadEpisodeButton').click();
+                        }
+                    });
+                    
+                    // Default to showing TV show landing page
+                    iframe.src = `https://vidsrc-embed.ru/embed/tv/${movieId}`;
+                    console.log(`Loading TV Show: ${title}`);
+                } else {
+                    // For movies - show language selector
+                    document.getElementById('movieLanguageSelector').classList.remove('hidden');
+                    
+                    // Apply language when button clicked
+                    document.getElementById('applyMovieLanguage').addEventListener('click', function() {
+                        const language = document.getElementById('movieLanguageSelect').value;
+                        let url = `https://vidsrc-embed.ru/embed/movie/${movieId}`;
+                        if (language) {
+                            url += `?ds_lang=${language}`;
+                        }
+                        iframe.src = url;
+                        console.log(`Loading Movie: ${title}${language ? ' (' + language + ')' : ''}`);
+                    });
+                    
+                    // Load movie with default language from URL params
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const language = urlParams.get('lang') || '';
+                    
+                    let url = `https://vidsrc-embed.ru/embed/movie/${movieId}`;
+                    if (language) {
+                        document.getElementById('movieLanguageSelect').value = language;
+                        url += `?ds_lang=${language}`;
+                    }
+                    iframe.src = url;
+                    console.log(`Loading Movie: ${title}${language ? ' (' + language + ')' : ''}`);
+                }
+            } else {
+                document.getElementById('movieTitle').textContent = 'Invalid Movie ID';
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+        
+        // ===== FIREBASE & COMMENTS =====
         
         // Post comment
         document.getElementById('streamCommentForm').addEventListener('submit', async (e) => {
@@ -788,7 +981,6 @@
             return new Date(timestamp).toLocaleDateString();
         }
         
-        // Share button
         // Share modal function
         function showShareModal(url, text) {
             const modal = document.createElement('div');
