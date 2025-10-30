@@ -283,8 +283,12 @@
         <ins style="width: 728px;height:90px" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"><script src="//data527.click/js/responsive.js" async></script></ins>
     </div>
     <!-- Loading Indicator -->
-    <div id="loadingIndicator" class="container mx-auto px-4 py-8 text-center hidden">
-        <p class="text-xl">Loading movie details...</p>
+    <div id="loadingIndicator" class="container mx-auto px-4 py-16 text-center hidden">
+        <div class="flex flex-col items-center justify-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-accent mb-6"></i>
+            <p class="text-2xl text-gray-300 mb-2">Loading Movie Details</p>
+            <p class="text-gray-500">Please wait while we fetch the information...</p>
+        </div>
     </div>
 
     <!-- Error Message -->
@@ -1082,6 +1086,42 @@
                     window.location.href = `stream.html?id=${movieId}&title=${encodeURIComponent(title)}&type=movie`;
                 }
             };
+        }
+        
+        // Helper function to format duration for schema.org
+        function formatDurationForSchema(duration) {
+            if (!duration || duration === 'N/A') return undefined;
+            
+            // If it's already formatted (e.g., "2h 12m")
+            if (duration.includes('h') || duration.includes('m')) {
+                let schemaDuration = "PT";
+                if (duration.includes('h')) {
+                    const hours = duration.match(/(\d+)h/);
+                    if (hours) schemaDuration += hours[1] + "H";
+                }
+                if (duration.includes('m')) {
+                    const minutes = duration.match(/(\d+)m/);
+                    if (minutes) schemaDuration += minutes[1] + "M";
+                }
+                return schemaDuration;
+            }
+            
+            // If it's in minutes, convert to ISO 8601 duration format
+            const minutes = parseInt(duration);
+            if (isNaN(minutes)) return undefined;
+            
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = minutes % 60;
+            
+            let schemaDuration = "PT";
+            if (hours > 0) {
+                schemaDuration += hours + "H";
+            }
+            if (remainingMinutes > 0) {
+                schemaDuration += remainingMinutes + "M";
+            }
+            
+            return schemaDuration;
         }
         
         // Populate Cast Photos Section with Carousel
@@ -2248,4 +2288,3 @@
     </footer>
 </body>
 </html>
-

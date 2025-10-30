@@ -259,7 +259,7 @@
         /* Video container */
         .video-container {
             border-radius: 16px;
-            overflow: hidden;
+            overflow: hidden; 
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
         
@@ -831,6 +831,19 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
     <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+        
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const movieId = urlParams.get('id');
@@ -1123,6 +1136,52 @@
             console.log('Share data:', { title, shareUrl });
             
             // Try Web Share API first (mobile)
+            if (navigator.share) {
+                console.log('📱 Using Web Share API');
+                navigator.share({ 
+                    title, 
+                    text: shareText, 
+                    url: shareUrl 
+                }).then(() => {
+                    console.log('✅ Shared successfully');
+                }).catch(err => {
+                    console.log('❌ Share cancelled:', err);
+                });
+            } else {
+                console.log('💻 Web Share not available, showing modal');
+                // Always show modal for desktop/HTTP
+                showShareModal(shareUrl, shareText);
+            }
+        });
+        
+        // Load comments if movie ID exists
+        if (movieId) {
+            loadStreamComments(movieId);
+        }
+    </script>
+    
+    <!-- Footer -->
+    <footer class="glass-card border-t border-gray-700 py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-film text-accent"></i>
+                        <span class="font-bold text-accent">Movie Wiki</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-2">&copy; 2025 Movie Wiki. All rights reserved.</p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a href="privacy-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Privacy Policy</a>
+                    <a href="terms-of-service.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Terms of Service</a>
+                    <a href="disclaimer.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Disclaimer</a>
+                    <a href="cookie-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
             if (navigator.share) {
                 console.log('📱 Using Web Share API');
                 navigator.share({ 

@@ -114,9 +114,9 @@ async function fetchWithProxy(url, options = {}) {
 
 // Track pagination for each section
 const sectionPagination = {
-    popular: { page: 1, items: [] },
-    latest: { page: 1, items: [] },
-    comingSoon: { page: 1, items: [] }
+    popular: { page: 1, items: [], hasMore: true, isLoading: false },
+    latest: { page: 1, items: [], hasMore: true, isLoading: false },
+    comingSoon: { page: 1, items: [], hasMore: true, isLoading: false }
 };
 
 // Rate limiting for API calls - increased to prevent server blocking
@@ -136,35 +136,46 @@ function delay(ms) {
 // WITH deduplication to prevent duplicate movies
 // ENHANCED with better proxy handling and timeout management
 async function fetchDetailsSequentially(titles, typeFilter = null, container = null, progressive = false) {
+    console.log('fetchDetailsSequentially called with:', {titles, container, progressive});
     const detailedItems = [];
     const processedIds = new Set(); // Track processed movie IDs to prevent duplicates
     
     // For genre view, don't limit to 5
     const limitedTitles = progressive ? titles : titles.slice(0, 5);
+    console.log('Limited titles:', limitedTitles);
     
     // Try Firebase cache first
     try {
         const cachedItems = await getCachedItems(limitedTitles);
+        console.log('Cached items result:', cachedItems);
         if (cachedItems && cachedItems.length > 0) {
             console.log(` Found ${cachedItems.length} items in cache`);
             
             // Process cached results and deduplicate
+            console.log('Processing cached items:', cachedItems);
             for (let i = 0; i < cachedItems.length; i++) {
                 const item = cachedItems[i];
+                console.log('Processing cached item:', item);
                 if (item && item.id && !processedIds.has(item.id)) {
                     processedIds.add(item.id);
                     detailedItems.push(item);
                     
                     // Progressive rendering: add card immediately if container provided
+                    console.log('Checking progressive rendering condition:', {progressive, container});
                     if (progressive && container) {
+                        console.log('Progressive rendering cached card:', item.title, 'to container:', container);
                         addCardToContainer(item, container);
+                    } else {
+                        console.log('Skipping progressive rendering for cached item:', item.title, {progressive, container});
                     }
+                } else {
+                    console.log('Skipping cached item:', item, 'already processed:', processedIds.has(item.id));
                 }
             }
             
-            // If we got all items from cache, return early
+            // If we got all items from cache, still process them for progressive rendering
             if (cachedItems.length === limitedTitles.length) {
-                console.log(`✅ All items served from cache`);
+                console.log(`✅ All items served from cache, returning ${detailedItems.length} items`);
                 return detailedItems;
             }
             
@@ -212,6 +223,7 @@ async function fetchDetailsSequentially(titles, typeFilter = null, container = n
                 
                 // Progressive rendering: add card immediately if container provided
                 if (progressive && container) {
+                    console.log('Progressive rendering card:', item.title, 'to container:', container);
                     addCardToContainer(item, container);
                 }
             }
@@ -289,6 +301,7 @@ async function fetchDetailsSequentially(titles, typeFilter = null, container = n
                     
                     // Progressive rendering: add card immediately if container provided
                     if (progressive && container) {
+                        console.log('Progressive rendering sequential card:', detailedItem.title, 'to container:', container);
                         addCardToContainer(detailedItem, container);
                     }
                 }
@@ -306,11 +319,50 @@ async function fetchDetailsSequentially(titles, typeFilter = null, container = n
 // Lightweight caching using localStorage (placeholder for Firebase)
 // In production, replace with Firebase Realtime Database
 
-// Get cached items
+// Replace localStorage-based caching with service worker caching
+// Get cached items using localStorage (primary) with service worker fallback
 async function getCachedItems(titles) {
     try {
+        // First try localStorage (faster and more reliable)
+        const cachedItems = await getCachedItemsFromLocalStorage(titles);
+        if (cachedItems.length > 0) {
+            return cachedItems;
+        }
+        
+        // If nothing in localStorage, try service worker cache
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            return new Promise((resolve) => {
+                const messageChannel = new MessageChannel();
+                messageChannel.port1.onmessage = (event) => {
+                    if (event.data && event.data.cachedItems) {
+                        resolve(event.data.cachedItems);
+                    } else {
+                        resolve([]);
+                    }
+                };
+                
+                navigator.serviceWorker.controller.postMessage({
+                    command: 'GET_CACHED_ITEMS',
+                    titles: titles
+                }, [messageChannel.port2]);
+                
+                // Timeout fallback
+                setTimeout(() => resolve([]), 1000);
+            });
+        }
+        
+        return [];
+    } catch (error) {
+        console.log('Cache get failed:', error.message);
+        return [];
+    }
+}
+
+// Fallback to localStorage for backward compatibility
+async function getCachedItemsFromLocalStorage(titles) {
+    try {
         const cachedItems = [];
-        const processedIds = new Set(); // Track processed IDs to prevent duplicates
+        const processedIds = new Set();
         
         for (const title of titles) {
             const key = `movie_cache_${title.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
@@ -332,13 +384,33 @@ async function getCachedItems(titles) {
         }
         return cachedItems;
     } catch (error) {
-        console.log('Cache get failed:', error.message);
+        console.log('LocalStorage cache get failed:', error.message);
         return [];
     }
 }
 
-// Cache single item
+// Cache single item using localStorage (primary) with service worker fallback
 async function cacheItem(item) {
+    try {
+        // First cache to localStorage (faster and more reliable)
+        await cacheItemToLocalStorage(item);
+        
+        // Then try to cache to service worker
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                command: 'CACHE_ITEM',
+                item: item
+            });
+        }
+    } catch (error) {
+        console.log('Cache item failed:', error.message);
+        // Fallback to localStorage only
+        cacheItemToLocalStorage(item);
+    }
+}
+
+// Fallback to localStorage for backward compatibility
+async function cacheItemToLocalStorage(item) {
     try {
         const key = `movie_cache_${item.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
         const cacheData = {
@@ -350,18 +422,38 @@ async function cacheItem(item) {
         // Clean up old cache entries
         cleanupCache();
     } catch (error) {
-        console.log('Cache item failed:', error.message);
+        console.log('LocalStorage cache item failed:', error.message);
     }
 }
 
-// Cache multiple items
+// Cache multiple items using localStorage (primary) with service worker fallback
 async function cacheItems(items) {
     try {
-        for (const item of items) {
-            await cacheItem(item);
+        // First cache to localStorage (faster and more reliable)
+        await cacheItemsToLocalStorage(items);
+        
+        // Then try to cache to service worker
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                command: 'CACHE_ITEMS',
+                items: items
+            });
         }
     } catch (error) {
         console.log('Cache items failed:', error.message);
+        // Fallback to localStorage only
+        cacheItemsToLocalStorage(items);
+    }
+}
+
+// Fallback to localStorage for backward compatibility
+async function cacheItemsToLocalStorage(items) {
+    try {
+        for (const item of items) {
+            await cacheItemToLocalStorage(item);
+        }
+    } catch (error) {
+        console.log('LocalStorage cache items failed:', error.message);
     }
 }
 
@@ -497,9 +589,14 @@ async function fetchDetailsBatch(titles) {
 
 // Add single card to container (for progressive loading)
 function addCardToContainer(item, containerId) {
+    console.log('Adding card to container:', containerId, item);
     const container = document.getElementById(containerId);
-    if (!container) return;
+    if (!container) {
+        console.log('Container not found:', containerId);
+        return;
+    }
     
+    console.log('Container found, adding card');
     const contentCard = document.createElement('div');
     contentCard.className = 'bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1';
     
@@ -536,6 +633,7 @@ function addCardToContainer(item, containerId) {
     });
     
     container.appendChild(contentCard);
+    console.log('Card added successfully to:', containerId);
 }
 
 // Search movies using the API
@@ -543,36 +641,8 @@ async function searchMovies() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) return;
     
-    try {
-        // Show loading indicator
-        const resultsContainer = document.getElementById('resultsContainer');
-        if (resultsContainer) {
-            resultsContainer.innerHTML = '<p class="text-center">Searching...</p>';
-        }
-        
-        // Show search results section
-        document.getElementById('searchResults').style.display = 'block';
-        document.getElementById('welcomeSection').style.display = 'none';
-        document.getElementById('movieDetails').style.display = 'none';
-        
-        const response = await fetchWithProxy(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
-        const data = await response.json();
-        
-        if (data.ok && data.description) {
-            displaySearchResults(data.description);
-        } else {
-            const resultsContainer = document.getElementById('resultsContainer');
-            if (resultsContainer) {
-                resultsContainer.innerHTML = '<p class="text-center">No movies found</p>';
-            }
-        }
-    } catch (error) {
-        console.error('Search error:', error);
-        const resultsContainer = document.getElementById('resultsContainer');
-        if (resultsContainer) {
-            resultsContainer.innerHTML = '<p class="text-center text-red-500">Search failed. Please try again.</p>';
-        }
-    }
+    // Redirect to search.html with the query parameter
+    window.location.href = `search.html?q=${encodeURIComponent(query)}`;
 }
 
 // DOM loaded event
@@ -1335,7 +1405,12 @@ async function scrapeMovieData(genre = null) {
         containers.forEach(containerId => {
             const container = document.getElementById(containerId);
             if (container) {
-                container.innerHTML = '<p class="text-center col-span-full">Loading data...</p>';
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12 col-span-full">
+                        <i class="fas fa-spinner fa-spin text-3xl text-accent mb-4"></i>
+                        <p class="text-gray-400">Loading content...</p>
+                    </div>
+                `;
             }
         });
         
@@ -1368,8 +1443,21 @@ async function scrapeMovieData(genre = null) {
             comingSoonResult
         });
         
-        // Progressive rendering handles display automatically
-        // No need to call displayPopularContent here
+        // Check if any results were successful and display them
+        if (popularResult.status === 'fulfilled' && popularResult.value) {
+            console.log('Displaying popular content:', popularResult.value.length, 'items');
+            displayPopularContent(popularResult.value, 'popularContainer');
+        }
+        
+        if (latestResult.status === 'fulfilled' && latestResult.value) {
+            console.log('Displaying latest content:', latestResult.value.length, 'items');
+            displayPopularContent(latestResult.value, 'latestContainer');
+        }
+        
+        if (comingSoonResult.status === 'fulfilled' && comingSoonResult.value) {
+            console.log('Displaying coming soon content:', comingSoonResult.value.length, 'items');
+            displayPopularContent(comingSoonResult.value, 'comingSoonContainer');
+        }
         
         console.log('Finished progressive loading all content');
     } catch (error) {
@@ -1385,7 +1473,13 @@ async function scrapeMovieData(genre = null) {
         containers.forEach(containerId => {
             const container = document.getElementById(containerId);
             if (container) {
-                container.innerHTML = '<p class="text-center col-span-full text-red-500">Failed to load data. Please try again later.</p>';
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12 col-span-full">
+                        <i class="fas fa-exclamation-triangle text-3xl text-red-500 mb-4"></i>
+                        <p class="text-red-500">Failed to load content</p>
+                        <p class="text-gray-400 text-sm mt-2">Please try again later</p>
+                    </div>
+                `;
             }
         });
     }
@@ -1439,7 +1533,12 @@ async function scrapeByGenre(genre) {
             }
             
             // Clear containers
-            document.getElementById('popularContainer').innerHTML = '<p class="text-center col-span-full text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Loading movies...</p>';
+            document.getElementById('popularContainer').innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12 col-span-full">
+                    <i class="fas fa-spinner fa-spin text-3xl text-accent mb-4"></i>
+                    <p class="text-gray-400">Loading ${genre} movies...</p>
+                </div>
+            `;
             document.getElementById('latestContainer').innerHTML = '';
             document.getElementById('comingSoonContainer').innerHTML = '';
             
@@ -1463,7 +1562,12 @@ async function scrapeByGenre(genre) {
         } else {
             console.warn(`⚠️ No items found for genre: ${genre}`);
             showSectionHeaders();
-            document.getElementById('popularContainer').innerHTML = `<p class="text-center col-span-full text-gray-400">No ${genre} content found</p>`;
+            document.getElementById('popularContainer').innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12 col-span-full">
+                    <i class="fas fa-search text-3xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-400">No ${genre} content found</p>
+                </div>
+            `;
             document.getElementById('latestContainer').innerHTML = '';
             document.getElementById('comingSoonContainer').innerHTML = '';
         }
@@ -1471,7 +1575,13 @@ async function scrapeByGenre(genre) {
         console.error(`❌ Error fetching ${genre} content:`, error);
         console.error('Error details:', error.message);
         showSectionHeaders();
-        document.getElementById('popularContainer').innerHTML = `<p class="text-center col-span-full text-red-500">Failed to load ${genre} content. ${error.message}</p>`;
+        document.getElementById('popularContainer').innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 col-span-full">
+                <i class="fas fa-exclamation-triangle text-3xl text-red-500 mb-4"></i>
+                <p class="text-red-500">Failed to load ${genre} content</p>
+                <p class="text-gray-400 text-sm mt-2">Please try again later</p>
+            </div>
+        `;
         document.getElementById('latestContainer').innerHTML = '';
         document.getElementById('comingSoonContainer').innerHTML = '';
     }
@@ -1534,11 +1644,15 @@ async function scrapePopular() {
             // Clear container and show loading
             document.getElementById('popularContainer').innerHTML = '';
             
-            // Fetch details WITH progressive rendering
-            await fetchDetailsSequentially(titles, null, 'popularContainer', true);
+            console.log('Fetching popular content with progressive loading');
+            const results = await fetchDetailsSequentially(titles, null, 'popularContainer', true);
+            console.log('Popular content fetch results:', results);
+            
+            // Update section pagination
+            sectionPagination.popular.items = results;
             
             console.log('Progressive popular content displayed');
-            return sectionPagination.popular.items;
+            return results;
         }
         
         return [];
@@ -1567,11 +1681,15 @@ async function scrapeLatest() {
             // Clear container and show loading
             document.getElementById('latestContainer').innerHTML = '';
             
-            // Fetch details WITH progressive rendering
-            await fetchDetailsSequentially(titles, null, 'latestContainer', true);
+            console.log('Fetching latest content with progressive loading');
+            const results = await fetchDetailsSequentially(titles, null, 'latestContainer', true);
+            console.log('Latest content fetch results:', results);
+            
+            // Update section pagination
+            sectionPagination.latest.items = results;
             
             console.log('Progressive latest content displayed');
-            return sectionPagination.latest.items;
+            return results;
         }
         
         return [];
@@ -1600,11 +1718,15 @@ async function scrapeComingSoon() {
             // Clear container and show loading
             document.getElementById('comingSoonContainer').innerHTML = '';
             
-            // Fetch details WITH progressive rendering
-            await fetchDetailsSequentially(titles, null, 'comingSoonContainer', true);
+            console.log('Fetching coming soon content with progressive loading');
+            const results = await fetchDetailsSequentially(titles, null, 'comingSoonContainer', true);
+            console.log('Coming soon content fetch results:', results);
+            
+            // Update section pagination
+            sectionPagination.comingSoon.items = results;
             
             console.log('Progressive coming soon content displayed');
-            return sectionPagination.comingSoon.items;
+            return results;
         }
         
         return [];
@@ -1697,7 +1819,12 @@ function displayPopularContent(contentList, containerId) {
         }
     } else {
         // Show message when no content is available
-        container.innerHTML = '<p class="text-center col-span-full text-gray-500">No content available at this time.</p>';
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 col-span-full">
+                <i class="fas fa-film text-3xl text-gray-500 mb-4"></i>
+                <p class="text-gray-500">No content available</p>
+            </div>
+        `;
     }
 }
 
@@ -1753,7 +1880,12 @@ function displayGenreContent(contentList, containerId) {
             container.appendChild(contentCard);
         });
     } else {
-        container.innerHTML = '<p class="text-center col-span-full text-gray-500">No content available.</p>';
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 col-span-full">
+                <i class="fas fa-film text-3xl text-gray-500 mb-4"></i>
+                <p class="text-gray-500">No content available</p>
+            </div>
+        `;
     }
 }
 
@@ -1850,6 +1982,230 @@ function loadMoreItems(containerId) {
         });
     }
 }
+
+// Function to display proxy performance statistics (for debugging)
+function displayProxyStats() {
+    console.log('=== Proxy Performance Statistics ===');
+    CORS_PROXIES.forEach((proxy, index) => {
+        const successes = proxySuccessCount[index];
+        const failures = proxyFailCount[index];
+        const total = successes + failures;
+        const successRate = total > 0 ? (successes / total * 100).toFixed(2) : '0.00';
+        
+        console.log(`Proxy ${index + 1}: ${proxy.substring(0, 30)}...`);
+        console.log(`  Successes: ${successes}, Failures: ${failures}, Success Rate: ${successRate}%`);
+    });
+    console.log('====================================');
+}
+
+// Add periodic stats logging
+setInterval(displayProxyStats, 300000); // Log every 5 minutes
+
+
+// Fetch more items from API for pagination
+async function fetchMoreItems(sectionKey, containerId) {
+    const sectionData = sectionPagination[sectionKey];
+    
+    try {
+        // Set loading state
+        sectionData.isLoading = true;
+        
+        // Show loading indicator
+        const container = document.getElementById(containerId);
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.id = `loading${containerId}`;
+        loadingIndicator.className = 'col-span-full text-center py-4';
+        loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin text-accent text-xl"></i>';
+        container.appendChild(loadingIndicator);
+        
+        // Fetch more data based on section
+        let newData = [];
+        if (sectionKey === 'popular') {
+            newData = await scrapePopular(sectionData.page + 1);
+        } else if (sectionKey === 'latest') {
+            newData = await scrapeLatest(sectionData.page + 1);
+        } else if (sectionKey === 'comingSoon') {
+            newData = await scrapeComingSoon(sectionData.page + 1);
+        }
+        
+        // Remove loading indicator
+        if (loadingIndicator.parentNode) {
+            loadingIndicator.parentNode.removeChild(loadingIndicator);
+        }
+        
+        if (newData && newData.length > 0) {
+            // Add new data to section
+            sectionData.items = [...sectionData.items, ...newData];
+            
+            // Add load more button if there are more items
+            addLoadMoreButton(containerId);
+        } else {
+            // No more items available
+            sectionData.hasMore = false;
+        }
+    } catch (error) {
+        console.error('Error fetching more items:', error);
+        
+        // Remove loading indicator
+        const loadingIndicator = document.getElementById(`loading${containerId}`);
+        if (loadingIndicator && loadingIndicator.parentNode) {
+            loadingIndicator.parentNode.removeChild(loadingIndicator);
+        }
+        
+        // Show error message
+        const container = document.getElementById(containerId);
+        const errorElement = document.createElement('div');
+        errorElement.className = 'col-span-full text-center py-4 text-red-500';
+        errorElement.innerHTML = '<p>Failed to load more items. Please try again.</p>';
+        container.appendChild(errorElement);
+        
+        // Add retry button
+        const retryButton = document.createElement('button');
+        retryButton.className = 'bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300 mt-2';
+        retryButton.innerHTML = 'Retry';
+        retryButton.onclick = () => {
+            errorElement.remove();
+            retryButton.remove();
+            fetchMoreItems(sectionKey, containerId);
+        };
+        container.appendChild(retryButton);
+    } finally {
+        sectionData.isLoading = false;
+    }
+}
+
+// Add load more button to container
+function addLoadMoreButton(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // Remove existing load more button if any
+    const existingButton = document.getElementById(`loadMore${containerId}`);
+    if (existingButton) {
+        existingButton.remove();
+    }
+    
+    // Add new load more button
+    const loadMoreButton = document.createElement('div');
+    loadMoreButton.className = 'col-span-full text-center mt-4';
+    loadMoreButton.innerHTML = `
+        <button id="loadMore${containerId}" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300">
+            Load More
+        </button>
+    `;
+    container.appendChild(loadMoreButton);
+    
+    // Add event listener for load more button
+    document.getElementById(`loadMore${containerId}`).addEventListener('click', () => {
+        loadMoreItems(containerId);
+    });
+}
+
+// Enhanced scrape functions with pagination support
+async function scrapePopular(page = 1) {
+    try {
+        console.log(`Fetching popular content from scraper API (page ${page})...`);
+        const response = await fetch(`${SCRAPER_API_BASE}/popular?page=${page}`);
+        const data = await response.json();
+        console.log('Scraper API response for popular:', data);
+        
+        if (data.items) {
+            // Extract titles - remove numbering prefix
+            const titles = data.items.slice(0, 5).map(item => 
+                item.title.replace(/^\d+\.\s*/, '')
+            );
+            console.log('Extracted titles:', titles);
+            
+            // Fetch details WITH progressive rendering
+            const results = await fetchDetailsSequentially(titles, null, null, false, 'popular');
+            
+            console.log('Popular content fetched:', results);
+            return results;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching popular content:', error);
+        return [];
+    }
+}
+
+async function scrapeLatest(page = 1) {
+    try {
+        console.log(`Fetching latest content from scraper API (page ${page})...`);
+        const response = await fetch(`${SCRAPER_API_BASE}/popular?page=${page}`);
+        const data = await response.json();
+        console.log('Scraper API response for latest:', data);
+        
+        if (data.items) {
+            // Extract titles - skip first 5, get next 5
+            const titles = data.items.slice(5, 10).map(item => 
+                item.title.replace(/^\d+\.\s*/, '')
+            );
+            console.log('Extracted titles:', titles);
+            
+            // Fetch details WITH progressive rendering
+            const results = await fetchDetailsSequentially(titles, null, null, false, 'latest');
+            
+            console.log('Latest content fetched:', results);
+            return results;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching latest content:', error);
+        return [];
+    }
+}
+
+async function scrapeComingSoon(page = 1) {
+    try {
+        console.log(`Fetching coming soon content from scraper API (page ${page})...`);
+        const response = await fetch(`${SCRAPER_API_BASE}/upcoming?page=${page}`);
+        const data = await response.json();
+        console.log('Scraper API response for coming soon:', data);
+        
+        if (data.items) {
+            // Extract titles - remove numbering prefix
+            const titles = data.items.slice(0, 5).map(item => 
+                item.title.replace(/^\d+\.\s*/, '')
+            );
+            console.log('Extracted titles:', titles);
+            
+            // Fetch details WITH progressive rendering
+            const results = await fetchDetailsSequentially(titles, null, null, false, 'comingSoon');
+            
+            console.log('Coming soon content fetched:', results);
+            return results;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Error fetching coming soon content:', error);
+        // Show error message in the container
+        const container = document.getElementById('comingSoonContainer');
+        if (container) {
+            container.innerHTML = '<p class="text-center col-span-full text-red-500">Failed to load coming soon content. Please try again later.</p>';
+        }
+        return [];
+    }
+}
+
+// Function to display proxy performance statistics (for debugging)
+function displayProxyStats() {
+    console.log('=== Proxy Performance Statistics ===');
+    CORS_PROXIES.forEach((proxy, index) => {
+        const successes = proxySuccessCount[index];
+        const failures = proxyFailCount[index];
+        const total = successes + failures;
+        const successRate = total > 0 ? (successes / total * 100).toFixed(2) : '0.00';
+        
+        console.log(`Proxy ${index + 1}: ${proxy.substring(0, 30)}...`);
+        console.log(`  Successes: ${successes}, Failures: ${failures}, Success Rate: ${successRate}%`);
+    });
+    console.log('====================================');
+}
+
 
 // Function to display proxy performance statistics (for debugging)
 function displayProxyStats() {

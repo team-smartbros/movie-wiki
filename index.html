@@ -3,7 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Wiki</title>
+    <title>Movie Wiki - Discover Movies and TV Shows Information</title>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Movie Wiki is your ultimate destination for movie and TV show information. Discover detailed information, ratings, cast, crew, trailers, and more for your favorite films and series.">
+    <meta name="keywords" content="movie, tv show, film, series, imdb, information, database, entertainment, movies, tv, wiki, movie wiki">
+    <meta name="author" content="Movie Wiki">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Movie Wiki - Discover Movies and TV Shows Information">
+    <meta property="og:description" content="Your ultimate destination for movie and TV show information. Discover detailed information, ratings, cast, crew, trailers, and more.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://moviewiki.example.com">
+    <meta property="og:image" content="https://moviewiki.example.com/favicon.png">
+    <meta property="og:site_name" content="Movie Wiki">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Movie Wiki - Discover Movies and TV Shows Information">
+    <meta name="twitter:description" content="Your ultimate destination for movie and TV show information. Discover detailed information, ratings, cast, crew, trailers, and more.">
+    <meta name="twitter:image" content="https://moviewiki.example.com/favicon.png">
+    <meta name="twitter:site" content="@MovieWiki">
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Movie Wiki",
+      "url": "https://moviewiki.example.com",
+      "description": "Your ultimate destination for movie and TV show information. Discover detailed information, ratings, cast, crew, trailers, and more.",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Movie Wiki",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://moviewiki.example.com/favicon.png"
+        }
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://moviewiki.example.com/search.html?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    
     <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -635,6 +681,19 @@
     </section>
 
     <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+        
         // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDeTE5otOE58jq1-bIPNbiYdwiwX88iT00",
@@ -738,7 +797,3 @@
 </body>
 
 </html>
-
-
-
-
