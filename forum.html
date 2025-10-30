@@ -60,20 +60,11 @@
             }
         }
         
-        /* Glass card styling */
+        /* Glassmorphism cards */
         .glass-card {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(34, 211, 238, 0.1);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            border-radius: 16px;
-            transition: all 0.3s ease;
-        }
-        
-        .glass-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(34, 211, 238, 0.2);
-            border-color: rgba(34, 211, 238, 0.3);
         }
         
         /* Form elements */
@@ -192,14 +183,14 @@
                     <i class="fas fa-film text-accent text-2xl"></i>
                     <h1 class="text-2xl font-bold text-accent font-sans">Movie Wiki</h1>
                 </div>
-                <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-4">
                     <a href="./index.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
                         <i class="fas fa-home"></i>
-                        <span class="hidden sm:inline">Home</span>
+                        <span>Home</span>
                     </a>
-                    <a href="./forum.html" class="text-accent flex items-center gap-2">
+                    <a href="./forum.html" class="text-accent transition-colors flex items-center gap-2">
                         <i class="fas fa-comments"></i>
-                        <span class="hidden sm:inline">Forum</span>
+                        <span>Forum</span>
                     </a>
                     <button id="loginBtn" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
                         <i class="fas fa-user"></i>
@@ -221,7 +212,7 @@
                 <i class="fas fa-lightbulb text-xl"></i>
                 <span class="text-xs">Suggest</span>
             </a>
-            <a href="#" class="flex flex-col items-center gap-1 text-accent">
+            <a href="./forum.html" class="flex flex-col items-center gap-1 text-accent">
                 <i class="fas fa-comments text-xl"></i>
                 <span class="text-xs">Forum</span>
             </a>
