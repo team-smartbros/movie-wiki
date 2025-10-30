@@ -1,6 +1,7 @@
 // API Base URLs
 const API_BASE = 'https://imdb.iamidiotareyoutoo.com';
 const SCRAPER_API_BASE = 'https://web-1-production.up.railway.app';
+const FALLBACK_SCRAPER_API_BASE = 'https://web-1-mykj.onrender.com';
 
 // Enhanced CORS Proxy with better, faster proxies and intelligent fallback
 const CORS_PROXIES = [
@@ -1504,10 +1505,18 @@ async function scrapeByGenre(genre) {
         
         const apiGenre = genreMap[genre] || genre;
         const apiUrl = `${SCRAPER_API_BASE}/by_genre/${apiGenre}`;
+        console.log(`Using primary scraper API: ${SCRAPER_API_BASE}`);
         
         console.log(`🔗 Fetching from: ${apiUrl}`);
         
-        const response = await fetch(apiUrl);
+        let response = await fetch(apiUrl);
+        
+        // If primary API fails, try fallback
+        if (!response.ok) {
+            console.log(`Primary API failed with status ${response.status}, trying fallback API: ${FALLBACK_SCRAPER_API_BASE}`);
+            const fallbackUrl = `${FALLBACK_SCRAPER_API_BASE}/by_genre/${apiGenre}`;
+            response = await fetch(fallbackUrl);
+        }
         
         if (!response.ok) {
             throw new Error(`API returned ${response.status}: ${response.statusText}`);
@@ -1630,7 +1639,15 @@ function showSectionHeaders() {
 async function scrapePopular() {
     try {
         console.log('Fetching popular content from scraper API...');
-        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        console.log(`Using primary scraper API: ${SCRAPER_API_BASE}`);
+        let response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        
+        // If primary API fails, try fallback
+        if (!response.ok) {
+            console.log(`Primary API failed with status ${response.status}, trying fallback API: ${FALLBACK_SCRAPER_API_BASE}`);
+            response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/popular`);
+        }
+        
         const data = await response.json();
         console.log('Scraper API response for popular:', data);
         
@@ -1658,6 +1675,37 @@ async function scrapePopular() {
         return [];
     } catch (error) {
         console.error('Error fetching popular content:', error);
+        // Try fallback API
+        try {
+            console.log('Trying fallback API for popular content...');
+            console.log(`Using fallback scraper API: ${FALLBACK_SCRAPER_API_BASE}`);
+            const response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/popular`);
+            const data = await response.json();
+            console.log('Fallback API response for popular:', data);
+            
+            if (data.items) {
+                // Extract titles - remove numbering prefix
+                const titles = data.items.slice(0, 5).map(item => 
+                    item.title.replace(/^\d+\.\s*/, '')
+                );
+                console.log('Extracted titles from fallback:', titles);
+                
+                // Clear container and show loading
+                document.getElementById('popularContainer').innerHTML = '';
+                
+                console.log('Fetching popular content with progressive loading from fallback');
+                const results = await fetchDetailsSequentially(titles, null, 'popularContainer', true);
+                console.log('Popular content fetch results from fallback:', results);
+                
+                // Update section pagination
+                sectionPagination.popular.items = results;
+                
+                console.log('Progressive popular content displayed from fallback');
+                return results;
+            }
+        } catch (fallbackError) {
+            console.error('Error fetching popular content from fallback:', fallbackError);
+        }
         return [];
     }
 }
@@ -1667,7 +1715,15 @@ async function scrapePopular() {
 async function scrapeLatest() {
     try {
         console.log('Fetching latest content from scraper API...');
-        const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        console.log(`Using primary scraper API: ${SCRAPER_API_BASE}`);
+        let response = await fetch(`${SCRAPER_API_BASE}/popular`);
+        
+        // If primary API fails, try fallback
+        if (!response.ok) {
+            console.log(`Primary API failed with status ${response.status}, trying fallback API: ${FALLBACK_SCRAPER_API_BASE}`);
+            response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/popular`);
+        }
+        
         const data = await response.json();
         console.log('Scraper API response for latest:', data);
         
@@ -1695,6 +1751,37 @@ async function scrapeLatest() {
         return [];
     } catch (error) {
         console.error('Error fetching latest content:', error);
+        // Try fallback API
+        try {
+            console.log('Trying fallback API for latest content...');
+            console.log(`Using fallback scraper API: ${FALLBACK_SCRAPER_API_BASE}`);
+            const response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/popular`);
+            const data = await response.json();
+            console.log('Fallback API response for latest:', data);
+            
+            if (data.items) {
+                // Extract titles - skip first 5, get next 5
+                const titles = data.items.slice(5, 10).map(item => 
+                    item.title.replace(/^\d+\.\s*/, '')
+                );
+                console.log('Extracted titles from fallback:', titles);
+                
+                // Clear container and show loading
+                document.getElementById('latestContainer').innerHTML = '';
+                
+                console.log('Fetching latest content with progressive loading from fallback');
+                const results = await fetchDetailsSequentially(titles, null, 'latestContainer', true);
+                console.log('Latest content fetch results from fallback:', results);
+                
+                // Update section pagination
+                sectionPagination.latest.items = results;
+                
+                console.log('Progressive latest content displayed from fallback');
+                return results;
+            }
+        } catch (fallbackError) {
+            console.error('Error fetching latest content from fallback:', fallbackError);
+        }
         return [];
     }
 }
@@ -1704,7 +1791,15 @@ async function scrapeLatest() {
 async function scrapeComingSoon() {
     try {
         console.log('Fetching coming soon content from scraper API...');
-        const response = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+        console.log(`Using primary scraper API: ${SCRAPER_API_BASE}`);
+        let response = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+        
+        // If primary API fails, try fallback
+        if (!response.ok) {
+            console.log(`Primary API failed with status ${response.status}, trying fallback API: ${FALLBACK_SCRAPER_API_BASE}`);
+            response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/upcoming`);
+        }
+        
         const data = await response.json();
         console.log('Scraper API response for coming soon:', data);
         
@@ -1732,6 +1827,37 @@ async function scrapeComingSoon() {
         return [];
     } catch (error) {
         console.error('Error fetching coming soon content:', error);
+        // Try fallback API
+        try {
+            console.log('Trying fallback API for coming soon content...');
+            console.log(`Using fallback scraper API: ${FALLBACK_SCRAPER_API_BASE}`);
+            const response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/upcoming`);
+            const data = await response.json();
+            console.log('Fallback API response for coming soon:', data);
+            
+            if (data.items) {
+                // Extract titles - remove numbering prefix
+                const titles = data.items.slice(0, 5).map(item => 
+                    item.title.replace(/^\d+\.\s*/, '')
+                );
+                console.log('Extracted titles from fallback:', titles);
+                
+                // Clear container and show loading
+                document.getElementById('comingSoonContainer').innerHTML = '';
+                
+                console.log('Fetching coming soon content with progressive loading from fallback');
+                const results = await fetchDetailsSequentially(titles, null, 'comingSoonContainer', true);
+                console.log('Coming soon content fetch results from fallback:', results);
+                
+                // Update section pagination
+                sectionPagination.comingSoon.items = results;
+                
+                console.log('Progressive coming soon content displayed from fallback');
+                return results;
+            }
+        } catch (fallbackError) {
+            console.error('Error fetching coming soon content from fallback:', fallbackError);
+        }
         // Show error message in the container
         const container = document.getElementById('comingSoonContainer');
         if (container) {
@@ -2105,7 +2231,15 @@ function addLoadMoreButton(containerId) {
 async function scrapePopular(page = 1) {
     try {
         console.log(`Fetching popular content from scraper API (page ${page})...`);
-        const response = await fetch(`${SCRAPER_API_BASE}/popular?page=${page}`);
+        console.log(`Using primary scraper API: ${SCRAPER_API_BASE}`);
+        let response = await fetch(`${SCRAPER_API_BASE}/popular?page=${page}`);
+        
+        // If primary API fails, try fallback
+        if (!response.ok) {
+            console.log(`Primary API failed with status ${response.status}, trying fallback API: ${FALLBACK_SCRAPER_API_BASE}`);
+            response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/popular?page=${page}`);
+        }
+        
         const data = await response.json();
         console.log('Scraper API response for popular:', data);
         
@@ -2126,6 +2260,30 @@ async function scrapePopular(page = 1) {
         return [];
     } catch (error) {
         console.error('Error fetching popular content:', error);
+        // Try fallback API
+        try {
+            console.log('Trying fallback API for popular content...');
+            console.log(`Using fallback scraper API: ${FALLBACK_SCRAPER_API_BASE}`);
+            const response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/popular?page=${page}`);
+            const data = await response.json();
+            console.log('Fallback API response for popular:', data);
+            
+            if (data.items) {
+                // Extract titles - remove numbering prefix
+                const titles = data.items.slice(0, 5).map(item => 
+                    item.title.replace(/^\d+\.\s*/, '')
+                );
+                console.log('Extracted titles from fallback:', titles);
+                
+                // Fetch details WITH progressive rendering
+                const results = await fetchDetailsSequentially(titles, null, null, false, 'popular');
+                
+                console.log('Popular content fetched from fallback:', results);
+                return results;
+            }
+        } catch (fallbackError) {
+            console.error('Error fetching popular content from fallback:', fallbackError);
+        }
         return [];
     }
 }
@@ -2133,7 +2291,15 @@ async function scrapePopular(page = 1) {
 async function scrapeLatest(page = 1) {
     try {
         console.log(`Fetching latest content from scraper API (page ${page})...`);
-        const response = await fetch(`${SCRAPER_API_BASE}/popular?page=${page}`);
+        console.log(`Using primary scraper API: ${SCRAPER_API_BASE}`);
+        let response = await fetch(`${SCRAPER_API_BASE}/popular?page=${page}`);
+        
+        // If primary API fails, try fallback
+        if (!response.ok) {
+            console.log(`Primary API failed with status ${response.status}, trying fallback API: ${FALLBACK_SCRAPER_API_BASE}`);
+            response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/popular?page=${page}`);
+        }
+        
         const data = await response.json();
         console.log('Scraper API response for latest:', data);
         
@@ -2154,6 +2320,30 @@ async function scrapeLatest(page = 1) {
         return [];
     } catch (error) {
         console.error('Error fetching latest content:', error);
+        // Try fallback API
+        try {
+            console.log('Trying fallback API for latest content...');
+            console.log(`Using fallback scraper API: ${FALLBACK_SCRAPER_API_BASE}`);
+            const response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/popular?page=${page}`);
+            const data = await response.json();
+            console.log('Fallback API response for latest:', data);
+            
+            if (data.items) {
+                // Extract titles - skip first 5, get next 5
+                const titles = data.items.slice(5, 10).map(item => 
+                    item.title.replace(/^\d+\.\s*/, '')
+                );
+                console.log('Extracted titles from fallback:', titles);
+                
+                // Fetch details WITH progressive rendering
+                const results = await fetchDetailsSequentially(titles, null, null, false, 'latest');
+                
+                console.log('Latest content fetched from fallback:', results);
+                return results;
+            }
+        } catch (fallbackError) {
+            console.error('Error fetching latest content from fallback:', fallbackError);
+        }
         return [];
     }
 }
@@ -2161,7 +2351,15 @@ async function scrapeLatest(page = 1) {
 async function scrapeComingSoon(page = 1) {
     try {
         console.log(`Fetching coming soon content from scraper API (page ${page})...`);
-        const response = await fetch(`${SCRAPER_API_BASE}/upcoming?page=${page}`);
+        console.log(`Using primary scraper API: ${SCRAPER_API_BASE}`);
+        let response = await fetch(`${SCRAPER_API_BASE}/upcoming?page=${page}`);
+        
+        // If primary API fails, try fallback
+        if (!response.ok) {
+            console.log(`Primary API failed with status ${response.status}, trying fallback API: ${FALLBACK_SCRAPER_API_BASE}`);
+            response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/upcoming?page=${page}`);
+        }
+        
         const data = await response.json();
         console.log('Scraper API response for coming soon:', data);
         
@@ -2182,6 +2380,30 @@ async function scrapeComingSoon(page = 1) {
         return [];
     } catch (error) {
         console.error('Error fetching coming soon content:', error);
+        // Try fallback API
+        try {
+            console.log('Trying fallback API for coming soon content...');
+            console.log(`Using fallback scraper API: ${FALLBACK_SCRAPER_API_BASE}`);
+            const response = await fetch(`${FALLBACK_SCRAPER_API_BASE}/upcoming?page=${page}`);
+            const data = await response.json();
+            console.log('Fallback API response for coming soon:', data);
+            
+            if (data.items) {
+                // Extract titles - remove numbering prefix
+                const titles = data.items.slice(0, 5).map(item => 
+                    item.title.replace(/^\d+\.\s*/, '')
+                );
+                console.log('Extracted titles from fallback:', titles);
+                
+                // Fetch details WITH progressive rendering
+                const results = await fetchDetailsSequentially(titles, null, null, false, 'comingSoon');
+                
+                console.log('Coming soon content fetched from fallback:', results);
+                return results;
+            }
+        } catch (fallbackError) {
+            console.error('Error fetching coming soon content from fallback:', fallbackError);
+        }
         // Show error message in the container
         const container = document.getElementById('comingSoonContainer');
         if (container) {
