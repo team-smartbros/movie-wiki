@@ -131,13 +131,24 @@
             height: auto;
             max-height: 60vh;
             object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
         }
         
-        @media (min-width: 768px) {
+        /* Mobile - larger images */
+        @media (max-width: 767px) {
             #carouselMediaContainer img,
             #carouselMediaContainer video {
-                max-width: 90vw;
                 max-height: 70vh;
+            }
+        }
+        
+        /* Desktop - smaller images */
+        @media (min-width: 1024px) {
+            #carouselMediaContainer img,
+            #carouselMediaContainer video {
+                max-width: 80vw;
+                max-height: 65vh;
             }
         }
         
@@ -145,12 +156,23 @@
             width: 100%;
             height: 60vh;
             max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
         }
         
-        @media (min-width: 768px) {
+        /* Mobile - larger video player */
+        @media (max-width: 767px) {
             #carouselMediaContainer iframe {
-                width: 90vw;
-                height: 80vh;
+                height: 70vh;
+                max-height: 70vh;
+            }
+        }
+        
+        /* Desktop - smaller video player */
+        @media (min-width: 1024px) {
+            #carouselMediaContainer iframe {
+                width: 80vw;
+                height: 65vh;
             }
         }
         /* Cast images sizing */
@@ -226,6 +248,57 @@
             .banner-ad-container ins {
                 height: 50px !important;
                 min-height: 50px;
+            }
+        }
+        
+        /* Media carousel improvements */
+        #mediaCarousel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        /* Larger video player on mobile */
+        @media (max-width: 767px) {
+            #mediaCarousel {
+                padding: 10px;
+            }
+            
+            #mediaCarousel iframe {
+                height: 60vh;
+            }
+        }
+        
+        /* Desktop - larger player */
+        @media (min-width: 1024px) {
+            #mediaCarousel iframe {
+                height: 85vh;
+            }
+        }
+        
+        /* Mobile-friendly navigation buttons */
+        @media (max-width: 767px) {
+            #mediaCarousel .absolute {
+                top: 10px;
+                right: 10px;
+            }
+            
+            #mediaCarousel .absolute.left-4 {
+                left: 10px;
+            }
+            
+            #mediaCarousel .absolute.right-4 {
+                right: 10px;
             }
         }
     </style>
@@ -532,14 +605,17 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="flex-grow flex items-center">
-                <button id="prevMediaButton" class="text-white text-3xl mx-4 hover:text-accent">
+            <div class="flex-grow flex flex-col items-center justify-center p-4 relative">
+                <button id="prevMediaButton" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-3xl z-10 bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition">
                     <i class="fas fa-chevron-left"></i>
                 </button>
-                <div id="carouselMediaContainer" class="flex-grow flex justify-center items-center h-full p-4">
+                <div id="carouselMediaContainer" class="w-full flex justify-center items-center mb-4">
                     <!-- Carousel media will be populated here -->
                 </div>
-                <button id="nextMediaButton" class="text-white text-3xl mx-4 hover:text-accent">
+                <div id="carouselMediaInfo" class="text-center w-full">
+                    <!-- Media info (title, description) will be populated here -->
+                </div>
+                <button id="nextMediaButton" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-3xl z-10 bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition">
                     <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
@@ -865,7 +941,7 @@
             const duration = topData.runtime?.displayableProperty?.value?.plainText || shortData.duration || shortData['#TIME'] || 'N/A';
             const genres = shortData.genre ? (Array.isArray(shortData.genre) ? shortData.genre.join(', ') : shortData.genre) : (topData.genres?.genres?.map(g => g.text || g.genre?.text).join(', ')) || shortData['#GENRES'] || 'N/A';
             const plot = shortData.description || topData.plot?.plotText?.plainText || shortData['#PLOT'] || 'No plot available';
-            const poster = shortData.image || topData.primaryImage?.url || shortData['#IMG_POSTER'] || 'https://via.placeholder.com/300x450?text=No+Image';
+            const poster = shortData.image || topData.primaryImage?.url || shortData['#IMG_POSTER'] || 'https://placehold.co/300x450?text=No+Image&font=opensans';
             const type = shortData['@type'] || (topData.titleType?.text === 'TV Series' ? 'TVSeries' : 'Movie');
             const imdbId = fullData.imdbId || movieId || 'N/A';
             
@@ -1139,7 +1215,7 @@
             
             castMembers.slice(0, 20).forEach((castMember, index) => {
                 const actorName = castMember.name?.nameText?.text || 'Unknown Actor';
-                const actorImage = castMember.name?.primaryImage?.url || 'https://via.placeholder.com/200x300?text=No+Image';
+                const actorImage = castMember.name?.primaryImage?.url || 'https://placehold.co/200x300?text=No+Image&font=opensans';
                 const characters = castMember.creditedRoles?.edges?.[0]?.node?.characters?.edges?.map(e => e.node.name).join(', ') || 'Unknown Role';
                 
                 photosHTML += `
@@ -1294,7 +1370,7 @@
                 const video = videoEdge.node;
                 if (!video) return;
                 
-                const thumbnail = video.thumbnail?.url || 'https://via.placeholder.com/300x200?text=Video';
+                const thumbnail = video.thumbnail?.url || 'https://placehold.co/300x200?text=Video&font=opensans';
                 const title = video.name?.value || video.contentTitle?.text || 'Video';
                 const runtime = video.runtime?.value ? `${Math.floor(video.runtime.value / 60)}:${String(video.runtime.value % 60).padStart(2, '0')}` : '';
                 const contentType = video.contentType?.displayName?.value || 'Video';
@@ -1499,14 +1575,16 @@
         }
         
         function updateCarousel() {
-            const container = document.getElementById('carouselMediaContainer');
+            const mediaContainer = document.getElementById('carouselMediaContainer');
+            const infoContainer = document.getElementById('carouselMediaInfo');
             const titleElement = document.getElementById('carouselTitle');
             const indicatorsContainer = document.getElementById('carouselIndicators');
             
             titleElement.textContent = window.currentMediaTitle;
             
             // Clear previous content
-            container.innerHTML = '';
+            mediaContainer.innerHTML = '';
+            infoContainer.innerHTML = '';
             
             if (window.isVideoCarousel && window.currentVideos) {
                 const video = window.currentVideos[window.currentVideoIndex];
@@ -1570,7 +1648,7 @@
                         } else {
                             // All proxies failed, show error message with refresh instructions
                             console.error('❌ All video proxies failed');
-                            container.innerHTML = `
+                            mediaContainer.innerHTML = `
                                 <div class="text-center p-4 md:p-8">
                                     <p class="text-white text-lg md:text-xl mb-3 md:mb-4">⚠️ Video Playback Blocked</p>
                                     <p class="text-gray-400 text-xs md:text-sm mb-3 md:mb-4">IMDb is blocking video playback due to cookies.</p>
@@ -1614,22 +1692,27 @@
                         }
                     };
                     
-                    container.appendChild(videoElement);
+                    mediaContainer.appendChild(videoElement);
                     
-                    // Add video title (mobile responsive)
+                    // Add video title (mobile responsive) to info container
                     const videoTitle = document.createElement('p');
-                    videoTitle.className = 'text-center text-white mt-2 text-xs md:text-sm px-2';
+                    videoTitle.className = 'text-center text-white mt-4 text-base md:text-lg px-2';
                     videoTitle.textContent = video.name?.value || video.contentTitle?.text || 'Video';
-                    container.appendChild(videoTitle);
+                    infoContainer.appendChild(videoTitle);
                 } else {
                     // Show thumbnail with message if video URL not available
-                    container.innerHTML = `
+                    mediaContainer.innerHTML = `
                         <div class="text-center">
                             <p class="text-white mb-4">🎬 Video not available for direct playback</p>
                             ${video.thumbnail?.url ? `<img src="${video.thumbnail.url}" alt="Thumbnail" class="max-w-md mx-auto rounded">` : ''}
-                            <p class="text-gray-400 text-sm mt-2">${video.name?.value || video.contentTitle?.text || 'Video'}</p>
                         </div>
                     `;
+                    
+                    // Add video title to info container
+                    const videoTitle = document.createElement('p');
+                    videoTitle.className = 'text-center text-gray-400 mt-4 text-base md:text-lg px-2';
+                    videoTitle.textContent = video.name?.value || video.contentTitle?.text || 'Video';
+                    infoContainer.appendChild(videoTitle);
                 }
                 
                 // Update indicators for videos
@@ -1647,23 +1730,23 @@
                 const image = window.currentImages[window.currentImageIndex];
                 
                 const img = document.createElement('img');
-                img.src = image.url || image.id || 'https://via.placeholder.com/800x600?text=No+Image';
+                img.src = image.url || image.id || 'https://placehold.co/800x600?text=No+Image&font=opensans';
                 img.alt = image.caption?.plainText || 'Image';
                 img.className = 'w-full max-w-full h-auto max-h-[60vh] md:max-h-[70vh] object-contain mx-auto rounded';
                 
                 // Add error handling for images
                 img.onerror = function() {
-                    this.src = 'https://via.placeholder.com/800x600?text=Image+Not+Available';
+                    this.src = 'https://placehold.co/800x600?text=Image+Not+Available&font=opensans';
                 };
                 
-                container.appendChild(img);
+                mediaContainer.appendChild(img);
                 
-                // Add image caption (mobile responsive)
+                // Add image caption (mobile responsive) to info container
                 if (image.caption?.plainText) {
                     const caption = document.createElement('p');
-                    caption.className = 'text-center text-white mt-2 text-xs md:text-sm px-2';
+                    caption.className = 'text-center text-white mt-4 text-base md:text-lg px-2';
                     caption.textContent = image.caption.plainText;
-                    container.appendChild(caption);
+                    infoContainer.appendChild(caption);
                 }
                 
                 // Update indicators for images
@@ -1733,9 +1816,15 @@
             });
             
             // Close carousel button
-            document.getElementById('closeCarouselButton').onclick = hideMediaCarousel;
-            document.getElementById('prevMediaButton').onclick = showPrevMedia;
-            document.getElementById('nextMediaButton').onclick = showNextMedia;
+            if (document.getElementById('closeCarouselButton')) {
+                document.getElementById('closeCarouselButton').onclick = hideMediaCarousel;
+            }
+            if (document.getElementById('prevMediaButton')) {
+                document.getElementById('prevMediaButton').onclick = showPrevMedia;
+            }
+            if (document.getElementById('nextMediaButton')) {
+                document.getElementById('nextMediaButton').onclick = showNextMedia;
+            }
         });
         
         // ===== FIREBASE & AUTH INTEGRATION =====

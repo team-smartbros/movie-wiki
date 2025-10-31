@@ -708,6 +708,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Add scroll event listener for pagination
     window.addEventListener('scroll', handleScroll);
     
+
+    
     // ===== GENRE FILTER FUNCTIONALITY =====
     console.log('🎭 Setting up genre filters...');
     const genrePills = document.querySelectorAll('.genre-pill');
@@ -736,6 +738,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Log initial proxy stats
     console.log('Intialized proxy system with', CORS_PROXIES.length, 'proxies');
     displayProxyStats();
+    
+    // Ensure marquee is visible
+    const marquee = document.querySelector('.animate-marquee');
+    if (marquee) {
+        const marqueeContainer = marquee.closest('div');
+        if (marqueeContainer) {
+            marqueeContainer.style.display = 'block';
+        }
+    }
+    
+    // Initialize sitemap generator
+    initializeSitemapGenerator();
 });
 
 // Handle scroll for pagination
@@ -1283,41 +1297,47 @@ function updateCarousel() {
     if (currentItem['#CAPTION']) {
         // Photo
         carousel.innerHTML = `
-            <button onclick="hideMediaCarousel()" class="absolute top-4 right-4 text-white text-2xl z-10">
+            <button onclick="hideMediaCarousel()" class="absolute top-4 right-4 text-white text-2xl z-10 bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition md:w-12 md:h-12">
                 <i class="fas fa-times"></i>
             </button>
-            <button onclick="showPrevMedia()" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10">
+            <button onclick="showPrevMedia()" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10 bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition md:w-14 md:h-14">
                 <i class="fas fa-chevron-left"></i>
             </button>
-            <button onclick="showNextMedia()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10">
+            <button onclick="showNextMedia()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10 bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition md:w-14 md:h-14">
                 <i class="fas fa-chevron-right"></i>
             </button>
-            <div class="text-center">
+            <div class="text-center w-full h-full flex flex-col">
                 <h2 class="text-2xl font-bold mb-4">${title}</h2>
-                <img src="${currentItem['#IMG']}" alt="Media" class="max-w-full max-h-full object-contain">
-                <p class="mt-2 text-white">${currentItem['#CAPTION']}</p>
-                <p class="text-gray-400 text-sm">${window.currentMediaIndex + 1} of ${window.currentMediaItems.length}</p>
+                <div class="w-full flex-grow flex items-center justify-center px-2">
+                    <img src="${currentItem['#IMG']}" alt="Media" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl">
+                </div>
+                <div class="mt-4">
+                    <p class="text-white text-base md:text-lg">${currentItem['#CAPTION']}</p>
+                    <p class="text-gray-400 text-sm mt-2">${window.currentMediaIndex + 1} of ${window.currentMediaItems.length}</p>
+                </div>
             </div>
         `;
     } else if (currentItem['#SRC']) {
         // Trailer
         carousel.innerHTML = `
-            <button onclick="hideMediaCarousel()" class="absolute top-4 right-4 text-white text-2xl z-10">
+            <button onclick="hideMediaCarousel()" class="absolute top-4 right-4 text-white text-2xl z-10 bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition md:w-12 md:h-12">
                 <i class="fas fa-times"></i>
             </button>
-            <button onclick="showPrevMedia()" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10">
+            <button onclick="showPrevMedia()" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10 bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition md:w-14 md:h-14">
                 <i class="fas fa-chevron-left"></i>
             </button>
-            <button onclick="showNextMedia()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10">
+            <button onclick="showNextMedia()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10 bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition md:w-14 md:h-14">
                 <i class="fas fa-chevron-right"></i>
             </button>
-            <div class="text-center w-full h-full">
+            <div class="text-center w-full h-full flex flex-col">
                 <h2 class="text-2xl font-bold mb-4">${title}</h2>
-                <div class="w-full h-4/5 flex items-center justify-center">
-                    <iframe src="${currentItem['#SRC']}" class="w-full h-full max-w-4xl" frameborder="0" allowfullscreen></iframe>
+                <div class="w-full flex-grow flex items-center justify-center px-2">
+                    <iframe src="${currentItem['#SRC']}" class="w-full h-full max-w-4xl rounded-lg shadow-2xl" frameborder="0" allowfullscreen></iframe>
                 </div>
-                <p class="mt-2 text-white">${currentItem['#NAME'] || 'Trailer'}</p>
-                <p class="text-gray-400 text-sm">${window.currentMediaIndex + 1} of ${window.currentMediaItems.length}</p>
+                <div class="mt-4">
+                    <p class="text-white text-base md:text-lg">${currentItem['#NAME'] || 'Trailer'}</p>
+                    <p class="text-gray-400 text-sm mt-2">${window.currentMediaIndex + 1} of ${window.currentMediaItems.length}</p>
+                </div>
             </div>
         `;
     }
@@ -1617,20 +1637,27 @@ function hideSectionHeaders() {
 
 // Show section headers for normal view
 function showSectionHeaders() {
-    // Get all section divs
-    const popularSection = document.querySelector('#popularContainer').closest('.mb-12');
-    const latestSection = document.querySelector('#latestContainer').closest('.mb-12');
-    const comingSoonSection = document.querySelector('#comingSoonContainer').closest('.mb-12');
+    // Get all section divs with error handling
+    const popularContainer = document.getElementById('popularContainer');
+    const latestContainer = document.getElementById('latestContainer');
+    const comingSoonContainer = document.getElementById('comingSoonContainer');
     
-    // Show all sections
+    // Get parent sections
+    const popularSection = popularContainer ? popularContainer.closest('.mb-8') : null;
+    const latestSection = latestContainer ? latestContainer.closest('.mb-8') : null;
+    const comingSoonSection = comingSoonContainer ? comingSoonContainer.closest('.mb-8') : null;
+    
+    // Show all sections with safety checks
     if (popularSection) popularSection.style.display = 'block';
     if (latestSection) latestSection.style.display = 'block';
     if (comingSoonSection) comingSoonSection.style.display = 'block';
     
-    // Restore Popular header
-    const popularHeader = popularSection.querySelector('h2');
-    if (popularHeader) {
-        popularHeader.innerHTML = '<i class="fas fa-fire mr-2"></i>Popular';
+    // Restore Popular header with safety check
+    if (popularSection) {
+        const popularHeader = popularSection.querySelector('h2');
+        if (popularHeader) {
+            popularHeader.innerHTML = '<i class="fas fa-fire mr-2"></i>Popular';
+        }
     }
 }
 
@@ -2126,6 +2153,279 @@ function displayProxyStats() {
 
 // Add periodic stats logging
 setInterval(displayProxyStats, 300000); // Log every 5 minutes
+
+/**
+ * Initialize the dynamic sitemap generator
+ * This function sets up the sitemap generator and updates it with movies from the current page
+ */
+function initializeSitemapGenerator() {
+    // Check if sitemap generator is available
+    if (typeof sitemapGenerator === 'undefined') {
+        console.warn('Sitemap generator not available');
+        return;
+    }
+    
+    // Wait for content to load
+    setTimeout(() => {
+        try {
+            // Generate sitemap from current page
+            const sitemapXML = sitemapGenerator.generateSitemapFromCurrentPage();
+            
+            // Save to storage
+            sitemapGenerator.saveSitemapToStorage(sitemapXML);
+            
+            console.log('Sitemap generated and saved to localStorage');
+        } catch (error) {
+            console.error('Error generating sitemap:', error);
+        }
+    }, 2000); // Wait 2 seconds for content to load
+}
+
+// Add the MovieSitemapGenerator class
+/**
+ * Dynamic Sitemap Generator for Movie Wiki
+ * This class can be used to automatically generate and update sitemaps with all movie detail pages.
+ */
+class MovieSitemapGenerator {
+    constructor() {
+        this.baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://moviewiki.qzz.io';
+        this.staticPages = [
+            { url: '/', priority: '1.0', changefreq: 'daily' },
+            { url: '/index.html', priority: '1.0', changefreq: 'daily' },
+            { url: '/search.html', priority: '0.8', changefreq: 'weekly' },
+            { url: '/forum.html', priority: '0.7', changefreq: 'daily' },
+            { url: '/stream.html', priority: '0.6', changefreq: 'weekly' },
+            { url: '/details.html', priority: '0.9', changefreq: 'weekly' },
+            { url: '/privacy-policy.html', priority: '0.3', changefreq: 'monthly' },
+            { url: '/terms-of-service.html', priority: '0.3', changefreq: 'monthly' },
+            { url: '/cookie-policy.html', priority: '0.3', changefreq: 'monthly' },
+            { url: '/disclaimer.html', priority: '0.3', changefreq: 'monthly' }
+        ];
+        this.movieCache = new Map();
+    }
+
+    /**
+     * Generate sitemap XML
+     * @param {Array} moviePages - Array of movie objects with id and title properties
+     * @returns {string} - XML sitemap string
+     */
+    generateSitemap(moviePages = []) {
+        const currentDate = new Date().toISOString().split('T')[0];
+        
+        let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+        xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+        
+        // Add static pages
+        this.staticPages.forEach(page => {
+            xml += this.generateUrlEntry(
+                `${this.baseUrl}${page.url}`,
+                currentDate,
+                page.changefreq,
+                page.priority
+            );
+        });
+        
+        // Add movie detail pages
+        moviePages.forEach(movie => {
+            const movieUrl = `${this.baseUrl}/details.html?id=${movie.id}&title=${encodeURIComponent(movie.title)}`;
+            xml += this.generateUrlEntry(
+                movieUrl,
+                movie.lastmod || currentDate,
+                'weekly',
+                '0.8'
+            );
+        });
+        
+        xml += `</urlset>`;
+        return xml;
+    }
+
+    /**
+     * Generate a single URL entry for the sitemap
+     * @param {string} loc - URL location
+     * @param {string} lastmod - Last modified date
+     * @param {string} changefreq - Change frequency
+     * @param {string} priority - Priority (0.0 - 1.0)
+     * @returns {string} - XML URL entry
+     */
+    generateUrlEntry(loc, lastmod, changefreq, priority) {
+        return `  <url>\n` +
+               `    <loc>${loc}</loc>\n` +
+               `    <lastmod>${lastmod}</lastmod>\n` +
+               `    <changefreq>${changefreq}</changefreq>\n` +
+               `    <priority>${priority}</priority>\n` +
+               `  </url>\n`;
+    }
+
+    /**
+     * Extract movie data from the homepage containers
+     * This function scans the DOM for movie cards and extracts their IDs and titles
+     * @returns {Array} - Array of movie objects
+     */
+    extractMoviesFromDOM() {
+        const movies = [];
+        const selectors = [
+            '#popularContainer .movie-card',
+            '#latestContainer .movie-card',
+            '#comingSoonContainer .movie-card'
+        ];
+
+        selectors.forEach(selector => {
+            const cards = document.querySelectorAll(selector);
+            cards.forEach(card => {
+                // Extract onclick attribute to get the URL
+                const onclick = card.getAttribute('onclick');
+                if (onclick) {
+                    // Extract ID and title from the onclick URL
+                    const idMatch = onclick.match(/id=([^&'"']+)/);
+                    const titleMatch = onclick.match(/title=([^&'"']+)/);
+                    
+                    if (idMatch && titleMatch) {
+                        const id = idMatch[1];
+                        const title = decodeURIComponent(titleMatch[1]);
+                        
+                        // Avoid duplicates
+                        if (!this.movieCache.has(id)) {
+                            movies.push({ id, title });
+                            this.movieCache.set(id, { title, lastmod: new Date().toISOString().split('T')[0] });
+                        }
+                    }
+                }
+            });
+        });
+
+        return movies;
+    }
+
+    /**
+     * Automatically generate sitemap from current DOM
+     * @returns {string} - XML sitemap string
+     */
+    generateSitemapFromCurrentPage() {
+        const movies = this.extractMoviesFromDOM();
+        return this.generateSitemap(movies);
+    }
+
+    /**
+     * Save sitemap to localStorage for persistence
+     * @param {string} sitemapXML - XML sitemap string
+     */
+    saveSitemapToStorage(sitemapXML) {
+        try {
+            localStorage.setItem('movieWikiSitemap', sitemapXML);
+            localStorage.setItem('movieWikiSitemapLastUpdate', new Date().toISOString());
+        } catch (e) {
+            console.warn('Could not save sitemap to localStorage:', e);
+        }
+    }
+
+    /**
+     * Load sitemap from localStorage
+     * @returns {string|null} - XML sitemap string or null if not found
+     */
+    loadSitemapFromStorage() {
+        try {
+            return localStorage.getItem('movieWikiSitemap');
+        } catch (e) {
+            console.warn('Could not load sitemap from localStorage:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Update sitemap with new movies
+     * @param {Array} newMovies - Array of new movie objects
+     * @returns {string} - Updated XML sitemap string
+     */
+    updateSitemapWithNewMovies(newMovies) {
+        // Merge with cached movies
+        newMovies.forEach(movie => {
+            this.movieCache.set(movie.id, { 
+                title: movie.title, 
+                lastmod: new Date().toISOString().split('T')[0] 
+            });
+        });
+
+        // Convert cache to array
+        const allMovies = Array.from(this.movieCache.entries()).map(([id, data]) => ({
+            id,
+            title: data.title,
+            lastmod: data.lastmod
+        }));
+
+        const sitemapXML = this.generateSitemap(allMovies);
+        this.saveSitemapToStorage(sitemapXML);
+        return sitemapXML;
+    }
+
+    /**
+     * Get cached movies
+     * @returns {Array} - Array of cached movie objects
+     */
+    getCachedMovies() {
+        return Array.from(this.movieCache.entries()).map(([id, data]) => ({
+            id,
+            title: data.title,
+            lastmod: data.lastmod
+        }));
+    }
+
+    /**
+     * Fetch real movie data from API
+     * @param {string} movieId - IMDb ID of the movie
+     * @returns {Object} - Movie object with id, title, and lastmod
+     */
+    async fetchMovieData(movieId) {
+        try {
+            // Check if we already have this movie in cache
+            if (this.movieCache.has(movieId)) {
+                return {
+                    id: movieId,
+                    title: this.movieCache.get(movieId).title,
+                    lastmod: this.movieCache.get(movieId).lastmod
+                };
+            }
+            
+            // Use the same API as the main application
+            const response = await fetch(`https://imdb.iamidiotareyoutoo.com/search?tt=${movieId}`);
+            const data = await response.json();
+            
+            if (data.ok && data.short) {
+                const title = data.short['#TITLE'] || movieId;
+                const lastmod = new Date().toISOString().split('T')[0];
+                
+                // Cache the movie data
+                this.movieCache.set(movieId, { title, lastmod });
+                
+                return { id: movieId, title, lastmod };
+            }
+        } catch (error) {
+            console.error('Error fetching movie data:', error);
+        }
+        
+        // Fallback to ID if API fails
+        const lastmod = new Date().toISOString().split('T')[0];
+        this.movieCache.set(movieId, { title: movieId, lastmod });
+        return { id: movieId, title: movieId, lastmod };
+    }
+
+    /**
+     * Update sitemap with new movies by fetching real data
+     * @param {Array} newMovieIds - Array of new movie IDs
+     * @returns {Promise<string>} - Updated XML sitemap string
+     */
+    async updateSitemapWithNewMovieIds(newMovieIds) {
+        // Fetch data for all new movies
+        const moviePromises = newMovieIds.map(id => this.fetchMovieData(id));
+        const movies = await Promise.all(moviePromises);
+        
+        // Update sitemap with new movies
+        return this.updateSitemapWithNewMovies(movies);
+    }
+}
+
+// Create a global instance
+const sitemapGenerator = new MovieSitemapGenerator();
 
 
 // Fetch more items from API for pagination

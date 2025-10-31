@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Wiki - Sitemap Generator</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#22d3ee',
+                        dark: '#0c1221'
+                    },
+                    fontFamily: {
+                        'sans': ['Poppins', 'sans-serif'],
+                        'body': ['Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0c1221 0%, #1a1f3a 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(34, 211, 238, 0.1);
+        }
+        textarea {
+            background: rgba(15, 23, 42, 0.7);
+            color: white;
+            border: 1px solid rgba(34, 211, 238, 0.3);
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #22d3ee;
+        }
+        .copy-btn {
+            transition: all 0.3s ease;
+        }
+        .copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+        }
+    </style>
+</head>
+<body class="font-body text-white">
+    <!-- Navigation Bar -->
+    <nav class="glass-card sticky top-0 z-50 border-b border-gray-700">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-film text-accent text-2xl"></i>
+                    <h1 class="text-2xl font-bold text-accent font-sans">Movie Wiki</h1>
+                </div>
+                <div class="hidden md:flex items-center gap-4">
+                    <a href="./index.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="./forum.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-comments"></i>
+                        <span>Forum</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="glass-card rounded-xl p-6 mb-8">
+            <h1 class="text-3xl font-bold text-accent mb-2 font-sans">Sitemap Generator</h1>
+            <p class="text-gray-300 mb-6">Generate a dynamic sitemap for all Movie Wiki pages including movie detail URLs</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h2 class="text-xl font-semibold text-accent mb-3">Static Pages</h2>
+                    <ul class="space-y-2">
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-file-alt text-accent"></i>
+                            <span>index.html</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-file-alt text-accent"></i>
+                            <span>search.html</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-file-alt text-accent"></i>
+                            <span>details.html</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-file-alt text-accent"></i>
+                            <span>stream.html</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-file-alt text-accent"></i>
+                            <span>forum.html</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-file-alt text-accent"></i>
+                            <span>privacy-policy.html</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-file-alt text-accent"></i>
+                            <span>terms-of-service.html</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-file-alt text-accent"></i>
+                            <span>cookie-policy.html</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-file-alt text-accent"></i>
+                            <span>disclaimer.html</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h2 class="text-xl font-semibold text-accent mb-3">Dynamic Movie Pages</h2>
+                    <div class="mb-4">
+                        <label class="block text-gray-300 mb-2">Add Movie IDs (one per line):</label>
+                        <textarea id="movieIds" class="w-full h-32 rounded-lg p-3" placeholder="tt0111161&#10;tt0068646&#10;tt0071562"></textarea>
+                    </div>
+                    <button id="generateBtn" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition flex items-center gap-2">
+                        <i class="fas fa-cogs"></i>
+                        Generate Sitemap
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xl font-semibold text-accent">Generated Sitemap</h2>
+                    <button id="copyBtn" class="copy-btn bg-secondary hover:bg-gray-700 text-accent py-2 px-4 rounded-lg flex items-center gap-2">
+                        <i class="fas fa-copy"></i>
+                        Copy to Clipboard
+                    </button>
+                </div>
+                <textarea id="sitemapOutput" class="w-full h-96 rounded-lg p-3 font-mono text-sm" readonly></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Static pages list
+        const staticPages = [
+            { url: '/', priority: '1.0', changefreq: 'daily' },
+            { url: '/index.html', priority: '1.0', changefreq: 'daily' },
+            { url: '/search.html', priority: '0.8', changefreq: 'weekly' },
+            { url: '/forum.html', priority: '0.7', changefreq: 'daily' },
+            { url: '/stream.html', priority: '0.6', changefreq: 'weekly' },
+            { url: '/details.html', priority: '0.9', changefreq: 'weekly' },
+            { url: '/privacy-policy.html', priority: '0.3', changefreq: 'monthly' },
+            { url: '/terms-of-service.html', priority: '0.3', changefreq: 'monthly' },
+            { url: '/cookie-policy.html', priority: '0.3', changefreq: 'monthly' },
+            { url: '/disclaimer.html', priority: '0.3', changefreq: 'monthly' }
+        ];
+
+        // Function to generate sitemap XML
+        function generateSitemap(staticPages, moviePages = []) {
+            const currentDate = new Date().toISOString().split('T')[0];
+            
+            // Get current domain
+            const currentDomain = window.location.origin;
+            
+            let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+            xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+            
+            // Add static pages
+            staticPages.forEach(page => {
+                xml += `  <url>\n`;
+                xml += `    <loc>${currentDomain}${page.url}</loc>\n`;
+                xml += `    <lastmod>${currentDate}</lastmod>\n`;
+                xml += `    <changefreq>${page.changefreq}</changefreq>\n`;
+                xml += `    <priority>${page.priority}</priority>\n`;
+                xml += `  </url>\n`;
+            });
+            
+            // Add movie detail pages
+            moviePages.forEach(movie => {
+                xml += `  <url>\n`;
+                xml += `    <loc>${currentDomain}/details.html?id=${movie.id}&amp;title=${encodeURIComponent(movie.title)}</loc>\n`;
+                xml += `    <lastmod>${movie.lastmod || currentDate}</lastmod>\n`;
+                xml += `    <changefreq>weekly</changefreq>\n`;
+                xml += `    <priority>0.8</priority>\n`;
+                xml += `  </url>\n`;
+            });
+            
+            xml += `</urlset>`;
+            
+            return xml;
+        }
+
+        // Function to parse movie IDs from textarea
+        function parseMovieIds(text) {
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            return lines.map(line => {
+                const id = line.trim();
+                // Extract title from ID (in a real implementation, you would fetch this from API)
+                const titles = {
+                    'tt0111161': 'The Shawshank Redemption',
+                    'tt0068646': 'The Godfather',
+                    'tt0071562': 'The Godfather Part II',
+                    'tt0468569': 'The Dark Knight',
+                    'tt0050083': '12 Angry Men'
+                };
+                return {
+                    id: id,
+                    title: titles[id] || id // Use the ID itself as title if not found
+                };
+            });
+        }
+
+        // Function to fetch real movie data from API
+        async function fetchMovieData(movieId) {
+            try {
+                // Use the same API as the main application
+                const response = await fetch(`https://imdb.iamidiotareyoutoo.com/search?tt=${movieId}`);
+                const data = await response.json();
+                
+                if (data.ok && data.short) {
+                    return {
+                        id: movieId,
+                        title: data.short['#TITLE'] || movieId,
+                        lastmod: new Date().toISOString().split('T')[0]
+                    };
+                }
+            } catch (error) {
+                console.error('Error fetching movie data:', error);
+            }
+            
+            // Fallback to ID if API fails
+            return {
+                id: movieId,
+                title: movieId,
+                lastmod: new Date().toISOString().split('T')[0]
+            };
+        }
+
+        // Function to parse movie IDs and fetch real data
+        async function parseMovieIdsWithFetch(text) {
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            const moviePromises = lines.map(line => {
+                const id = line.trim();
+                return fetchMovieData(id);
+            });
+            
+            // Wait for all movie data to be fetched
+            const movies = await Promise.all(moviePromises);
+            return movies;
+        }
+
+        // Event listeners
+        document.getElementById('generateBtn').addEventListener('click', async function() {
+            const movieIdsText = document.getElementById('movieIds').value;
+            const moviePages = await parseMovieIdsWithFetch(movieIdsText);
+            const sitemapXML = generateSitemap(staticPages, moviePages);
+            document.getElementById('sitemapOutput').value = sitemapXML;
+        });
+
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const sitemapOutput = document.getElementById('sitemapOutput');
+            sitemapOutput.select();
+            document.execCommand('copy');
+            
+            // Show feedback
+            const copyBtn = this;
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+            }, 2000);
+        });
+
+        // Generate initial sitemap with sample data
+        document.addEventListener('DOMContentLoaded', async function() {
+            const sampleMovieIds = [
+                'tt0111161',
+                'tt0068646',
+                'tt0071562'
+            ].join('\n');
+            document.getElementById('movieIds').value = sampleMovieIds;
+            
+            // Generate initial sitemap
+            const moviePages = await parseMovieIdsWithFetch(sampleMovieIds);
+            const sitemapXML = generateSitemap(staticPages, moviePages);
+            document.getElementById('sitemapOutput').value = sitemapXML;
+        });
+    </script>
+</body>
+</html>

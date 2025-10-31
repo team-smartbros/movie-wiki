@@ -129,22 +129,6 @@
             display: none;
         }
         
-        /* Login overlay */
-        #loginRequiredOverlay {
-            backdrop-filter: blur(10px);
-        }
-        
-        #loginRequiredOverlay .bg-gray-800 {
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-            border-radius: 16px;
-            transition: all 0.3s ease;
-        }
-        
-        #loginRequiredOverlay .bg-gray-800:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 25px 50px rgba(34, 211, 238, 0.3);
-        }
-        
         /* Banner ad positioning */
         .banner-ad-container {
             position: relative;
@@ -313,8 +297,21 @@
     </style>
 </head>
 <body class="bg-primary text-white min-h-screen" style="padding-bottom: 70px;">
+    <!-- Login Required Overlay - Full page overlay -->
+    <div id="loginRequiredOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex flex-col items-center justify-center z-50 hidden" style="backdrop-filter: blur(10px);">
+        <div class="text-center p-6 rounded-xl bg-gray-800 border border-accent max-w-md mx-4 w-[90%] sm:w-auto shadow-2xl">
+            <i class="fas fa-lock text-accent text-4xl mb-4"></i>
+            <h3 class="text-2xl font-bold text-white mb-2">Login Required</h3>
+            <p class="text-gray-300 mb-6">Please sign in to watch this content</p>
+            <button id="streamLoginBtn" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-6 rounded-lg transition flex items-center gap-2 mx-auto w-full sm:w-auto justify-center shadow-lg">
+                <i class="fab fa-google"></i>
+                Sign in with Google
+            </button>
+        </div>
+    </div>
+    
     <!-- Top Navigation Bar -->
-    <nav class="glass-card sticky top-0 z-50 border-b border-gray-700" style="background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(34, 211, 238, 0.1);">
+    <nav class="glass-card sticky top-0 z-40 border-b border-gray-700" style="background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(34, 211, 238, 0.1);">
         <div class="container mx-auto px-4 py-4">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-3">
@@ -381,19 +378,6 @@
                         <div class="animate-spin rounded-full h-12 w-12 md:h-16 md:w-16 border-b-2 border-accent mx-auto mb-4"></div>
                         <p class="text-white font-medium text-sm md:text-base">Loading video player...</p>
                         <p class="text-gray-400 text-xs md:text-sm mt-2">Free streaming service</p>
-                    </div>
-                </div>
-                
-                <!-- Login Required Overlay -->
-                <div id="loginRequiredOverlay" class="absolute inset-0 bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center z-20 hidden">
-                    <div class="text-center p-6 rounded-xl bg-gray-800 border border-accent max-w-md mx-4 w-[90%] sm:w-auto">
-                        <i class="fas fa-lock text-accent text-4xl mb-4"></i>
-                        <h3 class="text-2xl font-bold text-white mb-2">Login Required</h3>
-                        <p class="text-gray-300 mb-6">Please sign in to watch this content</p>
-                        <button id="streamLoginBtn" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-6 rounded-lg transition flex items-center gap-2 mx-auto w-full sm:w-auto justify-center">
-                            <i class="fab fa-google"></i>
-                            Sign in with Google
-                        </button>
                     </div>
                 </div>
                 
@@ -1136,52 +1120,6 @@
             console.log('Share data:', { title, shareUrl });
             
             // Try Web Share API first (mobile)
-            if (navigator.share) {
-                console.log('📱 Using Web Share API');
-                navigator.share({ 
-                    title, 
-                    text: shareText, 
-                    url: shareUrl 
-                }).then(() => {
-                    console.log('✅ Shared successfully');
-                }).catch(err => {
-                    console.log('❌ Share cancelled:', err);
-                });
-            } else {
-                console.log('💻 Web Share not available, showing modal');
-                // Always show modal for desktop/HTTP
-                showShareModal(shareUrl, shareText);
-            }
-        });
-        
-        // Load comments if movie ID exists
-        if (movieId) {
-            loadStreamComments(movieId);
-        }
-    </script>
-    
-    <!-- Footer -->
-    <footer class="glass-card border-t border-gray-700 py-6 mt-12">
-        <div class="container mx-auto px-4">
-            <div class="flex flex-col md:flex-row justify-between items-center">
-                <div class="mb-4 md:mb-0">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-film text-accent"></i>
-                        <span class="font-bold text-accent">Movie Wiki</span>
-                    </div>
-                    <p class="text-gray-400 text-sm mt-2">&copy; 2025 Movie Wiki. All rights reserved.</p>
-                </div>
-                <div class="flex flex-wrap justify-center gap-4">
-                    <a href="privacy-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Privacy Policy</a>
-                    <a href="terms-of-service.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Terms of Service</a>
-                    <a href="disclaimer.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Disclaimer</a>
-                    <a href="cookie-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Cookie Policy</a>
-                </div>
-            </div>
-        </div>
-    </footer>
-</body>
-</html>
             if (navigator.share) {
                 console.log('📱 Using Web Share API');
                 navigator.share({ 

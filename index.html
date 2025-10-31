@@ -364,6 +364,32 @@
             }
         }
         
+        /* Hide scrollbar for genre filters */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        
+        /* Animation for marquee */
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        .animate-marquee {
+            display: inline-block;
+            animation: marquee 15s linear infinite;
+            white-space: nowrap;
+            padding: 0 20px;
+        }
+        
+        /* Scroll indicators for genre filters */
+
+        
     </style>
 </head>
 <body class="bg-primary text-white min-h-screen font-body">
@@ -420,6 +446,17 @@
         <h1 class="text-4xl md:text-6xl font-bold mb-6 text-accent font-sans">Movie Wiki</h1>
         <p class="text-xl mb-8 max-w-2xl mx-auto text-gray-300">Discover detailed information about your favorite movies and web series</p>
         
+        <!-- Marquee Message -->
+        <div class="mb-6 overflow-hidden rounded-lg bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-700 py-3">
+            <div class="whitespace-nowrap relative">
+                <p class="text-blue-200 font-medium inline-block animate-marquee">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Please be patient while data is fetched. For first load, it may take some time.
+                    <i class="fas fa-info-circle ml-2"></i>
+                </p>
+            </div>
+        </div>
+        
         <!-- Search Bar -->
         <div class="max-w-2xl mx-auto mb-8">
             <div class="search-container flex gap-2">
@@ -440,51 +477,58 @@
 
     <!-- Banner Ad -->
     <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container">
-        <ins style="width: 728px;height:90px" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"><script src="//data527.click/js/responsive.js" async></script></ins>
+        <ins style="width: 728px;height:90px!important;display: flex  !important;;" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"><script src="//data527.click/js/responsive.js" async></script></ins>
     </div>
         
         <!-- Genre Filters -->
-        <div class="mb-8">
+        <div class="mb-8 relative">
             <h3 class="text-lg font-semibold mb-4 text-gray-300 flex items-center justify-center gap-2">
                 <i class="fas fa-filter"></i>
                 Filter by Genre
             </h3>
-            <div id="genreFilters" class="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
-                <button class="genre-pill active px-4 py-2 rounded-full bg-secondary border border-accent text-accent" data-genre="all">
-                    <i class="fas fa-globe mr-1"></i>All
-                </button>
-                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="action">
-                    <i class="fas fa-fist-raised mr-1"></i>Action
-                </button>
-                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="comedy">
-                    <i class="fas fa-laugh mr-1"></i>Comedy
-                </button>
-                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="drama">
-                    <i class="fas fa-theater-masks mr-1"></i>Drama
-                </button>
-                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="horror">
-                    <i class="fas fa-ghost mr-1"></i>Horror
-                </button>
-                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="sci-fi">
-                    <i class="fas fa-rocket mr-1"></i>Sci-Fi
-                </button>
-                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="thriller">
-                    <i class="fas fa-exclamation-triangle mr-1"></i>Thriller
-                </button>
-                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="romance">
-                    <i class="fas fa-heart mr-1"></i>Romance
-                </button>
-                <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300" data-genre="animation">
-                    <i class="fas fa-star mr-1"></i>Animation
-                </button>
+            <div id="genreFilters" class="flex overflow-x-auto pb-4 scrollbar-hide relative">
+                <div class="flex gap-3 min-w-max pl-2 pr-2">
+                    <button class="genre-pill active px-4 py-2 rounded-full bg-secondary border border-accent text-accent whitespace-nowrap flex-shrink-0" data-genre="all">
+                        <i class="fas fa-globe mr-1"></i>All
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="action">
+                        <i class="fas fa-fist-raised mr-1"></i>Action
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="comedy">
+                        <i class="fas fa-laugh mr-1"></i>Comedy
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="drama">
+                        <i class="fas fa-theater-masks mr-1"></i>Drama
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="horror">
+                        <i class="fas fa-ghost mr-1"></i>Horror
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="sci-fi">
+                        <i class="fas fa-rocket mr-1"></i>Sci-Fi
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="thriller">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Thriller
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="romance">
+                        <i class="fas fa-heart mr-1"></i>Romance
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="animation">
+                        <i class="fas fa-star mr-1"></i>Animation
+                    </button>
+                </div>
+            </div>
+            <!-- Scroll indicators -->
+            <div class="scroll-indicator scroll-left">
+            </div>
+            <div class="scroll-indicator scroll-right">
             </div>
         </div>
     </section>
         
         <!-- Popular, Latest and Coming Soon Sections -->
-        <div class="mt-8">
+        <div class="mt-4">
             <!-- Popular Section -->
-            <div class="mb-12 container mx-auto px-4">
+            <div class="mb-8 container mx-auto px-4">
                 <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-fire mr-2"></i>Popular</h2>
                 <div id="popularContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     <!-- Popular content will be populated here -->
@@ -492,7 +536,7 @@
             </div>
             
             <!-- Latest Section -->
-            <div class="mb-12 container mx-auto px-4">
+            <div class="mb-8 container mx-auto px-4">
                 <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-clock mr-2"></i>Latest</h2>
                 <div id="latestContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     <!-- Latest content will be populated here -->
@@ -500,7 +544,7 @@
             </div>
             
             <!-- Coming Soon Section -->
-            <div class="mb-12 container mx-auto px-4">
+            <div class="mb-8 container mx-auto px-4">
                 <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-calendar-alt mr-2"></i>Coming Soon</h2>
                 <div id="comingSoonContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     <!-- Coming soon content will be populated here -->
