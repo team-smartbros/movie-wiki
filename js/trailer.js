@@ -491,16 +491,29 @@ async function fetchMoviesBySection(section, count) {
                     }
                 }
                 
-                // Create movie object from raw item data
+                // Create movie object from raw item data with better genre and year handling
                 const movieFromRaw = {
                     id: id,
                     title: titles[i],
-                    year: rawItem.year || rawItem.releaseYear || 'N/A',
-                    image: rawItem.image || rawItem.poster || 'https://placehold.co/300x450?text=No+Image&font=opensans',
-                    rating: rawItem.rating || rawItem.imdbRating || 'N/A',
-                    genre: rawItem.genre || 'N/A'
+                    year: rawItem.year || rawItem.releaseYear || rawItem.ReleaseYear || 'N/A',
+                    image: rawItem.image || rawItem.poster || rawItem.Poster || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                    rating: rawItem.rating || rawItem.imdbRating || rawItem.Rating || 'N/A',
+                    genre: rawItem.genre || rawItem.Genre || genre || 'N/A'
                 };
-                
+
+                // Improve genre formatting
+                if (movieFromRaw.genre !== 'N/A' && Array.isArray(movieFromRaw.genre)) {
+                    movieFromRaw.genre = movieFromRaw.genre.join(', ');
+                } else if (movieFromRaw.genre !== 'N/A' && typeof movieFromRaw.genre === 'string') {
+                    // Clean up genre string
+                    movieFromRaw.genre = movieFromRaw.genre.replace(/\|/g, ', ');
+                }
+
+                // Ensure year is a string
+                if (typeof movieFromRaw.year === 'number') {
+                    movieFromRaw.year = movieFromRaw.year.toString();
+                }
+
                 console.log(`Movie from raw item ${i}:`, movieFromRaw);
                 
                 // If we have an ID, try to fetch more detailed info
@@ -751,9 +764,9 @@ async function fetchMovieDetailsByTitle(title) {
                 id: null,
                 title: title,
                 year: 'N/A',
-                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
                 rating: 'N/A',
-                genre: 'N/A'
+                genre: 'Movie'
             };
         }
         
@@ -768,9 +781,9 @@ async function fetchMovieDetailsByTitle(title) {
                 id: null,
                 title: title,
                 year: 'N/A',
-                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
                 rating: 'N/A',
-                genre: 'N/A'
+                genre: 'Movie'
             };
         }
         
@@ -852,9 +865,9 @@ async function fetchMovieDetailsByTitle(title) {
             id: null,
             title: title,
             year: 'N/A',
-            image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+            image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
             rating: 'N/A',
-            genre: 'N/A'
+            genre: 'Movie'
         };
     }
 }
@@ -919,24 +932,51 @@ async function displayTrailers(movies) {
         }
         
         // Create trailer item HTML
-        // If we have a trailer, show the play button, otherwise just show movie info
-        const hasTrailer = trailerInfo && trailerInfo.url;
-        const playButtonHtml = hasTrailer ? 
+        // Always show the play button for better UX
+        const playButtonHtml = 
             `<button class="trailer-control-btn play-btn" data-index="${i}" style="opacity: 1 !important; pointer-events: auto !important;">
                 <i class="fas fa-play"></i>
-            </button>` : '';
-        
-        // Use the best available image
-        const imageUrl = movie.image || trailerInfo?.thumbnail || 'https://placehold.co/600x338?text=No+Image&font=opensans';
-        
+            </button>`;
+
+        // Use the best available image with higher quality
+        let imageUrl = movie.image || trailerInfo?.thumbnail || 'https://placehold.co/600x900?text=No+Image&font=opensans';
+
+        // Try to get a higher resolution version
+        if (imageUrl && !imageUrl.includes('placehold.co')) {
+            // Try to get a higher resolution version
+            // Replace common low-res image patterns with higher res versions
+            imageUrl = imageUrl.replace(/SX300|SX200|SX150/, 'SX600');
+            // If it's an IMDb image, try to get a larger size
+            if (imageUrl.includes('media-amazon.com')) {
+                imageUrl = imageUrl.replace(/\._V1_.*\.jpg/, '._V1_SX600_CR0,0,600,900_AL_.jpg');
+            }
+        }
+
         // Use the best available title
         const displayTitle = movie.title || 'Unknown Title';
-        
-        // Use the best available genre and year
-        const displayGenre = movie.genre || 'N/A';
-        const displayYear = movie.year || 'N/A';
-        
-        console.log(`Movie ${i} has trailer: ${hasTrailer}`);
+
+        // Use the best available genre and year with better defaults and validation
+        let displayGenre = 'Movie';
+        let displayYear = new Date().getFullYear().toString();
+
+        // Only override defaults if we have valid data
+        if (movie.genre) {
+            if (typeof movie.genre === 'string' && movie.genre !== 'N/A' && movie.genre !== '') {
+                displayGenre = movie.genre;
+            } else if (Array.isArray(movie.genre) && movie.genre.length > 0) {
+                displayGenre = movie.genre.join(', ');
+            }
+        }
+
+        if (movie.year) {
+            if (typeof movie.year === 'string' && movie.year !== 'N/A' && movie.year !== '') {
+                displayYear = movie.year;
+            } else if (typeof movie.year === 'number') {
+                displayYear = movie.year.toString();
+            }
+        }
+
+        console.log(`Movie ${i} processed with display values:`, {displayTitle, displayGenre, displayYear});
         
         trailerItem.innerHTML = `
             <div class="bg-gray-800 w-full h-full flex items-center justify-center rounded-xl relative">
