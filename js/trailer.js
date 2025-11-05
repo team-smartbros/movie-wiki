@@ -274,8 +274,35 @@ if (window.trailerJSLoaded) {
             if (loader) loader.style.display = 'flex';
             if (carousel) carousel.innerHTML = '';
             
-            // Wait a bit for the main content to load
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // Wait for main content to load by checking if containers have content
+            // We'll wait up to 10 seconds for content to load
+            let attempts = 0;
+            const maxAttempts = 20; // 10 seconds with 500ms intervals
+            let hasContent = false;
+            
+            while (attempts < maxAttempts && !hasContent) {
+                // Check if any of the main containers have content
+                const popularContainer = document.getElementById('popularContainer');
+                const latestContainer = document.getElementById('latestContainer');
+                const comingSoonContainer = document.getElementById('comingSoonContainer');
+                
+                // Check if any container has movie cards
+                const hasPopularContent = popularContainer && popularContainer.querySelectorAll('.movie-card').length > 0;
+                const hasLatestContent = latestContainer && latestContainer.querySelectorAll('.movie-card').length > 0;
+                const hasComingSoonContent = comingSoonContainer && comingSoonContainer.querySelectorAll('.movie-card').length > 0;
+                
+                hasContent = hasPopularContent || hasLatestContent || hasComingSoonContent;
+                
+                if (!hasContent) {
+                    attempts++;
+                    console.log(`Waiting for main content to load... Attempt ${attempts}/${maxAttempts}`);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+            
+            if (!hasContent) {
+                console.log('Main content still not loaded after waiting, proceeding anyway');
+            }
             
             // Get movie IDs from the existing containers
             const popularMovies = Array.from(document.querySelectorAll('#popularContainer .movie-card')).slice(0, 2);
@@ -421,14 +448,14 @@ if (window.trailerJSLoaded) {
 
     console.log('✅ Trailer functionality initialized');
     
-    // Initialize featured trailers when DOM is loaded
+    // Initialize featured trailers when DOM is loaded and main content is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-            // Wait for the main content to load first
+            // Wait a bit more to ensure main content is loaded
             setTimeout(initializeFeaturedTrailers, 5000);
         });
     } else {
-        // DOM is already loaded
+        // DOM is already loaded, wait a bit more to ensure main content is loaded
         setTimeout(initializeFeaturedTrailers, 5000);
     }
 }
