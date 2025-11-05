@@ -928,20 +928,26 @@ async function displayTrailers(movies) {
             console.log(`Fetching trailer for movie ${i} with ID: ${movie.id}`);
             trailerInfo = await fetchTrailerForMovie(movie.id);
             console.log(`Trailer info for movie ${i}:`, trailerInfo);
+            if (trailerInfo && trailerInfo.url) {
+                console.log(`✅ Successfully fetched trailer URL for movie ${i}:`, trailerInfo.url);
+            } else {
+                console.log(`⚠️ No trailer URL available for movie ${i} with ID: ${movie.id}`);
+            }
         } else {
             console.log(`No ID for movie ${i}, skipping trailer fetch`);
         }
         
         // Store trailer data for later use
-        if (trailerInfo) {
-            window.trailerDataStore[i] = {
-                url: trailerInfo.url,
-                title: trailerInfo.title,
-                type: trailerInfo.type,
-                thumbnail: trailerInfo.thumbnail,
-                movie: movie
-            };
-        }
+        // Always store something in the trailerDataStore, even if no trailer data is available
+        window.trailerDataStore[i] = {
+            url: trailerInfo?.url || null,
+            title: trailerInfo?.title || movie.title || 'Movie Trailer',
+            type: trailerInfo?.type || 'unknown',
+            thumbnail: trailerInfo?.thumbnail || movie.image || 'https://placehold.co/600x900?text=No+Image&font=opensans',
+            movie: movie
+        };
+
+        console.log(`Stored trailer data for index ${i}:`, window.trailerDataStore[i]);
         
         // Create trailer item HTML
         // Always show the play button for better UX
@@ -1035,6 +1041,9 @@ async function displayTrailers(movies) {
             if (window.trailerDataStore && window.trailerDataStore[index]) {
                 movieId = window.trailerDataStore[index].movie?.id || null;
                 trailerData = window.trailerDataStore[index];
+                console.log(`Retrieved trailer data for index ${index}:`, {movieId, trailerData});
+            } else {
+                console.log(`No trailer data found for index ${index}`);
             }
             
             console.log('Play button clicked', {index, movieId, trailerData});
@@ -1184,22 +1193,26 @@ function playTrailer(index, movieId, trailerData) {
     pauseAutoScroll();
     console.log('Auto-scroll paused');
     
-    if (trailerData && trailerData.url) {
-        const trailerUrl = trailerData.url;
-        
-        // Validate that we have a proper URL
-        if (!trailerUrl.startsWith('http')) {
-            console.error('Invalid trailer URL:', trailerUrl);
-            showTrailerError('Invalid trailer URL. Please try again.');
-            return;
-        }
-        
-        // Redirect to dedicated trailer page
-        redirectToTrailerPage(trailerUrl, trailerData, movieId);
+    // Always redirect to trailer page, even if we don't have trailer data
+    // The trailer page can handle cases where no trailer is available
+    if (trailerData) {
+        // We have trailer data, redirect with all available information
+        console.log(`Redirecting with trailer URL: ${trailerData.url || 'N/A'}`);
+        redirectToTrailerPage(trailerData.url || '', trailerData, movieId);
+    } else if (window.trailerDataStore && window.trailerDataStore[index]) {
+        // Try to get data from the store
+        const storedData = window.trailerDataStore[index];
+        console.log(`Redirecting with stored trailer URL: ${storedData.url || 'N/A'}`);
+        redirectToTrailerPage(storedData.url || '', storedData, movieId || storedData.movie?.id);
     } else {
-        // Fallback if no trailer URL
-        console.log('No trailer URL available for movie', {index, movieId, trailerData});
-        showTrailerError('No trailer available for this movie.');
+        // Fallback - redirect with minimal data
+        console.log('No trailer data available, redirecting with minimal data');
+        const fallbackData = {
+            title: 'Movie Trailer',
+            thumbnail: 'https://placehold.co/600x900?text=No+Image&font=opensans',
+            movie: { year: new Date().getFullYear().toString(), plot: 'No plot information available', rating: 'N/A' }
+        };
+        redirectToTrailerPage('', fallbackData, movieId);
     }
 }
 
@@ -1255,10 +1268,10 @@ function redirectToTrailerPage(trailerUrl, trailerData, movieId) {
     
     // Create URL parameters
     const params = new URLSearchParams({
-        url: trailerUrl,
-        title: trailerData.title || 'Movie Trailer',
-        movieId: movieId || '',
-        poster: trailerData.thumbnail || '',
+        url: trailerUrl || '',
+        title: trailerData.title || trailerData.movie?.title || 'Movie Trailer',
+        movieId: movieId || trailerData.movie?.id || '',
+        poster: trailerData.thumbnail || trailerData.movie?.image || 'https://placehold.co/600x900?text=No+Image&font=opensans',
         year: trailerData.movie?.year || new Date().getFullYear().toString(),
         plot: trailerData.movie?.plot || 'No plot information available',
         rating: trailerData.movie?.rating || 'N/A'
@@ -1395,11 +1408,18 @@ window.resumeAutoScroll = resumeAutoScroll;
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize trailer data store
-    window.trailerDataStore = {};
+    if (!window.trailerDataStore) {
+        window.trailerDataStore = {};
+    }
     
     // Initialize genre filter scroll functionality
     setTimeout(initGenreFilterScroll, 100); // Small delay to ensure DOM is fully ready
 });
+
+// Start initialization when script loads
+waitForDOMAndInit();
+
+console.log('✅ trailer.js module initialized and exposed globally');
 
 // Start initialization when script loads
 waitForDOMAndInit();
