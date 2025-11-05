@@ -1,19 +1,14 @@
-// trailer.js - Featured Trailers functionality for Movie Wiki
+// Trailer Carousel System
+// Handles fetching, displaying, and playing movie trailers with auto-scrolling
 
-console.log('✅ trailer.js loaded');
+console.log('🎬 Initializing trailer carousel system...');
 
-// Global variables for trailer carousel
-let trailerCarousel;
-let trailerItems = [];
-let currentTrailerIndex = 0;
-let autoScrollInterval;
-let isAutoScrolling = true;
-let trailerData = [];
-let currentGenre = 'all';
-let isLoading = false; // Prevent multiple simultaneous loads
-
-// Make trailerDataStore globally accessible
-window.trailerDataStore = {};
+// Global variables
+let trailerCarousel = null;
+let currentSlide = 0;
+let isLoading = false;
+let autoScrollInterval = null;
+let currentGenre = 'all'; // Default to showing mixed content
 
 // Debounce function to limit expensive operations
 function debounce(func, wait) {
@@ -42,32 +37,22 @@ function throttle(func, limit) {
     };
 }
 
-// Initialize trailer carousel when DOM is loaded and API constants are available
+// Initialize trailer carousel system
 function initTrailerCarousel() {
-    console.log('🎬 Initializing trailer carousel...');
-    console.log('API constants:', {
-        API_BASE: window.API_BASE,
-        SCRAPER_API_BASE: window.SCRAPER_API_BASE,
-        FALLBACK_SCRAPER_API_BASE: window.FALLBACK_SCRAPER_API_BASE
-    });
+    console.log('🔄 Initializing trailer carousel...');
     
     // Check if API constants are available
-    if (typeof window.API_BASE === 'undefined' || window.API_BASE === null) {
+    if (typeof window.API_BASE === 'undefined' || typeof window.SCRAPER_API_BASE === 'undefined') {
         console.warn('⚠️ API constants not available yet, waiting...');
         setTimeout(initTrailerCarousel, 100);
         return;
     }
     
-    // Additional check to ensure constants are properly set
-    if (!window.API_BASE || window.API_BASE === '') {
+    // Make sure all API constants are properly set
+    if (!window.API_BASE || window.API_BASE === '' || 
+        !window.SCRAPER_API_BASE || window.SCRAPER_API_BASE === '' ||
+        !window.FALLBACK_SCRAPER_API_BASE || window.FALLBACK_SCRAPER_API_BASE === '') {
         console.warn('⚠️ API constants not properly initialized, waiting...');
-        setTimeout(initTrailerCarousel, 100);
-        return;
-    }
-    
-    // Make sure all API constants are available
-    if (!window.SCRAPER_API_BASE || !window.FALLBACK_SCRAPER_API_BASE) {
-        console.warn('⚠️ Scraper API constants not available yet, waiting...');
         setTimeout(initTrailerCarousel, 100);
         return;
     }
@@ -225,7 +210,7 @@ async function fetchTrailerForMovie(movieId) {
                                 url: playback.url,  // Use URL directly as in details.html
                                 title: trailerNode.name?.value || trailerNode.contentTitle?.text || 'Trailer',
                                 type: 'playback',  // Indicate this is a playback URL for embedding
-                                thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/300x450?text=No+Image&font=opensans'
+                                thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans'
                             };
                             
                             // Cache the trailer data for faster loading next time
@@ -242,7 +227,7 @@ async function fetchTrailerForMovie(movieId) {
                         url: playbackURLs[0].url,  // Use URL directly as in details.html
                         title: trailerNode.name?.value || trailerNode.contentTitle?.text || 'Trailer',
                         type: 'playback',  // Indicate this is a playback URL for embedding
-                        thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/300x450?text=No+Image&font=opensans'
+                        thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans'
                     };
                     
                     // Cache the trailer data for faster loading next time
@@ -261,7 +246,7 @@ async function fetchTrailerForMovie(movieId) {
                         url: previewURLs[0].url,
                         title: trailerNode.name?.value || trailerNode.contentTitle?.text || 'Trailer',
                         type: 'preview',  // Indicate this is a preview URL for embedding
-                        thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/300x450?text=No+Image&font=opensans'
+                        thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans'
                     };
                     
                     // Cache the trailer data for faster loading next time
@@ -282,7 +267,7 @@ async function fetchTrailerForMovie(movieId) {
                 url: shortData.trailer.url,  // Use URL directly as in details.html
                 title: shortData.trailer.title || 'Trailer',
                 type: 'direct',  // Indicate this is a direct URL to open in new tab
-                thumbnail: shortData.image || topData.primaryImage?.url || 'https://placehold.co/300x450?text=No+Image&font=opensans'
+                thumbnail: shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans'
             };
             
             // Cache the trailer data for faster loading next time
@@ -414,9 +399,9 @@ async function fetchMoviesBySection(section, count) {
                 id: null,
                 title: `${section} Movie ${i + 1}`,
                 year: 'N/A',
-                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
                 rating: 'N/A',
-                genre: 'N/A'
+                genre: 'Movie'
             }));
         }
         
@@ -431,9 +416,9 @@ async function fetchMoviesBySection(section, count) {
                 id: null,
                 title: `${section} Movie ${i + 1}`,
                 year: 'N/A',
-                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
                 rating: 'N/A',
-                genre: 'N/A'
+                genre: 'Movie'
             }));
         }
         
@@ -495,16 +480,16 @@ async function fetchMoviesBySection(section, count) {
                 const movieFromRaw = {
                     id: id,
                     title: titles[i],
-                    year: rawItem.year || rawItem.releaseYear || rawItem.ReleaseYear || 'N/A',
-                    image: rawItem.image || rawItem.poster || rawItem.Poster || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                    year: rawItem.year || rawItem.releaseYear || rawItem.ReleaseYear || new Date().getFullYear().toString(),
+                    image: rawItem.image || rawItem.poster || rawItem.Poster || 'https://placehold.co/600x900?text=No+Image&font=opensans',
                     rating: rawItem.rating || rawItem.imdbRating || rawItem.Rating || 'N/A',
-                    genre: rawItem.genre || rawItem.Genre || genre || 'N/A'
+                    genre: rawItem.genre || rawItem.Genre || 'Movie'
                 };
 
                 // Improve genre formatting
-                if (movieFromRaw.genre !== 'N/A' && Array.isArray(movieFromRaw.genre)) {
+                if (Array.isArray(movieFromRaw.genre)) {
                     movieFromRaw.genre = movieFromRaw.genre.join(', ');
-                } else if (movieFromRaw.genre !== 'N/A' && typeof movieFromRaw.genre === 'string') {
+                } else if (typeof movieFromRaw.genre === 'string') {
                     // Clean up genre string
                     movieFromRaw.genre = movieFromRaw.genre.replace(/\|/g, ', ');
                 }
@@ -552,10 +537,10 @@ async function fetchMoviesBySection(section, count) {
         return Array(count).fill().map((_, i) => ({
             id: null,
             title: `${section} Movie ${i + 1}`,
-            year: 'N/A',
-            image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+            year: new Date().getFullYear().toString(),
+            image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
             rating: 'N/A',
-            genre: 'N/A'
+            genre: 'Movie'
         }));
     }
 }
@@ -605,8 +590,8 @@ async function fetchMoviesByGenre(genre, count) {
             return Array(count).fill().map((_, i) => ({
                 id: null,
                 title: `${genre} Movie ${i + 1}`,
-                year: 'N/A',
-                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                year: new Date().getFullYear().toString(),
+                image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
                 rating: 'N/A',
                 genre: genre
             }));
@@ -622,8 +607,8 @@ async function fetchMoviesByGenre(genre, count) {
             return Array(count).fill().map((_, i) => ({
                 id: null,
                 title: `${genre} Movie ${i + 1}`,
-                year: 'N/A',
-                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                year: new Date().getFullYear().toString(),
+                image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
                 rating: 'N/A',
                 genre: genre
             }));
@@ -675,8 +660,8 @@ async function fetchMoviesByGenre(genre, count) {
                 const movieFromRaw = {
                     id: id,
                     title: titles[i],
-                    year: rawItem.year || rawItem.releaseYear || 'N/A',
-                    image: rawItem.image || rawItem.poster || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                    year: rawItem.year || rawItem.releaseYear || new Date().getFullYear().toString(),
+                    image: rawItem.image || rawItem.poster || 'https://placehold.co/600x900?text=No+Image&font=opensans',
                     rating: rawItem.rating || rawItem.imdbRating || 'N/A',
                     genre: genre
                 };
@@ -719,8 +704,8 @@ async function fetchMoviesByGenre(genre, count) {
         return Array(count).fill().map((_, i) => ({
             id: null,
             title: `${genre} Movie ${i + 1}`,
-            year: 'N/A',
-            image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+            year: new Date().getFullYear().toString(),
+            image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
             rating: 'N/A',
             genre: genre
         }));
@@ -763,7 +748,7 @@ async function fetchMovieDetailsByTitle(title) {
             return {
                 id: null,
                 title: title,
-                year: 'N/A',
+                year: new Date().getFullYear().toString(),
                 image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
                 rating: 'N/A',
                 genre: 'Movie'
@@ -780,7 +765,7 @@ async function fetchMovieDetailsByTitle(title) {
             return {
                 id: null,
                 title: title,
-                year: 'N/A',
+                year: new Date().getFullYear().toString(),
                 image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
                 rating: 'N/A',
                 genre: 'Movie'
@@ -839,22 +824,49 @@ async function fetchMovieDetailsByTitle(title) {
             const movie = {
                 id: null, // No ID available
                 title: short.name || top.titleText?.text || title,
-                year: short.year || top.releaseYear?.year || 'N/A',
-                image: short.image || top.primaryImage?.url || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                year: short.year || top.releaseYear?.year || new Date().getFullYear().toString(),
+                image: short.image || top.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans',
                 rating: short.rating || top.ratingsSummary?.aggregateRating || 'N/A',
-                genre: short.genre?.join(', ') || 'N/A'
+                genre: short.genre?.join(', ') || 'Movie'
             };
+            
+            // Improve genre formatting
+            if (movie.genre !== 'Movie' && Array.isArray(movie.genre)) {
+                movie.genre = movie.genre.join(', ');
+            } else if (movie.genre !== 'Movie' && typeof movie.genre === 'string') {
+                // Clean up genre string
+                movie.genre = movie.genre.replace(/\|/g, ', ');
+            }
+            
+            // Ensure year is a string
+            if (typeof movie.year === 'number') {
+                movie.year = movie.year.toString();
+            }
+            
             return movie;
         }
         
         const movie = {
             id: id,
             title: short.name || top.titleText?.text || title,
-            year: short.year || top.releaseYear?.year || 'N/A',
-            image: short.image || top.primaryImage?.url || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+            year: short.year || top.releaseYear?.year || new Date().getFullYear().toString(),
+            image: short.image || top.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans',
             rating: short.rating || top.ratingsSummary?.aggregateRating || 'N/A',
-            genre: short.genre?.join(', ') || 'N/A'
+            genre: short.genre?.join(', ') || 'Movie'
         };
+        
+        // Improve genre formatting
+        if (movie.genre !== 'Movie' && Array.isArray(movie.genre)) {
+            movie.genre = movie.genre.join(', ');
+        } else if (movie.genre !== 'Movie' && typeof movie.genre === 'string') {
+            // Clean up genre string
+            movie.genre = movie.genre.replace(/\|/g, ', ');
+        }
+        
+        // Ensure year is a string
+        if (typeof movie.year === 'number') {
+            movie.year = movie.year.toString();
+        }
         
         return movie;
         
@@ -864,7 +876,7 @@ async function fetchMovieDetailsByTitle(title) {
         return {
             id: null,
             title: title,
-            year: 'N/A',
+            year: new Date().getFullYear().toString(),
             image: 'https://placehold.co/600x900?text=No+Image&font=opensans',
             rating: 'N/A',
             genre: 'Movie'
@@ -955,7 +967,7 @@ async function displayTrailers(movies) {
         // Use the best available title
         const displayTitle = movie.title || 'Unknown Title';
 
-        // Use the best available genre and year with better defaults and validation
+        // Use the best available genre and year with better defaults
         let displayGenre = 'Movie';
         let displayYear = new Date().getFullYear().toString();
 
@@ -985,7 +997,7 @@ async function displayTrailers(movies) {
                          alt="${displayTitle} Trailer" 
                          class="w-full h-full object-cover rounded-xl"
                          loading="lazy"
-                         onerror="this.src='https://placehold.co/600x338?text=No+Image&font=opensans'">
+                         onerror="this.src='https://placehold.co/600x900?text=No+Image&font=opensans'">
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-xl"></div>
                 <div class="trailer-controls">
@@ -1180,239 +1192,166 @@ function playTrailer(index, movieId, trailerData) {
 }
 
 // Show error message for trailer playback issues
-function showTrailerError(message, trailerData = null) {
-    // For now, we'll show an alert since we're redirecting to a new page
-    alert(message + '\n\nYou will be redirected to the trailer page.');
+function showTrailerError(message) {
+    // Create error modal
+    const errorModal = document.createElement('div');
+    errorModal.id = 'trailerErrorModal';
+    errorModal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4';
+    errorModal.innerHTML = `
+        <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-red-400">Trailer Error</h3>
+                <button id="closeErrorModal" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p class="text-gray-300 mb-6">${message}</p>
+            <div class="flex gap-3">
+                <button id="retryTrailer" class="flex-1 bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300">
+                    Retry
+                </button>
+                <button id="closeErrorModalBtn" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
     
-    // If we have trailer data, redirect to trailer page anyway
-    if (trailerData && trailerData.url) {
-        setTimeout(() => {
-            redirectToTrailerPage(trailerData.url, trailerData);
-        }, 1000);
-    } else {
-        // Resume auto-scroll if we can't play trailer
+    document.body.appendChild(errorModal);
+    
+    // Add event listeners
+    document.getElementById('closeErrorModal').addEventListener('click', function() {
+        errorModal.remove();
         resumeAutoScroll();
-    }
+    });
+    
+    document.getElementById('closeErrorModalBtn').addEventListener('click', function() {
+        errorModal.remove();
+        resumeAutoScroll();
+    });
+    
+    document.getElementById('retryTrailer').addEventListener('click', function() {
+        errorModal.remove();
+        // Retry logic would go here
+        resumeAutoScroll();
+    });
 }
 
 // Redirect to dedicated trailer page
-function redirectToTrailerPage(videoUrl, trailerData, movieId) {
-    console.log('Redirecting to trailer page with URL:', videoUrl);
+function redirectToTrailerPage(trailerUrl, trailerData, movieId) {
+    console.log('Redirecting to trailer page with data:', {trailerUrl, trailerData, movieId});
     
-    // Get movie data from the trailer data store if available
-    const movie = window.trailerDataStore && window.trailerDataStore[movieId] ? 
-                  window.trailerDataStore[movieId].movie : null;
-    
-    // Build URL parameters
-    const params = new URLSearchParams();
-    params.set('url', videoUrl);
-    
-    if (trailerData.title) {
-        params.set('title', trailerData.title);
-    }
-    
-    if (movieId) {
-        params.set('movieId', movieId);
-    }
-    
-    if (movie) {
-        if (movie.title) params.set('title', movie.title);
-        if (movie.poster) params.set('poster', movie.poster);
-        if (movie.year) params.set('year', movie.year);
-        if (movie.plot) params.set('plot', movie.plot);
-        if (movie.rating) params.set('rating', movie.rating);
-    }
+    // Create URL parameters
+    const params = new URLSearchParams({
+        url: trailerUrl,
+        title: trailerData.title || 'Movie Trailer',
+        movieId: movieId || '',
+        poster: trailerData.thumbnail || '',
+        year: trailerData.movie?.year || new Date().getFullYear().toString(),
+        plot: trailerData.movie?.plot || 'No plot information available',
+        rating: trailerData.movie?.rating || 'N/A'
+    });
     
     // Redirect to trailer page
     window.location.href = `trailer.html?${params.toString()}`;
 }
 
+// Auto-scroll functionality
+function startAutoScroll() {
+    if (autoScrollInterval) {
+        clearInterval(autoScrollInterval);
+    }
+    
+    autoScrollInterval = setInterval(() => {
+        if (trailerCarousel && !isLoading) {
+            const items = trailerCarousel.querySelectorAll('.trailer-item');
+            if (items.length > 0) {
+                currentSlide = (currentSlide + 1) % items.length;
+                scrollToTrailer(currentSlide);
+            }
+        }
+    }, 5000); // Scroll every 5 seconds
+}
+
+// Pause auto-scroll
+function pauseAutoScroll() {
+    if (autoScrollInterval) {
+        clearInterval(autoScrollInterval);
+        autoScrollInterval = null;
+    }
+}
+
+// Resume auto-scroll
+function resumeAutoScroll() {
+    startAutoScroll();
+}
+
 // Scroll to specific trailer
 function scrollToTrailer(index) {
-    const trailerContainer = document.getElementById('trailersCarousel');
-    if (!trailerContainer) return;
-    
-    currentTrailerIndex = index;
-    updateCarouselNavigation();
-    
-    // Scroll to the specific trailer item
-    const trailerItems = document.querySelectorAll('.trailer-item');
-    if (trailerItems.length > 0 && index < trailerItems.length) {
-        const scrollPosition = trailerItems[index].offsetLeft;
-        trailerContainer.scrollTo({
-            left: scrollPosition,
-            behavior: 'smooth'
+    const items = document.querySelectorAll('.trailer-item');
+    if (items.length > 0 && index < items.length) {
+        const item = items[index];
+        item.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'center'
         });
-        console.log(`⏭️ Scrolling to trailer ${index} at position ${scrollPosition}`);
-    } else {
-        console.log(`⏭️ Could not scroll to trailer ${index}`);
-    }
-}
-
-// Update carousel navigation dots
-function updateCarouselNavigation() {
-    const dots = document.querySelectorAll('.carousel-dot');
-    dots.forEach((dot, index) => {
-        if (index === currentTrailerIndex) {
-            dot.classList.add('active');
-        } else {
-            dot.classList.remove('active');
-        }
-    });
-}
-
-// Start auto-scrolling with optimized timing
-function startAutoScroll() {
-    if (autoScrollInterval) return;
-    
-    isAutoScrolling = true;
-    // Increased interval to reduce CPU usage
-    autoScrollInterval = setInterval(() => {
-        if (isAutoScrolling && !isLoading) {
-            scrollToNextTrailer();
-        }
-    }, 3000); // Increased from 5s to 3s for better UX
-}
-
-// Pause auto-scrolling
-function pauseAutoScroll() {
-    console.log('⏸️ Pausing auto-scroll');
-    isAutoScrolling = false;
-}
-
-// Resume auto-scrolling
-function resumeAutoScroll() {
-    console.log('▶️ Resuming auto-scroll');
-    isAutoScrolling = true;
-}
-
-// Scroll to next trailer
-function scrollToNextTrailer() {
-    const trailerItems = document.querySelectorAll('.trailer-item');
-    if (trailerItems.length === 0) return;
-    
-    currentTrailerIndex = (currentTrailerIndex + 1) % trailerItems.length;
-    updateCarouselNavigation();
-    
-    // Scroll to the next trailer item
-    if (trailerCarousel) {
-        const scrollPosition = trailerItems[currentTrailerIndex].offsetLeft;
-        trailerCarousel.scrollTo({
-            left: scrollPosition,
-            behavior: 'smooth'
-        });
-    }
-    
-    console.log(`⏭️ Auto-scrolling to trailer ${currentTrailerIndex}`);
-}
-
-// Update trailers based on selected genre
-function updateTrailersForGenre(genre) {
-    console.log(`🔄 Updating trailers for genre: ${genre}`);
-    
-    // Update current genre
-    currentGenre = genre;
-    
-    // Pause auto-scrolling during update
-    pauseAutoScroll();
-    
-    // Fetch and display trailers for the selected genre
-    fetchAndDisplayTrailers();
-    
-    // Resume auto-scrolling after update
-    setTimeout(resumeAutoScroll, 1000);
-}
-
-// Expose trailer module functions globally
-window.trailerModule = {
-    updateTrailersForGenre: function(genre) {
-        console.log(`Updating trailers for genre: ${genre}`);
-        currentGenre = genre;
-        fetchAndDisplayTrailers();
-    },
-    refreshTrailers: function() {
-        console.log('Refreshing trailers');
-        fetchAndDisplayTrailers();
-    }
-};
-
-// Also expose individual functions for backward compatibility
-window.updateTrailersForGenre = window.trailerModule.updateTrailersForGenre;
-window.refreshTrailers = window.trailerModule.refreshTrailers;
-
-// Initialize genre filter functionality
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing genre filter functionality');
-    
-    // Small delay to ensure genre pills are rendered
-    setTimeout(function() {
-        // Add event listeners to genre pills
-        const genrePills = document.querySelectorAll('.genre-pill');
-        console.log('Found genre pills:', genrePills.length);
         
-        if (genrePills.length > 0) {
-            genrePills.forEach((pill, index) => {
-                console.log(`Attaching event listener to pill ${index}:`, pill.textContent.trim());
-                pill.addEventListener('click', function() {
-                    const genre = this.getAttribute('data-genre');
-                    console.log(`Genre selected: ${genre}`);
-                    
-                    // Update active state
-                    genrePills.forEach(p => p.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Update trailers for selected genre
-                    if (window.trailerModule && typeof window.trailerModule.updateTrailersForGenre === 'function') {
-                        window.trailerModule.updateTrailersForGenre(genre);
-                    } else {
-                        console.error('trailerModule not available or updateTrailersForGenre function not found');
-                    }
-                });
-            });
-        } else {
-            console.warn('No genre pills found');
-        }
-        
-        // Add scroll indicators for genre filters
-        const genreFilters = document.getElementById('genreFilters');
-        const scrollLeftBtn = document.querySelector('.scroll-indicator.scroll-left');
-        const scrollRightBtn = document.querySelector('.scroll-indicator.scroll-right');
-        
-        if (genreFilters && scrollLeftBtn && scrollRightBtn) {
-            // Show/hide scroll indicators based on scroll position
-            function updateScrollIndicators() {
-                const scrollLeft = genreFilters.scrollLeft;
-                const scrollWidth = genreFilters.scrollWidth;
-                const clientWidth = genreFilters.clientWidth;
-                
-                // Check if scrolling is needed (content overflows container)
-                const needsScrolling = scrollWidth > clientWidth;
-                
-                if (needsScrolling) {
-                    // Show left indicator if not at start
-                    if (scrollLeft > 0) {
-                        scrollLeftBtn.classList.add('visible');
-                    } else {
-                        scrollLeftBtn.classList.remove('visible');
-                    }
-                    
-                    // Show right indicator if not at end
-                    if (scrollLeft + clientWidth < scrollWidth) {
-                        scrollRightBtn.classList.add('visible');
-                    } else {
-                        scrollRightBtn.classList.remove('visible');
-                    }
-                } else {
-                    // Hide both indicators if no scrolling needed
-                    scrollLeftBtn.classList.remove('visible');
-                    scrollRightBtn.classList.remove('visible');
-                }
+        // Update active dot
+        const dots = document.querySelectorAll('.carousel-dot');
+        dots.forEach((dot, i) => {
+            if (i === index) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
             }
+        });
+        
+        currentSlide = index;
+    }
+}
+
+// Update scroll indicators for genre filters
+function updateScrollIndicators() {
+    const genreFilters = document.getElementById('genreFilters');
+    const scrollLeftBtn = document.getElementById('scrollLeftBtn');
+    const scrollRightBtn = document.getElementById('scrollRightBtn');
+    
+    if (genreFilters && scrollLeftBtn && scrollRightBtn) {
+        const scrollLeft = genreFilters.scrollLeft;
+        const scrollWidth = genreFilters.scrollWidth;
+        const clientWidth = genreFilters.clientWidth;
+        
+        // Show left indicator if not at start
+        if (scrollLeft > 0) {
+            scrollLeftBtn.classList.add('visible');
+        } else {
+            scrollLeftBtn.classList.remove('visible');
+        }
+        
+        // Show right indicator if not at end
+        if (scrollLeft + clientWidth < scrollWidth) {
+            scrollRightBtn.classList.add('visible');
+        } else {
+            scrollRightBtn.classList.remove('visible');
+        }
+    }
+}
+
+// Initialize genre filter scroll indicators
+function initGenreFilterScroll() {
+    const genreFilters = document.getElementById('genreFilters');
+    const scrollLeftBtn = document.getElementById('scrollLeftBtn');
+    const scrollRightBtn = document.getElementById('scrollRightBtn');
+    
+    if (genreFilters && scrollLeftBtn && scrollRightBtn) {
+        // Check if scrolling is needed
+        if (genreFilters.scrollWidth > genreFilters.clientWidth) {
+            // Show scroll indicators
+            scrollLeftBtn.style.display = 'flex';
+            scrollRightBtn.style.display = 'flex';
             
-            // Initial check
-            updateScrollIndicators();
-            
-            // Update on scroll (throttled)
+            // Update indicators on scroll
             genreFilters.addEventListener('scroll', throttle(updateScrollIndicators, 100));
             
             // Add click handlers for scroll buttons
@@ -1423,8 +1362,31 @@ document.addEventListener('DOMContentLoaded', function() {
             scrollRightBtn.addEventListener('click', function() {
                 genreFilters.scrollBy({ left: 200, behavior: 'smooth' });
             });
+            
+            // Initial check
+            setTimeout(updateScrollIndicators, 100);
+        } else {
+            // Hide scroll indicators if not needed
+            scrollLeftBtn.style.display = 'none';
+            scrollRightBtn.style.display = 'none';
         }
-    }, 100); // Small delay to ensure DOM is fully ready
+    }
+}
+
+// Expose functions globally for use in HTML
+window.fetchTrailerForMovie = fetchTrailerForMovie;
+window.playTrailer = playTrailer;
+window.scrollToTrailer = scrollToTrailer;
+window.pauseAutoScroll = pauseAutoScroll;
+window.resumeAutoScroll = resumeAutoScroll;
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize trailer data store
+    window.trailerDataStore = {};
+    
+    // Initialize genre filter scroll functionality
+    setTimeout(initGenreFilterScroll, 100); // Small delay to ensure DOM is fully ready
 });
 
 // Start initialization when script loads
