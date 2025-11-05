@@ -885,7 +885,7 @@ function showTrailerInModal(videoUrl, trailerData) {
         </div>
     `;
     
-    // Show modal
+    // Show modal immediately
     modal.classList.remove('hidden');
     
     // Create video element after a short delay to ensure DOM is updated
@@ -922,7 +922,7 @@ function showTrailerInModal(videoUrl, trailerData) {
 }
 
 // Create video element for modal with enhanced proxy support
-async function createModalVideoElement(videoUrl, trailerData) {
+function createModalVideoElement(videoUrl, trailerData) {
     const container = document.querySelector('#trailerModalContent .video-container');
     if (!container) {
         console.error('Video container not found in modal');
@@ -956,10 +956,6 @@ async function createModalVideoElement(videoUrl, trailerData) {
     
     let proxyAttemptCount = 0;
     
-    // Check if local proxy is available
-    const localProxyAvailable = await isLocalProxyAvailable();
-    console.log('Local proxy available:', localProxyAvailable);
-    
     // Check if URL is M3U8 (HLS stream)
     const isHLS = videoUrl.toLowerCase().includes('.m3u8');
     
@@ -978,100 +974,98 @@ async function createModalVideoElement(videoUrl, trailerData) {
     videoElement.onerror = function(e) {
         console.error('❌ Video playback failed for URL:', videoUrl, e);
         
-        // Check if we have more proxies to try
-        if (proxyAttemptCount < VIDEO_PROXIES.length) {
-            // If local proxy is not available, skip it
-            if (!localProxyAvailable && proxyAttemptCount === 0) {
-                proxyAttemptCount = 1;
-            }
+        // Check if local proxy is available (only when needed)
+        isLocalProxyAvailable().then(localProxyAvailable => {
+            console.log('Local proxy available:', localProxyAvailable);
             
-            // Try next proxy
-            const proxy = VIDEO_PROXIES[proxyAttemptCount];
-            let proxiedUrl;
-            
-            // Special handling for local proxy
-            if (proxy.startsWith('http://localhost:3001/proxy/')) {
-                // Extract path and query from original URL
-                const urlObj = new URL(videoUrl);
-                proxiedUrl = proxy + urlObj.pathname + urlObj.search;
-            } else {
-                proxiedUrl = proxy + encodeURIComponent(videoUrl);
-            }
-            
-            console.log(`🔄 Attempting proxy ${proxyAttemptCount + 1}:`, proxy.substring(0, 50) + '...');
-            
-            videoElement.src = proxiedUrl;
-            proxyAttemptCount++;
-        } else {
-            // All proxies failed, show error message with multiple options
-            console.error('❌ All video proxies failed for URL:', videoUrl);
-            
-            // Extract movie title for search
-            const movieTitle = trailerData.title || 'Movie Trailer';
-            
-            // Get reference to close function for the button
-            const closeModalFunction = function() {
-                const modal = document.getElementById('trailerModal');
-                if (modal) {
-                    modal.classList.add('hidden');
-                    // Unlock body scroll
-                    document.body.classList.remove('modal-open');
-                    // Resume auto-scrolling
-                    resumeAutoScroll();
+            // Check if we have more proxies to try
+            if (proxyAttemptCount < VIDEO_PROXIES.length) {
+                // If local proxy is not available, skip it
+                if (!localProxyAvailable && proxyAttemptCount === 0) {
+                    proxyAttemptCount = 1;
                 }
-            };
-            
-            container.innerHTML = `
-                <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 rounded-xl">
-                    <div class="text-center p-4 max-w-md">
-                        <p class="text-white text-lg mb-3">⚠️ Video Playback Blocked</p>
-                        <p class="text-gray-400 text-sm mb-4">IMDb is blocking video playback due to strict security policies.</p>
-                        
-                        <div class="bg-blue-900 border border-blue-600 rounded-lg p-3 mb-4">
-                            <p class="text-blue-200 font-semibold text-sm mb-2">💡 Solutions:</p>
-                            <ul class="text-left text-xs text-blue-200 space-y-1">
-                                <li>• Open trailer in new tab (below)</li>
-                                <li>• Search on YouTube/Google</li>
-                                <li>• Try incognito mode</li>
-                                <li>• Use a VPN service</li>
-                                <li>• Run local proxy server</li>
-                            </ul>
+                
+                // Try next proxy
+                const proxy = VIDEO_PROXIES[proxyAttemptCount];
+                let proxiedUrl;
+                
+                // Special handling for local proxy
+                if (proxy.startsWith('http://localhost:3001/proxy/')) {
+                    // Extract path and query from original URL
+                    const urlObj = new URL(videoUrl);
+                    proxiedUrl = proxy + urlObj.pathname + urlObj.search;
+                } else {
+                    proxiedUrl = proxy + encodeURIComponent(videoUrl);
+                }
+                
+                console.log(`🔄 Attempting proxy ${proxyAttemptCount + 1}:`, proxy.substring(0, 50) + '...');
+                
+                videoElement.src = proxiedUrl;
+                proxyAttemptCount++;
+            } else {
+                // All proxies failed, show error message with multiple options
+                console.error('❌ All video proxies failed for URL:', videoUrl);
+                
+                // Extract movie title for search
+                const movieTitle = trailerData.title || 'Movie Trailer';
+                
+                // Get reference to close function for the button
+                const closeModalFunction = function() {
+                    const modal = document.getElementById('trailerModal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                        // Unlock body scroll
+                        document.body.classList.remove('modal-open');
+                        // Resume auto-scrolling
+                        resumeAutoScroll();
+                    }
+                };
+                
+                container.innerHTML = `
+                    <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 rounded-xl">
+                        <div class="text-center p-4 max-w-md">
+                            <p class="text-white text-lg mb-3">⚠️ Video Playback Blocked</p>
+                            <p class="text-gray-400 text-sm mb-4">IMDb is blocking video playback due to strict security policies.</p>
+                            
+                            <div class="bg-blue-900 border border-blue-600 rounded-lg p-3 mb-4">
+                                <p class="text-blue-200 font-semibold text-sm mb-2">💡 Solutions:</p>
+                                <ul class="text-left text-xs text-blue-200 space-y-1">
+                                    <li>• Open trailer in new tab (below)</li>
+                                    <li>• Search on YouTube/Google</li>
+                                    <li>• Try incognito mode</li>
+                                    <li>• Use a VPN service</li>
+                                    <li>• Run local proxy server</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="flex flex-col gap-2">
+                                <button class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('${videoUrl}', '_blank')">
+                                    Open in New Tab
+                                </button>
+                                <button class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('https://www.youtube.com/results?search_query=${encodeURIComponent(movieTitle)}', '_blank')">
+                                    Search on YouTube
+                                </button>
+                                <button class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="location.reload()">
+                                    Reload Page
+                                </button>
+                                <button class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 mt-2" onclick="window.open('http://localhost:3001', '_blank')">
+                                    Start Local Proxy
+                                </button>
+                                <button class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 mt-2" onclick="(${closeModalFunction.toString()})()">
+                                    Close
+                                </button>
+                            </div>
+                            ${trailerData.thumbnail ? `<img src="${trailerData.thumbnail}" alt="Thumbnail" class="max-w-full mt-4 rounded">` : ''}
                         </div>
-                        
-                        <div class="flex flex-col gap-2">
-                            <button class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('${videoUrl}', '_blank')">
-                                Open in New Tab
-                            </button>
-                            <button class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('https://www.youtube.com/results?search_query=${encodeURIComponent(movieTitle)}', '_blank')">
-                                Search on YouTube
-                            </button>
-                            <button class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="location.reload()">
-                                Reload Page
-                            </button>
-                            <button class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 mt-2" onclick="window.open('http://localhost:3001', '_blank')">
-                                Start Local Proxy
-                            </button>
-                            <button class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 mt-2" onclick="(${closeModalFunction.toString()})()">
-                                Close
-                            </button>
-                        </div>
-                        ${trailerData.thumbnail ? `<img src="${trailerData.thumbnail}" alt="Thumbnail" class="max-w-full mt-4 rounded">` : ''}
                     </div>
-                </div>
-            `;
-        }
+                `;
+            }
+        });
     };
     
     // Success handler
     videoElement.onloadeddata = function() {
-        if (proxyAttemptCount === 0) {
-            console.log('✅ Video loaded successfully (direct playback) for URL:', videoUrl);
-        } else {
-            const proxyName = proxyAttemptCount === 1 && !localProxyAvailable ? 
-                VIDEO_PROXIES[1] : 
-                VIDEO_PROXIES[proxyAttemptCount - 1];
-            console.log(`✅ Video loaded via proxy ${proxyAttemptCount}: ${proxyName} for URL:`, videoUrl);
-        }
+        console.log('✅ Video loaded successfully (direct playback) for URL:', videoUrl);
         // Unmute after video starts playing
         setTimeout(() => {
             if (videoElement) {
