@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Forum - Movie Wiki</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#22d3ee',
+                        dark: '#0c1221'
+                    },
+                    fontFamily: {
+                        'sans': ['Poppins', 'sans-serif'],
+                        'body': ['Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0c1221 0%, #1a1f3a 100%);
+            background-attachment: fixed;
+            padding-bottom: 70px; /* Space for mobile nav */
+        }
+        
+        /* Mobile bottom navigation */
+        .mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(34, 211, 238, 0.2);
+            z-index: 1000;
+        }
+        
+        @media (min-width: 768px) {
+            .mobile-nav {
+                display: none;
+            }
+            body {
+                padding-bottom: 0;
+            }
+        }
+        
+        /* Glassmorphism cards */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(34, 211, 238, 0.1);
+        }
+        
+        /* Form elements */
+        input, select, textarea {
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        /* Buttons */
+        .filter-btn {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .filter-btn.active {
+            box-shadow: 0 6px 12px rgba(34, 211, 238, 0.3);
+        }
+        
+        /* Suggestion cards */
+        .suggestion-card {
+            background: rgba(30, 41, 59, 0.5);
+            border-left: 3px solid #22d3ee;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .suggestion-card:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-left-color: #06b6d4;
+            transform: translateX(5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Upvote button */
+        .upvote-btn {
+            transition: all 0.2s ease;
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+        
+        .upvote-btn:hover {
+            transform: scale(1.1);
+            background: rgba(34, 211, 238, 0.2);
+        }
+        
+        .upvote-btn.upvoted {
+            color: #22d3ee;
+            background: rgba(34, 211, 238, 0.3);
+        }
+        
+        /* Responsive banner ads */
+        .banner-ad-container {
+            width: 100%;
+            max-width: 728px;
+            margin: 0 auto;
+            min-height: 90px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .banner-ad-container ins {
+            display: block;
+            width: 100% !important;
+            height: 90px !important;
+            min-height: 90px;
+            max-width: 728px;
+        }
+        
+        /* Mobile ad adjustments */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+                min-height: 60px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100%;
+                width: 100% !important;
+                height: 60px !important;
+                min-height: 60px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-ad-container {
+                min-height: 50px;
+            }
+            
+            .banner-ad-container ins {
+                height: 50px !important;
+                min-height: 50px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-primary text-white min-h-screen font-body">
+    <!-- Navigation Bar -->
+    <nav class="glass-card sticky top-0 z-50 border-b border-gray-700">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-film text-accent text-2xl"></i>
+                    <h1 class="text-2xl font-bold text-accent font-sans">Movie Wiki</h1>
+                </div>
+                <div class="hidden md:flex items-center gap-4">
+                    <a href="/pages/index.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="/pages/forum.html" class="text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-comments"></i>
+                        <span>Forum</span>
+                    </a>
+                    <button id="loginBtn" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-user"></i>
+                        <span id="userNameDisplay">Login</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-nav md:hidden">
+        <div class="flex justify-around items-center py-3">
+            <a href="/pages/index.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="#suggestionForm" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-lightbulb text-xl"></i>
+                <span class="text-xs">Suggest</span>
+            </a>
+            <a href="/pages/forum.html" class="flex flex-col items-center gap-1 text-accent">
+                <i class="fas fa-comments text-xl"></i>
+                <span class="text-xs">Forum</span>
+            </a>
+            <button id="mobileLoginBtn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-user text-xl"></i>
+                <span class="text-xs" id="mobileUserName">Login</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Banner Ad -->
+    <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container">
+        <ins style="width: 728px;height:90px" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"><script src="//data527.click/js/responsive.js" async></script></ins>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Hero Section -->
+        <div class="max-w-3xl mx-auto mb-12 text-center">
+            <h1 class="text-4xl font-bold mb-4 text-accent font-sans">Community Forum</h1>
+            <p class="text-xl text-gray-300">Share ideas, report bugs, and help improve Movie Wiki</p>
+        </div>
+        
+        <!-- New Suggestion Form -->
+        <div class="max-w-3xl mx-auto mb-12">
+            <div class="glass-card rounded-xl p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="fas fa-lightbulb text-accent"></i>
+                    <span>Share Your Suggestion</span>
+                </h2>
+                
+                <form id="suggestionForm">
+                    <div class="mb-4">
+                        <label for="userName" class="block text-sm font-semibold mb-2 text-gray-300">
+                            <i class="fas fa-user mr-1"></i>Your Name
+                        </label>
+                        <input 
+                            type="text" 
+                            id="userName" 
+                            required
+                            placeholder="Enter your name" 
+                            class="w-full px-4 py-3 rounded-lg bg-secondary text-white focus:outline-none focus:ring-2 focus:ring-accent border border-gray-700"
+                        >
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="suggestionTitle" class="block text-sm font-semibold mb-2 text-gray-300">
+                            <i class="fas fa-heading mr-1"></i>Suggestion Title
+                        </label>
+                        <input 
+                            type="text" 
+                            id="suggestionTitle" 
+                            required
+                            placeholder="Briefly describe your suggestion" 
+                            class="w-full px-4 py-3 rounded-lg bg-secondary text-white focus:outline-none focus:ring-2 focus:ring-accent border border-gray-700"
+                        >
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="suggestionCategory" class="block text-sm font-semibold mb-2 text-gray-300">
+                            <i class="fas fa-tag mr-1"></i>Category
+                        </label>
+                        <select 
+                            id="suggestionCategory" 
+                            required
+                            class="w-full px-4 py-3 rounded-lg bg-secondary text-white focus:outline-none focus:ring-2 focus:ring-accent border border-gray-700"
+                        >
+                            <option value="feature">Feature Request</option>
+                            <option value="bug">Bug Report</option>
+                            <option value="improvement">UI/UX Improvement</option>
+                            <option value="content">Content Request</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label for="suggestionText" class="block text-sm font-semibold mb-2 text-gray-300">
+                            <i class="fas fa-comment-dots mr-1"></i>Description
+                        </label>
+                        <textarea 
+                            id="suggestionText" 
+                            required
+                            rows="5"
+                            placeholder="Describe your suggestion in detail..." 
+                            class="w-full px-4 py-3 rounded-lg bg-secondary text-white focus:outline-none focus:ring-2 focus:ring-accent border border-gray-700"
+                        ></textarea>
+                    </div>
+                    
+                    <button 
+                        type="submit" 
+                        class="w-full bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center gap-2"
+                    >
+                        <i class="fas fa-paper-plane"></i>
+                        Submit Suggestion
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Filter & Sort -->
+        <div class="max-w-5xl mx-auto mb-6">
+            <div class="flex flex-wrap gap-3 items-center justify-between">
+                <div class="flex flex-wrap gap-2">
+                    <button class="filter-btn active px-4 py-2 rounded-lg bg-accent text-primary font-semibold" data-filter="all">
+                        All
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-lg bg-secondary text-gray-300" data-filter="feature">
+                        Features
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-lg bg-secondary text-gray-300" data-filter="bug">
+                        Bugs
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-lg bg-secondary text-gray-300" data-filter="improvement">
+                        UI/UX
+                    </button>
+                </div>
+                <div>
+                    <select id="sortBy" class="px-4 py-2 rounded-lg bg-secondary text-white border border-gray-700">
+                        <option value="recent">Most Recent</option>
+                        <option value="popular">Most Popular</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Suggestions List -->
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="fas fa-list text-accent"></i>
+                <span>Community Suggestions</span>
+            </h2>
+            
+            <div id="suggestionsContainer" class="space-y-4">
+                <!-- Loading indicator -->
+                <div class="text-center py-12">
+                    <i class="fas fa-spinner fa-spin text-accent text-3xl mb-4"></i>
+                    <p class="text-gray-400">Loading suggestions...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeTE5otOE58jq1-bIPNbiYdwiwX88iT00",
+            authDomain: "movie-wiki-86d4d.firebaseapp.com",
+            databaseURL: "https://movie-wiki-86d4d-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "movie-wiki-86d4d",
+            storageBucket: "movie-wiki-86d4d.firebasestorage.app",
+            messagingSenderId: "453451714779",
+            appId: "1:453451714779:web:e94ad0ef8df299b733fcfe",
+            measurementId: "G-91SHQF7F4P"
+        };
+        
+        // Initialize Firebase
+        console.log('🔥 Initializing Firebase...');
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+        
+        console.log('✅ Firebase initialized');
+        console.log('📊 Database reference:', database.ref());
+        
+        let currentUser = null;
+        
+        // Google Sign-In
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    console.log('✅ Signed in:', result.user.displayName);
+                })
+                .catch((error) => {
+                    console.error('Sign-in error:', error);
+                    alert('Failed to sign in. Please try again.');
+                });
+        }
+        
+        // Auth State Observer
+        auth.onAuthStateChanged((user) => {
+            currentUser = user;
+            updateAuthUI(user);
+            
+            // Auto-fill user name if logged in
+            if (user) {
+                document.getElementById('userName').value = user.displayName;
+                document.getElementById('userName').readOnly = true;
+            }
+        });
+        
+        // Update UI based on auth state
+        function updateAuthUI(user) {
+            const loginBtn = document.getElementById('loginBtn');
+            const mobileLoginBtn = document.getElementById('mobileLoginBtn');
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            const mobileUserName = document.getElementById('mobileUserName');
+            
+            if (user) {
+                const displayName = user.displayName || 'User';
+                const shortName = displayName.split(' ')[0];
+                
+                userNameDisplay.textContent = shortName;
+                mobileUserName.textContent = shortName;
+                loginBtn.innerHTML = `<i class="fas fa-user-circle"></i><span id="userNameDisplay">${shortName}</span>`;
+            } else {
+                userNameDisplay.textContent = 'Login';
+                mobileUserName.textContent = 'Login';
+                loginBtn.innerHTML = `<i class="fas fa-user"></i><span id="userNameDisplay">Login</span>`;
+            }
+        }
+        
+        // Login button handlers
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            if (currentUser) {
+                if (confirm(`Sign out ${currentUser.displayName}?`)) {
+                    auth.signOut();
+                }
+            } else {
+                signInWithGoogle();
+            }
+        });
+        
+        document.getElementById('mobileLoginBtn').addEventListener('click', () => {
+            if (currentUser) {
+                if (confirm(`Sign out ${currentUser.displayName}?`)) {
+                    auth.signOut();
+                }
+            } else {
+                signInWithGoogle();
+            }
+        });
+        
+        // ===== RATE LIMITING FOR FIREBASE =====
+        const rateLimits = {
+            suggestions: {
+                maxPerHour: 5,        // Max 5 suggestions per hour per user
+                maxPerDay: 15,        // Max 15 suggestions per day per user
+                cooldown: 30000       // 30 seconds between suggestions
+            },
+            upvotes: {
+                maxPerMinute: 10,     // Max 10 upvotes per minute
+                cooldown: 1000        // 1 second between upvotes
+            }
+        };
+        
+        const userActivity = {
+            lastSuggestionTime: 0,
+            suggestionsThisHour: 0,
+            suggestionsToday: 0,
+            hourStart: Date.now(),
+            dayStart: Date.now(),
+            lastUpvoteTime: 0,
+            upvotesThisMinute: 0,
+            minuteStart: Date.now()
+        };
+        
+        // Check if user can suggest
+        function canUserSuggest() {
+            const now = Date.now();
+            
+            // Reset hourly count
+            if (now - userActivity.hourStart > 3600000) {
+                userActivity.suggestionsThisHour = 0;
+                userActivity.hourStart = now;
+            }
+            
+            // Reset daily count
+            if (now - userActivity.dayStart > 86400000) {
+                userActivity.suggestionsToday = 0;
+                userActivity.dayStart = now;
+            }
+            
+            // Check cooldown
+            if (now - userActivity.lastSuggestionTime < rateLimits.suggestions.cooldown) {
+                const wait = Math.ceil((rateLimits.suggestions.cooldown - (now - userActivity.lastSuggestionTime)) / 1000);
+                return { allowed: false, reason: `Please wait ${wait} seconds before suggesting again` };
+            }
+            
+            // Check hourly limit
+            if (userActivity.suggestionsThisHour >= rateLimits.suggestions.maxPerHour) {
+                return { allowed: false, reason: `You've reached the hourly limit of ${rateLimits.suggestions.maxPerHour} suggestions` };
+            }
+            
+            // Check daily limit
+            if (userActivity.suggestionsToday >= rateLimits.suggestions.maxPerDay) {
+                return { allowed: false, reason: `You've reached the daily limit of ${rateLimits.suggestions.maxPerDay} suggestions` };
+            }
+            
+            return { allowed: true };
+        }
+        
+        // Check if user can upvote
+        function canUserUpvote() {
+            const now = Date.now();
+            
+            // Reset minute count
+            if (now - userActivity.minuteStart > 60000) {
+                userActivity.upvotesThisMinute = 0;
+                userActivity.minuteStart = now;
+            }
+            
+            // Check cooldown
+            if (now - userActivity.lastUpvoteTime < rateLimits.upvotes.cooldown) {
+                return { allowed: false, reason: 'Please slow down' };
+            }
+            
+            // Check minute limit
+            if (userActivity.upvotesThisMinute >= rateLimits.upvotes.maxPerMinute) {
+                return { allowed: false, reason: 'Too many upvotes, please wait' };
+            }
+            
+            return { allowed: true };
+        }
+        
+        // ===== END RATE LIMITING =====
+        
+        // Submit suggestion
+        let isSubmitting = false;
+        document.getElementById('suggestionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (isSubmitting) {
+                console.log('⏸️ Already submitting, please wait...');
+                return;
+            }
+            
+            // Check rate limit
+            const canSuggest = canUserSuggest();
+            if (!canSuggest.allowed) {
+                alert(`⏱️ ${canSuggest.reason}`);
+                return;
+            }
+            
+            isSubmitting = true;
+            console.log('📤 Form submitted');
+            
+            const userName = document.getElementById('userName').value.trim();
+            const title = document.getElementById('suggestionTitle').value.trim();
+            const category = document.getElementById('suggestionCategory').value;
+            const text = document.getElementById('suggestionText').value.trim();
+            
+            console.log('Form data:', { userName, title, category, textLength: text.length });
+            
+            if (!userName || !title || !text) {
+                alert('⚠️ Please fill in all fields');
+                isSubmitting = false;
+                return;
+            }
+            
+            const suggestion = {
+                userName,
+                title,
+                category,
+                text,
+                upvotes: 0,
+                timestamp: Date.now(),
+                upvotedBy: {},
+                userId: currentUser ? currentUser.uid : null
+            };
+            
+            console.log('💾 Saving to Firebase:', suggestion);
+            
+            try {
+                const newRef = await database.ref('suggestions').push(suggestion);
+                console.log('✅ Saved successfully with ID:', newRef.key);
+                
+                // Update rate limit counters
+                userActivity.lastSuggestionTime = Date.now();
+                userActivity.suggestionsThisHour++;
+                userActivity.suggestionsToday++;
+                
+                // Reset form (but keep name if logged in)
+                if (!currentUser) {
+                    document.getElementById('userName').value = '';
+                }
+                document.getElementById('suggestionTitle').value = '';
+                document.getElementById('suggestionText').value = '';
+                document.getElementById('suggestionCategory').value = 'feature';
+                
+                // Show success message with remaining quota
+                const remaining = rateLimits.suggestions.maxPerHour - userActivity.suggestionsThisHour;
+                alert(`✅ Thank you! Your suggestion has been submitted! 🎉\n(${remaining} suggestions remaining this hour)`);
+                
+                // No need to reload - real-time listener will update automatically!
+                console.log('✅ Real-time update will show new suggestion automatically');
+            } catch (error) {
+                console.error('❌ Error submitting suggestion:', error);
+                console.error('Error details:', error.message, error.code);
+                alert('❌ Error submitting suggestion: ' + error.message + '\n\nPlease check Firebase rules and try again.');
+            } finally {
+                isSubmitting = false;
+            }
+        });
+        
+        // Load suggestions with real-time updates
+        function loadSuggestions() {
+            console.log('📦 Loading suggestions from Firebase...');
+            const container = document.getElementById('suggestionsContainer');
+            container.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-accent text-3xl mb-4"></i><p class="text-gray-400">Loading suggestions...</p></div>';
+            
+            // Use 'on' instead of 'once' for real-time updates
+            database.ref('suggestions').on('value', (snapshot) => {
+                console.log('📸 Real-time update received');
+                const suggestions = [];
+                
+                if (!snapshot.exists()) {
+                    console.log('⚠️ No suggestions in database');
+                    container.innerHTML = `
+                        <div class="text-center py-12 glass-card rounded-xl">
+                            <i class="fas fa-comments text-gray-500 text-5xl mb-4"></i>
+                            <p class="text-gray-400 text-lg">No suggestions yet. Be the first to share your ideas!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                snapshot.forEach((childSnapshot) => {
+                    suggestions.push({
+                        id: childSnapshot.key,
+                        ...childSnapshot.val()
+                    });
+                });
+                
+                console.log(`✅ Loaded ${suggestions.length} suggestions`);
+                
+                // Sort by recent
+                suggestions.sort((a, b) => b.timestamp - a.timestamp);
+                
+                displaySuggestions(suggestions);
+            }, (error) => {
+                console.error('❌ Error loading suggestions:', error);
+                container.innerHTML = `
+                    <div class="text-center py-12 glass-card rounded-xl bg-red-900 bg-opacity-20">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
+                        <p class="text-red-400 text-lg">Failed to load suggestions</p>
+                        <p class="text-gray-400 text-sm mt-2">${error.message}</p>
+                        <button onclick="loadSuggestions()" class="mt-4 bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-6 rounded-lg">
+                            Try Again
+                        </button>
+                    </div>
+                `;
+            });
+        }
+        
+        // Display suggestions
+        function displaySuggestions(suggestions) {
+            const container = document.getElementById('suggestionsContainer');
+            
+            if (suggestions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 glass-card rounded-xl">
+                        <i class="fas fa-comments text-gray-500 text-5xl mb-4"></i>
+                        <p class="text-gray-400 text-lg">No suggestions yet. Be the first to share your ideas!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = suggestions.map(s => `
+                <div class="suggestion-card rounded-xl p-6" data-category="${s.category}">
+                    <div class="flex items-start gap-4">
+                        <div class="flex flex-col items-center gap-1">
+                            <button class="upvote-btn text-2xl" data-id="${s.id}">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <span class="text-accent font-bold">${s.upvotes || 0}</span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="text-xl font-bold text-white">${s.title}</h3>
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(s.category)}">
+                                    ${getCategoryLabel(s.category)}
+                                </span>
+                            </div>
+                            <p class="text-gray-300 mb-3">${s.text}</p>
+                            <div class="flex items-center gap-4 text-sm text-gray-400">
+                                <span><i class="fas fa-user mr-1"></i>${s.userName}</span>
+                                <span><i class="fas fa-clock mr-1"></i>${formatDate(s.timestamp)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Add upvote listeners
+            document.querySelectorAll('.upvote-btn').forEach(btn => {
+                btn.addEventListener('click', handleUpvote);
+            });
+        }
+        
+        // Handle upvote
+        async function handleUpvote(e) {
+            // Check rate limit
+            const canUpvote = canUserUpvote();
+            if (!canUpvote.allowed) {
+                return; // Silently ignore (no alert spam)
+            }
+            
+            const suggestionId = e.currentTarget.getAttribute('data-id');
+            const userKey = 'user_' + Math.random().toString(36).substr(2, 9); // Simple user identification
+            
+            try {
+                const ref = database.ref(`suggestions/${suggestionId}`);
+                const snapshot = await ref.once('value');
+                const suggestion = snapshot.val();
+                
+                const newUpvotes = (suggestion.upvotes || 0) + 1;
+                await ref.update({ upvotes: newUpvotes });
+                
+                // Update rate limit counters
+                userActivity.lastUpvoteTime = Date.now();
+                userActivity.upvotesThisMinute++;
+                
+                loadSuggestions();
+            } catch (error) {
+                console.error('Error upvoting:', error);
+            }
+        }
+        
+        // Helper functions
+        function getCategoryColor(category) {
+            const colors = {
+                feature: 'bg-blue-500 text-white',
+                bug: 'bg-red-500 text-white',
+                improvement: 'bg-purple-500 text-white',
+                content: 'bg-green-500 text-white',
+                other: 'bg-gray-500 text-white'
+            };
+            return colors[category] || colors.other;
+        }
+        
+        function getCategoryLabel(category) {
+            const labels = {
+                feature: 'Feature',
+                bug: 'Bug',
+                improvement: 'UI/UX',
+                content: 'Content',
+                other: 'Other'
+            };
+            return labels[category] || 'Other';
+        }
+        
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+            
+            if (hours < 1) return 'Just now';
+            if (hours < 24) return `${hours}h ago`;
+            if (days < 7) return `${days}d ago`;
+            return date.toLocaleDateString();
+        }
+        
+        // Filter functionality
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-accent', 'text-primary');
+                    b.classList.add('bg-secondary', 'text-gray-300');
+                });
+                this.classList.add('active', 'bg-accent', 'text-primary');
+                this.classList.remove('bg-secondary', 'text-gray-300');
+                
+                const filter = this.getAttribute('data-filter');
+                document.querySelectorAll('.suggestion-card').forEach(card => {
+                    if (filter === 'all' || card.getAttribute('data-category') === filter) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+        
+        // Initial load
+        loadSuggestions();
+    </script>
+    
+    <script>
+        // Remove loader when page is fully loaded
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('globalLoader');
+            if (loader) {
+                setTimeout(function() {
+                    loader.style.opacity = '0';
+                    loader.style.transition = 'opacity 0.5s ease';
+                    setTimeout(function() {
+                        if (loader.parentNode) {
+                            loader.parentNode.removeChild(loader);
+                        }
+                    }, 500);
+                }, 500);
+            }
+        });
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+    <script async src="../js/script.js"></script>
+    
+<!-- Footer -->
+<footer class="glass-card border-t border-gray-700 py-6 mt-12">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+            <div class="mb-4 md:mb-0">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-film text-accent"></i>
+                    <span class="font-bold text-accent">Movie Wiki</span>
+                </div>
+                <p class="text-gray-400 text-sm mt-2">&copy; 2025 Movie Wiki. All rights reserved.</p>
+            </div>
+            <div class="flex flex-wrap justify-center gap-4">
+                <a href="privacy-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Privacy Policy</a>
+                <a href="terms-of-service.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Terms of Service</a>
+                <a href="disclaimer.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Disclaimer</a>
+                <a href="cookie-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Cookie Policy</a>
+            </div>
+        </div>
+    </div>
+</footer>
+</body>
+</html>

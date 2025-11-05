@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trailer Debug - Movie Wiki</title>
+    <link rel="icon" href="../assets/favicon.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #1e293b;
+            --accent: #0ea5e9;
+            --text: #f1f5f9;
+        }
+        
+        body {
+            background-color: var(--primary);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+        }
+        
+        .trailer-item {
+            aspect-ratio: 16/9;
+            min-width: 300px;
+        }
+        
+        .trailer-controls {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        
+        .trailer-control-btn {
+            background: rgba(14, 165, 233, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(14, 165, 233, 0.4);
+        }
+        
+        .trailer-control-btn:hover {
+            background: rgba(14, 165, 233, 1);
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(14, 165, 233, 0.6);
+        }
+        
+        .trailer-control-btn i {
+            color: white;
+            font-size: 24px;
+        }
+        
+        .trailer-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 20px;
+            z-index: 5;
+        }
+        
+        .trailer-info h3 {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .trailer-info p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .carousel-nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .carousel-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #64748b;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .carousel-dot.active {
+            background: var(--accent);
+            transform: scale(1.2);
+        }
+        
+        .debug-info {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .debug-entry {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        
+        .debug-error {
+            background: rgba(239, 68, 68, 0.2);
+            border-left: 3px solid #ef4444;
+        }
+        
+        .debug-success {
+            background: rgba(34, 197, 94, 0.2);
+            border-left: 3px solid #22c55e;
+        }
+        
+        .debug-info-entry {
+            background: rgba(59, 130, 246, 0.2);
+            border-left: 3px solid #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="glass-card border-b border-gray-700 py-4 px-6">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-film text-2xl text-accent"></i>
+                <h1 class="text-xl font-bold">Movie Wiki</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="../index.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="../search.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                    <i class="fas fa-search"></i>
+                    <span>Search</span>
+                </a>
+                <a href="../forum.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                    <i class="fas fa-comments"></i>
+                    <span>Forum</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">Trailer Debug Page</h1>
+            <p class="text-gray-400">Debugging featured trailers functionality</p>
+        </div>
+
+        <!-- Test Movie Input -->
+        <div class="glass-card rounded-xl p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">Test Trailer Fetching</h2>
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="movieIdInput" placeholder="Enter IMDb ID (e.g., tt0111161)" class="flex-1 bg-secondary border border-gray-600 rounded-lg px-4 py-2 text-white">
+                <button id="fetchTrailerBtn" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-6 rounded-lg transition duration-300">
+                    Fetch Trailer
+                </button>
+            </div>
+            <div class="mt-4">
+                <p class="text-gray-400 text-sm">Example IDs: tt0111161 (The Shawshank Redemption), tt0068646 (The Godfather), tt0109830 (Forrest Gump)</p>
+            </div>
+        </div>
+
+        <!-- Trailer Display -->
+        <div class="glass-card rounded-xl p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">Trailer Preview</h2>
+            <div id="trailerPreview" class="bg-gray-800 rounded-xl p-8 text-center">
+                <i class="fas fa-film text-4xl text-gray-600 mb-4"></i>
+                <p class="text-gray-400">Enter an IMDb ID above to fetch and preview a trailer</p>
+            </div>
+        </div>
+
+        <!-- Debug Information -->
+        <div class="glass-card rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4">Debug Information</h2>
+            <div id="debugInfo" class="debug-info">
+                <p class="text-gray-400">Debug information will appear here...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-card border-t border-gray-700 py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-film text-accent"></i>
+                        <span class="font-bold text-accent">Movie Wiki</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-2">&copy; 2025 Movie Wiki. All rights reserved.</p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a href="../privacy-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Privacy Policy</a>
+                    <a href="../terms-of-service.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Terms of Service</a>
+                    <a href="../disclaimer.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Disclaimer</a>
+                    <a href="../cookie-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // API constants (same as in main application)
+        const API_BASE = 'https://imdb.iamidiotareyoutoo.com';
+        
+        // Debug log function
+        function logDebug(message, type = 'info') {
+            const debugInfo = document.getElementById('debugInfo');
+            const entry = document.createElement('div');
+            entry.className = `debug-entry debug-${type}-entry`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            debugInfo.appendChild(entry);
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        }
+        
+        // Fetch trailer for a movie using the same approach as details.html
+        // Enhanced with caching support
+        async function fetchTrailerForMovie(movieId) {
+            if (!movieId) return null;
+            
+            // Check cache first for faster loading
+            if (window.trailerCache) {
+                const cachedTrailer = window.trailerCache.get(movieId);
+                if (cachedTrailer) {
+                    logDebug(`Using cached trailer for movie: ${movieId}`, 'success');
+                    return cachedTrailer;
+                }
+            }
+            
+            logDebug(`Fetching trailer for movie: ${movieId}`);
+            
+            try {
+                // Use the same API as details page
+                const url = `${API_BASE}/search?tt=${movieId}`;
+                logDebug(`API URL: ${url}`);
+                
+                // Try direct fetch first
+                let response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Direct fetch failed with status ${response.status}`);
+                }
+                
+                const data = await response.json();
+                logDebug(`Received data for ${movieId}`, 'success');
+                
+                // Extract trailer information (same structure as details page)
+                const shortData = data.short || {};
+                const topData = data.top || {};
+                
+                logDebug(`shortData keys: ${Object.keys(shortData).join(', ')}`);
+                logDebug(`topData keys: ${Object.keys(topData).join(', ')}`);
+                
+                // Try to get trailer from short data
+                if (shortData.trailer && shortData.trailer.url) {
+                    const trailerData = {
+                        url: shortData.trailer.url,
+                        title: shortData.trailer.title || 'Trailer'
+                    };
+                    
+                    // Cache the trailer data for faster loading next time
+                    if (window.trailerCache) {
+                        window.trailerCache.set(movieId, trailerData);
+                    }
+                    
+                    logDebug(`Found trailer in shortData: ${shortData.trailer.url}`, 'success');
+                    return trailerData;
+                }
+                
+                // Try to get trailer from top data primary videos
+                const videos = topData.primaryVideos?.edges || [];
+                logDebug(`Found ${videos.length} videos in topData`);
+                
+                if (videos.length > 0) {
+                    const trailerNode = videos[0].node;
+                    if (trailerNode) {
+                        // Try to get playback URL
+                        const playbackURLs = trailerNode.playbackURLs || [];
+                        logDebug(`Found ${playbackURLs.length} playback URLs`);
+                        
+                        if (playbackURLs.length > 0) {
+                            // Get the highest quality available
+                            const qualityOptions = ['DEF_1080p', 'DEF_720p', 'DEF_480p', 'DEF_360p', 'DEF_AUTO'];
+                            for (const quality of qualityOptions) {
+                                const playback = playbackURLs.find(p => p.videoDefinition === quality);
+                                if (playback && playback.url) {
+                                    const trailerData = {
+                                        url: playback.url,
+                                        title: trailerNode.name?.value || trailerNode.contentTitle?.text || 'Trailer'
+                                    };
+                                    
+                                    // Cache the trailer data for faster loading next time
+                                    if (window.trailerCache) {
+                                        window.trailerCache.set(movieId, trailerData);
+                                    }
+                                    
+                                    logDebug(`Found ${quality} playback URL: ${playback.url}`, 'success');
+                                    return trailerData;
+                                }
+                            }
+                            // Fallback to first available URL
+                            const trailerData = {
+                                url: playbackURLs[0].url,
+                                title: trailerNode.name?.value || trailerNode.contentTitle?.text || 'Trailer'
+                            };
+                            
+                            // Cache the trailer data for faster loading next time
+                            if (window.trailerCache) {
+                                window.trailerCache.set(movieId, trailerData);
+                            }
+                            
+                            logDebug(`Using first playback URL: ${playbackURLs[0].url}`, 'success');
+                            return trailerData;
+                        }
+                    }
+                }
+                
+                logDebug(`No trailer found for movie ${movieId}`, 'error');
+                return null;
+                
+            } catch (error) {
+                logDebug(`Error fetching trailer for movie ${movieId}: ${error.message}`, 'error');
+                return null;
+            }
+        }
+        
+        // Display trailer preview
+        async function displayTrailerPreview(movieId) {
+            const previewContainer = document.getElementById('trailerPreview');
+            previewContainer.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-spinner fa-spin text-4xl text-accent mb-4"></i>
+                    <p class="text-gray-400">Fetching trailer for ${movieId}...</p>
+                </div>
+            `;
+            
+            try {
+                const trailerData = await fetchTrailerForMovie(movieId);
+                
+                if (trailerData && trailerData.url) {
+                    logDebug(`Displaying trailer for ${movieId}`, 'success');
+                    previewContainer.innerHTML = `
+                        <div class="relative w-full" style="aspect-ratio: 16/9;">
+                            <div class="bg-gray-800 w-full h-full flex items-center justify-center rounded-xl relative">
+                                <div class="text-center">
+                                    <i class="fas fa-external-link-alt text-6xl text-accent mb-4"></i>
+                                    <h3 class="text-2xl font-bold text-white mb-2">Trailer Available</h3>
+                                    <p class="text-gray-300 mb-4">Click below to open trailer in new tab</p>
+                                    <a href="${trailerData.url}" target="_blank" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-6 rounded-lg transition duration-300 inline-flex items-center">
+                                        <i class="fas fa-play mr-2"></i> Play Trailer
+                                    </a>
+                                    <div class="mt-4 text-left bg-gray-900 p-4 rounded-lg">
+                                        <p class="text-sm"><strong>URL:</strong> ${trailerData.url}</p>
+                                        <p class="text-sm mt-2"><strong>Title:</strong> ${trailerData.title || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    logDebug(`No trailer available for ${movieId}`, 'error');
+                    previewContainer.innerHTML = `
+                        <div class="text-center">
+                            <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
+                            <h3 class="text-xl font-bold text-white mb-2">No Trailer Available</h3>
+                            <p class="text-gray-400">No trailer found for movie ID: ${movieId}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                logDebug(`Error displaying trailer preview: ${error.message}`, 'error');
+                previewContainer.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                        <h3 class="text-xl font-bold text-white mb-2">Error Loading Trailer</h3>
+                        <p class="text-gray-400">Failed to load trailer: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            logDebug('Trailer debug page loaded');
+            
+            // Set up event listeners
+            const fetchBtn = document.getElementById('fetchTrailerBtn');
+            const movieIdInput = document.getElementById('movieIdInput');
+            
+            fetchBtn.addEventListener('click', function() {
+                const movieId = movieIdInput.value.trim();
+                if (movieId) {
+                    displayTrailerPreview(movieId);
+                } else {
+                    logDebug('Please enter a valid IMDb ID', 'error');
+                }
+            });
+            
+            // Allow Enter key to trigger fetch
+            movieIdInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    fetchBtn.click();
+                }
+            });
+            
+            // Pre-fill with example ID
+            movieIdInput.value = 'tt0111161';
+        });
+    </script>
+    
+    <!-- Include trailer cache script -->
+    <script defer src="../js/trailer-cache.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scraper API Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-6">IMDb Unlimited Scraper API Test</h1>
+        
+        <div class="mb-4">
+            <button id="testTop" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
+                Test Top Movies
+            </button>
+            <button id="testPopular" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-2">
+                Test Popular
+            </button>
+            <button id="testUpcoming" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
+                Test Upcoming
+            </button>
+        </div>
+        
+        <div id="results" class="mt-6">
+            <p class="text-gray-400">Click a button to test the API</p>
+        </div>
+    </div>
+
+    <script>
+        const SCRAPER_API_BASE = 'https://web-1-production.up.railway.app';
+        
+        async function testTopMovies() {
+            try {
+                const response = await fetch(`${SCRAPER_API_BASE}/top`);
+                const data = await response.json();
+                displayResults(data, 'Top Movies');
+            } catch (error) {
+                displayError(error);
+            }
+        }
+        
+        async function testPopular() {
+            try {
+                const response = await fetch(`${SCRAPER_API_BASE}/popular`);
+                const data = await response.json();
+                displayResults(data, 'Popular');
+            } catch (error) {
+                displayError(error);
+            }
+        }
+        
+        async function testUpcoming() {
+            try {
+                const response = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+                const data = await response.json();
+                displayResults(data, 'Upcoming');
+            } catch (error) {
+                displayError(error);
+            }
+        }
+        
+        function displayResults(data, title) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">${title}</h2>
+                <p class="mb-2">Count: ${data.count || 0}</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    ${data.items ? data.items.map(item => `
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <h3 class="font-bold">${item.title}</h3>
+                            <p class="text-gray-400 text-sm">Year: ${item.year || item.release_date || 'N/A'}</p>
+                            <p class="text-gray-400 text-sm">IMDb ID: ${item.imdb_id}</p>
+                            ${item.rating ? `<p class="text-yellow-400 text-sm">Rating: ${item.rating}</p>` : ''}
+                            ${item.cast ? `<p class="text-gray-300 text-sm">Cast: ${item.cast.slice(0, 3).join(', ')}</p>` : ''}
+                        </div>
+                    `).join('') : '<p>No items found</p>'}
+                </div>
+            `;
+        }
+        
+        function displayError(error) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4 text-red-500">Error</h2>
+                <p class="text-red-400">${error.message || error}</p>
+            `;
+        }
+        
+        document.getElementById('testTop').addEventListener('click', testTopMovies);
+        document.getElementById('testPopular').addEventListener('click', testPopular);
+        document.getElementById('testUpcoming').addEventListener('click', testUpcoming);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Wiki - Discover Movies and TV Shows Information</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Movie Wiki is your ultimate destination for movie and TV show information. Discover detailed information, ratings, cast, crew, trailers, and more for your favorite films and series.">
+    <meta name="keywords" content="movie, tv show, film, series, imdb, information, database, entertainment, movies, tv, wiki, movie wiki">
+    <meta name="author" content="Movie Wiki">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Movie Wiki - Discover Movies and TV Shows Information">
+    <meta property="og:description" content="Your ultimate destination for movie and TV show information. Discover detailed information, ratings, cast, crew, trailers, and more.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://moviewiki.qzz.io">
+    <meta property="og:image" content="https://moviewiki.qzz.io/favicon.png">
+    <meta property="og:site_name" content="Movie Wiki">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Movie Wiki - Discover Movies and TV Shows Information">
+    <meta name="twitter:description" content="Your ultimate destination for movie and TV show information. Discover detailed information, ratings, cast, crew, trailers, and more.">
+    <meta name="twitter:image" content="https://moviewiki.qzz.io/favicon.png">
+    <meta name="twitter:site" content="@MovieWiki">
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Movie Wiki",
+      "url": "https://moviewiki.qzz.io",
+      "description": "Your ultimate destination for movie and TV show information. Discover detailed information, ratings, cast, crew, trailers, and more.",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Movie Wiki",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://moviewiki.qzz.io/favicon.png"
+        }
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://moviewiki.qzz.io/search.html?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-91SHQF7F4P"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-91SHQF7F4P');
+</script>
+    <!--ads-->
+    <meta name='admaven-placement' content=Bqja5qTs8>
+    <meta name="ppck-ver" content="82dfcd5e2477b24cad18352337ab7719" />
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#22d3ee',
+                        dark: '#0c1221'
+                    },
+                    fontFamily: {
+                        'sans': ['Poppins', 'sans-serif'],
+                        'body': ['Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Modern gradient background */
+        body {
+            background: linear-gradient(135deg, #0c1221 0%, #1a1f3a 100%);
+            background-attachment: fixed;
+            padding-bottom: 70px; /* Space for mobile nav */
+        }
+        
+        /* Mobile bottom navigation */
+        .mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(34, 211, 238, 0.2);
+            z-index: 1000;
+        }
+        
+        @media (min-width: 768px) {
+            .mobile-nav {
+                display: none;
+            }
+            body {
+                padding-bottom: 0;
+            }
+        }
+        
+        /* Glassmorphism cards */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(34, 211, 238, 0.1);
+        }
+        
+        /* Genre filter pills */
+        .genre-pill {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            z-index: 10;
+            pointer-events: auto;
+        }
+        .genre-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+        }
+        .genre-pill.active {
+            background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%) !important;
+            color: #0f172a !important;
+            font-weight: 600;
+        }
+        
+        /* Movie card hover effects */
+        .movie-card {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .movie-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .movie-card:hover::before {
+            opacity: 1;
+        }
+        .movie-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+        }
+        
+        .carousel-container {
+            scroll-behavior: smooth;
+        }
+        .cast-image {
+            transition: all 0.3s ease;
+        }
+        .cast-image:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        .media-carousel::-webkit-scrollbar {
+            height: 8px;
+        }
+        .media-carousel::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .media-carousel::-webkit-scrollbar-thumb {
+            background: #22d3ee;
+            border-radius: 4px;
+        }
+        .section-divider {
+            border-top: 1px solid #334155;
+        }
+        
+        /* Improved search bar */
+        .search-container {
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        /* Modern search bar styling */
+        .search-container {
+            --active: #0f172a;
+            align-items: center;
+            background: #1e293b;
+            border: 2px solid #0000;
+            border-radius: 4rem;
+            box-sizing: border-box;
+            box-shadow: 0 1rem 2rem -1.5rem #0005;
+            display: inline-flex;
+            height: 4rem;
+            overflow: hidden;
+            transition: box-shadow 0.5s;
+            width: 100%;
+        }
+        
+        .search-container:focus-within {
+            background: #1e293b;
+            border: 2px solid #22d3ee;
+            box-shadow: 0 1rem 2rem -1.5rem #0007;
+        }
+        
+        .search-container:hover {
+            box-shadow: 0 1rem 2rem -1.5rem #0007;
+        }
+        
+        .search-container label {
+            position: absolute;
+            color: #94a3b8;
+            left: 1.625rem;
+            font-family: 'Poppins', 'sans-serif';
+            font-size: 1.25rem;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            width: calc(100% - 8rem);
+            max-width: calc(100% - 8rem);
+            display: flex;
+            align-items: center;
+            z-index: 0;
+        }
+        
+        .search-container label span {
+            visibility: hidden;
+            overflow: hidden;
+            max-width: 0;
+            display: inline-block;
+            margin: 0 0.125rem;
+            transition: max-width 1s, margin 0.125s;
+            transition-delay: 1s;
+        }
+        
+        .search-container label span.show {
+            visibility: visible;
+            margin: 0 0.25rem;
+            max-width: calc(100% - 8rem);
+        }
+        
+        .search-container input {
+            background: transparent;
+            border: 0;
+            box-sizing: border-box;
+            flex: 1;
+            font-size: 1.25rem;
+            margin-left: 0.5rem;
+            min-width: 8rem;
+            outline: none;
+            padding-left: 1rem;
+            position: relative;
+            z-index: 1;
+            color: white;
+        }
+        
+        .search-container input::-ms-clear,
+        .search-container input::ms-reveal {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+        
+        .search-container input::-webkit-search-decoration,
+        .search-container input::-webkit-search-cancel-button,
+        .search-container input::-webkit-search-results-button,
+        .search-container input::-webkit-search-results-decoration {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+        
+        .search-container button {
+            background: transparent;
+            border: 0;
+            border-radius: 50%;
+            color: #94a3b8;
+            font-size: 1.25rem;
+            margin: 0;
+            outline: none;
+            width: 3rem;
+            min-width: 3rem;
+            height: 3rem;
+            transition: background-color, color;
+            transition-duration: 0.25s;
+            box-shadow: 0 0 2rem #0000;
+        }
+        
+        .search-container button:hover {
+            background: #334155;
+            color: #22d3ee;
+        }
+        
+        .search-container button:focus {
+            background: #22d3ee;
+            color: #0f172a;
+        }
+        
+        .search-container button:active,
+        .search-container button.active {
+            background: #06b6d4;
+            color: #0f172a;
+        }
+        
+        .search-container #voiceSearchButton {
+            transform: scale(0);
+            transition: transform 0.5s;
+            transition-delay: 1s;
+            visibility: hidden;
+        }
+        
+        .search-container #voiceSearchButton.show {
+            visibility: visible;
+            transform: scale(1);
+        }
+        
+        .search-container #voiceSearchButton.active svg {
+            display: block;
+        }
+        
+        .search-container #voiceSearchButton.active i {
+            display: none;
+        }
+        
+        .search-container #voiceSearchButton svg {
+            display: none;
+            margin: auto auto;
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+        
+        .search-container #voiceSearchButton svg g {
+            stroke: #0f172a;
+            stroke-width: 15;
+        }
+        
+        .search-container:last-child {
+            margin-right: 0.5rem;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        @media (prefers-reduced-motion) {
+            * {
+                transition: none !important;
+                transition-delay: 0s !important;
+            }
+        }
+        
+        /* Accessibility hidden class */
+        .a11y-hidden {
+            position: absolute;
+            left: -1000in;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: polygon(0 0, 0 0);
+        }
+        
+        /* Share button animation */
+        .share-btn {
+            transition: all 0.3s ease;
+        }
+        .share-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Genre pills styling */
+        .genre-pill {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 2rem;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+            margin: 5px;
+            padding: 0.5rem 1rem;
+        }
+        .genre-pill:hover {
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, #22d3ee, #06b6d4) !important;
+            color: #0f172a !important;
+        }
+        .genre-pill.active {
+            background: linear-gradient(135deg, #22d3ee, #06b6d4) !important;
+            color: #0f172a !important;
+            font-weight: 600;
+            box-shadow: 0 6px 12px rgba(34, 211, 238, 0.4);
+        }
+        .genre-pill::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+        .genre-pill:hover::before {
+            left: 100%;
+        }
+        
+        /* Genre filter container adjustments */
+        @media (max-width: 768px) {
+            #genreFilters {
+                justify-content: flex-start !important;
+            }
+        }
+        
+        /* Featured Trailers Section */
+        #featuredTrailersContainer {
+            position: relative;
+            height: 300px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(30, 41, 59, 0.5);
+        }
+        
+        #trailersCarousel {
+            display: flex;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            height: 100%;
+            width: 100%;
+        }
+        
+        .trailer-item {
+            flex: 0 0 100%;
+            height: 100%;
+            position: relative;
+            scroll-snap-align: start;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+        
+        .trailer-item .thumbnail-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+        }
+        
+        .trailer-item .thumbnail-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Cover to fill the container while maintaining aspect ratio */
+            border-radius: 12px;
+        }
+        
+        .trailer-item iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 12px;
+        }
+        
+        .trailer-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        
+        .trailer-item .video-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+        }
+        
+        .trailer-item .video-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Maintain aspect ratio without cropping */
+            border-radius: 12px;
+        }
+        
+        /* Ensure video player fits within container */
+        .trailer-item .video-player-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+        
+        .trailer-item .video-player-container .aspect-ratio-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+        }
+        
+        .trailer-item .video-player-container .aspect-ratio-wrapper video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        
+        .trailer-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+            display: flex;
+            align-items: flex-end;
+            padding: 1rem;
+            border-radius: 12px;
+        }
+        
+        .trailer-info {
+            color: white;
+        }
+        
+        .trailer-info h3 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .trailer-controls {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 30; /* Ensure controls are above all content */
+        }
+        
+        .trailer-control-btn {
+            background: rgba(34, 211, 238, 0.8);
+            color: #0f172a;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: all 0.3s ease;
+            z-index: 35; /* Ensure button is above controls */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Add shadow for better visibility */
+        }
+        
+        .trailer-control-btn:hover {
+            background: #22d3ee;
+            transform: scale(1.1);
+        }
+        
+        /* Ensure play button is always visible */
+        .trailer-control-btn:not(:disabled) {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        
+        /* Close button for trailer player */
+        .trailer-close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(34, 211, 238, 0.8);
+            color: #0f172a;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            z-index: 40;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .trailer-close-btn:hover {
+            background: #22d3ee;
+            transform: scale(1.1);
+        }
+        
+        .carousel-nav {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .carousel-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #94a3b8;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .carousel-dot.active {
+            background: #22d3ee;
+            transform: scale(1.25);
+        }
+        
+        /* Responsive adjustments for featured trailers */
+        @media (max-width: 768px) {
+            #featuredTrailersContainer {
+                height: 200px;
+            }
+            
+            .trailer-info h3 {
+                font-size: 1rem;
+            }
+            
+            .trailer-control-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+            
+            .trailer-close-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 0.875rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #featuredTrailersContainer {
+                height: 150px;
+            }
+            
+            .trailer-overlay {
+                padding: 0.5rem;
+            }
+            
+            .trailer-info h3 {
+                font-size: 0.875rem;
+            }
+            
+            .trailer-info p {
+                font-size: 0.75rem;
+            }
+            
+            .trailer-control-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 0.875rem;
+            }
+            
+            .trailer-close-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 0.75rem;
+            }
+        }
+        
+        /* Comments section */
+        .comment-card {
+            background: rgba(30, 41, 59, 0.5);
+            border-left: 3px solid #22d3ee;
+            transition: all 0.3s ease;
+        }
+        .comment-card:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-left-color: #06b6d4;
+            transform: translateX(5px);
+        }
+        
+        /* Movie cards */
+        .movie-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        .movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(34, 211, 238, 0.2);
+        }
+        .movie-card img {
+            transition: transform 0.3s ease;
+        }
+        .movie-card:hover img {
+            transform: scale(1.05);
+        }
+        
+        /* Section titles */
+        .section-title {
+            position: relative;
+            padding-bottom: 15px;
+        }
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, #22d3ee, #06b6d4);
+            border-radius: 2px;
+        }
+        
+        /* Ensure media elements fit within carousel - larger iframes */
+        #carouselMediaContainer img,
+        #carouselMediaContainer video {
+            max-width: 90vw;
+            max-height: 70vh;
+            object-fit: contain;
+        }
+        #carouselMediaContainer iframe {
+            width: 90vw;
+            height: 80vh;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        /* Cast images sizing */
+        #castImagesContainer img {
+            object-fit: cover;
+        }
+        #additionalMediaContainer img {
+            object-fit: cover;
+        }
+        /* Video thumbnails */
+        .video-thumbnail {
+            position: relative;
+        }
+        .video-thumbnail .play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            opacity: 0.8;
+            font-size: 2rem;
+        }
+        /* Fix cast & crew layout */
+        #movieCast li, #movieCrew li {
+            line-height: 1.4;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .md\:grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+               /* Responsive banner ads */
+        .banner-ad-container {
+            width: 100%;
+            max-width: 728px;
+            margin: 0 auto;
+            min-height: 90px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            visibility: visible; /* Ensure ad banner is visible */
+            display: flex; /* Ensure ad banner is displayed as flex */
+        }
+        
+        .banner-ad-container ins {
+            display: block;
+            width: 100% !important;
+            height: 90px !important;
+            min-height: 90px;
+            max-width: 728px;
+        }
+        
+        /* Mobile ad adjustments */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+                min-height: 60px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100%;
+                width: 100% !important;
+                height: 60px !important;
+                min-height: 60px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-ad-container {
+                min-height: 50px;
+            }
+            
+            .banner-ad-container ins {
+                height: 50px !important;
+                min-height: 50px;
+            }
+        }
+        
+        /* Hide scrollbar for genre filters */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        
+        /* Animation for marquee */
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        .animate-marquee {
+            display: inline-block;
+            animation: marquee 15s linear infinite;
+            white-space: nowrap;
+            padding: 0 20px;
+            visibility: visible; /* Ensure marquee is visible by default */
+        }
+        
+        /* Ensure marquee container is visible */
+        .overflow-hidden.rounded-lg {
+            visibility: visible; /* Ensure marquee container is visible */
+        }
+        
+        /* Search label styling */
+        #searchLabel {
+            position: absolute;
+            top: 50%;
+            left: 1rem;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        
+        #searchLabel.a11y-hidden {
+            display: none;
+        }
+        
+        #searchInput {
+            padding-left: 1rem;
+            padding-right: 4rem;
+        }
+        
+        #searchInput:focus + #searchLabel,
+        #searchInput:not(:placeholder-shown) + #searchLabel {
+            display: none;
+        }
+        
+        .search-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        #voiceSearchButton, #searchButton {
+            position: absolute;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        #voiceSearchButton {
+            right: 2.5rem;
+        }
+        
+        #searchButton {
+            right: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-primary text-white min-h-screen font-body">
+    <!-- Immediate visibility script -->
+    <script>
+        // Immediately ensure critical UI elements are visible
+        (function() {
+            // Force visibility of marquee and ad banner
+            var marqueeContainer = document.querySelector('.overflow-hidden.rounded-lg');
+            var marquee = document.querySelector('.animate-marquee');
+            var adBanner = document.querySelector('.banner-ad-container');
+            
+            if (marqueeContainer) {
+                marqueeContainer.style.visibility = 'visible';
+                marqueeContainer.style.display = 'block';
+                marqueeContainer.style.setProperty('visibility', 'visible', 'important');
+                marqueeContainer.style.setProperty('display', 'block', 'important');
+            }
+            
+            if (marquee) {
+                marquee.style.visibility = 'visible';
+                marquee.style.display = 'inline-block';
+                marquee.style.setProperty('visibility', 'visible', 'important');
+                marquee.style.setProperty('display', 'inline-block', 'important');
+            }
+            
+            if (adBanner) {
+                adBanner.style.visibility = 'visible';
+                adBanner.style.display = 'flex';
+                adBanner.style.setProperty('visibility', 'visible', 'important');
+                adBanner.style.setProperty('display', 'flex', 'important');
+            }
+            
+            // Create a MutationObserver to prevent hiding of these elements
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && 
+                        (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                        
+                        var target = mutation.target;
+                        
+                        // Check if this is one of our critical elements
+                        if (target.classList && 
+                            (target.classList.contains('overflow-hidden') || 
+                             target.classList.contains('animate-marquee') || 
+                             target.classList.contains('banner-ad-container'))) {
+                            
+                            // Ensure visibility is maintained
+                            if (target.style.visibility === 'hidden' || target.style.display === 'none') {
+                                target.style.visibility = 'visible';
+                                target.style.display = 'block';
+                                target.style.setProperty('visibility', 'visible', 'important');
+                                
+                                if (target.classList.contains('animate-marquee')) {
+                                    target.style.display = 'inline-block';
+                                    target.style.setProperty('display', 'inline-block', 'important');
+                                } else if (target.classList.contains('banner-ad-container')) {
+                                    target.style.display = 'flex';
+                                    target.style.setProperty('display', 'flex', 'important');
+                                } else {
+                                    target.style.display = 'block';
+                                    target.style.setProperty('display', 'block', 'important');
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // Start observing
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style', 'class']
+            });
+        })();
+    </script>
+    
+    <!-- Navigation Bar -->
+    <nav class="glass-card sticky top-0 z-50 border-b border-gray-700">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-film text-accent text-2xl"></i>
+                    <h1 class="text-2xl font-bold text-accent font-sans">Movie Wiki</h1>
+                </div>
+                <div class="hidden md:flex items-center gap-4">
+                    <a href="/pages/index.html" class="text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="/pages/forum.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-comments"></i>
+                        <span>Forum</span>
+                    </a>
+                    <button id="loginBtn" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-user"></i>
+                        <span id="userNameDisplay">Login</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-nav md:hidden">
+        <div class="flex justify-around items-center py-3">
+            <a href="/pages/index.html" class="flex flex-col items-center gap-1 text-accent">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="#genreFilters" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-filter text-xl"></i>
+                <span class="text-xs">Filter</span>
+            </a>
+            <a href="/pages/forum.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-comments text-xl"></i>
+                <span class="text-xs">Forum</span>
+            </a>
+            <button id="mobileLoginBtn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-user text-xl"></i>
+                <span class="text-xs" id="mobileUserName">Login</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Welcome Section -->
+    <section id="welcomeSection" class="container mx-auto px-4 py-16 text-center">
+        <h1 class="text-4xl md:text-6xl font-bold mb-6 text-accent font-sans">Movie Wiki</h1>
+        <p class="text-xl mb-8 max-w-2xl mx-auto text-gray-300">Discover detailed information about your favorite movies and web series</p>
+        
+        <!-- Marquee Message -->
+        <div class="mb-6 overflow-hidden rounded-lg bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-700 py-3" style="visibility: visible !important; display: block !important;">
+            <div class="whitespace-nowrap relative">
+                <p class="text-blue-200 font-medium inline-block animate-marquee" style="visibility: visible !important; display: inline-block !important;">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Please be patient while data is fetched. For first load, it may take some time.
+                    <i class="fas fa-info-circle ml-2"></i>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Search Bar -->
+        <div class="search max-w-2xl mx-auto mb-8">
+            <div class="search-container relative">
+                <input 
+                    type="search" 
+                    id="searchInput" 
+                    name="search" 
+                    autocomplete="off"
+                    placeholder="Type or dictate to search"
+                    class="w-full py-3 pl-4 pr-12 rounded-lg bg-secondary border border-gray-600 text-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50"
+                >
+                <label for="searchInput" id="searchLabel" class="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-400 pointer-events-none transition-all duration-200">
+                    Type <span>or dictate</span> to search
+                </label>
+                <button 
+                    id="voiceSearchButton" 
+                    title="Dictate"
+                    class="absolute right-10 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-accent transition-colors"
+                >
+                    <i class="fas fa-microphone"></i>
+                    <svg width="1.25rem" height="1.25rem" viewBox="0 0 100 100" class="hidden">
+                        <g stroke="#fff" stroke-width="15">
+                            <path d="M20,20 20,80">
+                                <animate attributeName="d" values="M20,40 20,60;M20,20 20,80;M20,40 20,60" dur="1s" repeatCount="indefinite" />
+                            </path>
+                            <path d="M50,10 50,90">
+                                <animate attributeName="d" values="M50,10 50,90;M50,40 50,60;M50,10 50,90" dur="1s" repeatCount="indefinite" />
+                            </path>
+                            <path d="M80,20 80,80">
+                                <animate attributeName="d" values="M80,40 80,60;M80,20 80,80;M80,40 80,60" dur="1s" repeatCount="indefinite" />
+                            </path>
+                        </g>
+                    </svg>
+                    <span class="a11y-hidden">Dictate new search</span>
+                </button>
+                <button 
+                    id="searchButton" 
+                    title="Search"
+                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-accent transition-colors"
+                >
+                    <i class="fas fa-search"></i>
+                    <span class="a11y-hidden">Search</span>
+                </button>
+            </div>
+        </div>
+
+    <!-- Banner Ad -->
+    <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container" style="visibility: visible !important; display: flex !important;">
+        <ins style="width: 728px;height:90px!important;display: block !important;;" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"></ins>
+        <script src="//data527.click/js/responsive.js" async></script>
+    </div>
+        
+        <!-- Genre Filters -->
+        <div class="mb-8 relative">
+            <h3 class="text-lg font-semibold mb-4 text-gray-300 flex items-center justify-center gap-2">
+                <i class="fas fa-filter"></i>
+                Filter by Genre
+            </h3>
+            <div id="genreFilters" class="flex overflow-x-auto pb-4 scrollbar-hide relative">
+                <div class="flex gap-3 min-w-max pl-2 pr-2">
+                    <button class="genre-pill active px-4 py-2 rounded-full bg-secondary border border-accent text-accent whitespace-nowrap flex-shrink-0" data-genre="all">
+                        <i class="fas fa-globe mr-1"></i>All
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="action">
+                        <i class="fas fa-fist-raised mr-1"></i>Action
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="comedy">
+                        <i class="fas fa-laugh mr-1"></i>Comedy
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="drama">
+                        <i class="fas fa-theater-masks mr-1"></i>Drama
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="horror">
+                        <i class="fas fa-ghost mr-1"></i>Horror
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="sci-fi">
+                        <i class="fas fa-rocket mr-1"></i>Sci-Fi
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="thriller">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Thriller
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="romance">
+                        <i class="fas fa-heart mr-1"></i>Romance
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="animation">
+                        <i class="fas fa-star mr-1"></i>Animation
+                    </button>
+                    <!-- Duplicate pills for infinite scrolling -->
+                    <button class="genre-pill active px-4 py-2 rounded-full bg-secondary border border-accent text-accent whitespace-nowrap flex-shrink-0" data-genre="all">
+                        <i class="fas fa-globe mr-1"></i>All
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="action">
+                        <i class="fas fa-fist-raised mr-1"></i>Action
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="comedy">
+                        <i class="fas fa-laugh mr-1"></i>Comedy
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="drama">
+                        <i class="fas fa-theater-masks mr-1"></i>Drama
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="horror">
+                        <i class="fas fa-ghost mr-1"></i>Horror
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="sci-fi">
+                        <i class="fas fa-rocket mr-1"></i>Sci-Fi
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="thriller">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Thriller
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="romance">
+                        <i class="fas fa-heart mr-1"></i>Romance
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="animation">
+                        <i class="fas fa-star mr-1"></i>Animation
+                    </button>
+                </div>
+            </div>
+            <!-- Scroll indicators -->
+            <div class="scroll-indicator scroll-left">
+            </div>
+            <div class="scroll-indicator scroll-right">
+            </div>
+        </div>
+    </section>
+        
+        <!-- Featured Trailers Section -->
+        <div class="mb-8 container mx-auto px-4">
+            <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-film mr-2"></i>Featured Trailers</h2>
+            <div id="featuredTrailersContainer" class="relative overflow-hidden">
+                <!-- Loader for trailers section -->
+                <div id="trailersLoader" class="absolute inset-0 flex items-center justify-center bg-secondary rounded-xl z-10">
+                    <div class="text-center">
+                        <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent mb-4"></div>
+                        <p class="text-gray-400">Loading featured trailers...</p>
+                    </div>
+                </div>
+                <div id="trailersCarousel" class="flex overflow-x-hidden snap-x snap-mandatory">
+                    <!-- Featured trailers will be populated here -->
+                </div>
+                <div class="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none" id="scrollLeftBtn">
+                    <button class="bg-accent text-primary rounded-full p-2 mx-2 pointer-events-auto opacity-0 transition-opacity duration-300">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="absolute inset-y-0 right-0 flex items-center justify-center pointer-events-none" id="scrollRightBtn">
+                    <button class="bg-accent text-primary rounded-full p-2 mx-2 pointer-events-auto opacity-0 transition-opacity duration-300">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Popular, Latest and Coming Soon Sections -->
+        <div class="mt-4">
+            <!-- Popular Section -->
+            <div class="mb-8 container mx-auto px-4">
+                <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-fire mr-2"></i>Popular</h2>
+                <div id="popularContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <!-- Popular content will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Latest Section -->
+            <div class="mb-8 container mx-auto px-4">
+                <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-clock mr-2"></i>Latest</h2>
+                <div id="latestContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <!-- Latest content will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Coming Soon Section -->
+            <div class="mb-8 container mx-auto px-4">
+                <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-calendar-alt mr-2"></i>Coming Soon</h2>
+                <div id="comingSoonContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <!-- Coming soon content will be populated here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search Results -->
+    <section id="searchResults" class="container mx-auto px-4 py-8 hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-accent font-sans">Search Results</h2>
+            <button id="backToWelcome" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>New Search
+            </button>
+        </div>
+        <div id="resultsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Movie cards will be populated here -->
+        </div>
+    </section>
+
+    <!-- Movie Details -->
+    <section id="movieDetails" class="container mx-auto px-4 py-8 hidden">
+        <div class="bg-secondary rounded-xl shadow-lg overflow-hidden">
+            <div class="md:flex">
+                <div class="md:w-1/3 p-6 flex justify-center">
+                    <img id="moviePoster" src="" alt="Movie Poster" class="rounded-lg shadow-lg w-full max-w-md">
+                </div>
+                <div class="md:w-2/3 p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 id="movieTitle" class="text-3xl font-bold text-accent font-sans"></h2>
+                        <button id="backButton" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i>Back
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Movie Information</h3>
+                            <ul class="space-y-2">
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Year:</span>
+                                    <span id="movieYear"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Rating:</span>
+                                    <span id="movieRating"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Length:</span>
+                                    <span id="movieDuration"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Genres:</span>
+                                    <span id="movieGenres"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">IMDb ID:</span>
+                                    <span id="movieImdbId"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Type:</span>
+                                    <span id="movieType"></span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Cast & Crew</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <h4 class="font-semibold text-gray-300 mb-1">Cast</h4>
+                                    <div id="movieCast" class="space-y-1">
+                                        <!-- Cast will be populated here -->
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-300 mb-1">Crew</h4>
+                                    <ul id="movieCrew" class="space-y-1">
+                                        <!-- Crew will be populated here -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        <button id="trailerButton" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-play-circle mr-2"></i>Watch Trailer
+                        </button>
+                        <button id="photosButton" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-images mr-2"></i>View Photos
+                        </button>
+                        <button id="streamButton" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-film mr-2"></i>Stream Movie
+                        </button>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Plot</h3>
+                        <p id="moviePlot" class="leading-relaxed"></p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Keywords</h3>
+                        <div id="movieKeywords" class="flex flex-wrap">
+                            <!-- Keywords will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cast Images Section -->
+            <div id="castImagesSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Cast Images</h3>
+                <div id="castImagesContainer" class="flex overflow-x-auto space-x-4 pb-4 media-carousel">
+                    <!-- Cast images will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Additional Media Section -->
+            <div id="additionalMediaSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Additional Media</h3>
+                <div id="additionalMediaContainer" class="flex overflow-x-auto space-x-4 pb-4 media-carousel">
+                    <!-- Additional media will be populated here -->
+                </div>
+            </div>
+            
+            <div class="section-divider my-6"></div>
+            
+            <!-- Additional Information Section -->
+            <div id="additionalInfoSection" class="px-6 pb-6">
+                <!-- Additional information will be populated here -->
+            </div>
+            
+            <!-- Reviews Section -->
+            <div id="reviewsSection" class="px-6 pb-6">
+                <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Featured Review</h3>
+                <div id="movieReviews">
+                    <!-- Reviews will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Box Office Section -->
+            <div id="boxOfficeSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Box Office</h3>
+                <div id="boxOfficeInfo" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Box office info will be populated here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Media Carousel Section -->
+    <section id="mediaCarouselSection" class="fixed inset-0 bg-dark bg-opacity-95 z-50 hidden">
+        <div class="w-full h-full flex flex-col">
+            <div class="flex justify-between items-center p-4 bg-secondary">
+                <h2 id="carouselTitle" class="text-2xl font-bold text-accent font-sans"></h2>
+                <button id="closeCarouselButton" class="text-white hover:text-accent text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex-grow flex items-center">
+                <button id="prevMediaButton" class="text-white text-3xl mx-4 hover:text-accent">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div id="carouselMediaContainer" class="flex-grow flex justify-center items-center h-full p-4">
+                    <!-- Carousel media will be populated here -->
+                </div>
+                <button id="nextMediaButton" class="text-white text-3xl mx-4 hover:text-accent">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div id="carouselIndicators" class="flex justify-center p-4 space-x-2">
+                <!-- Carousel indicators will be populated here -->
+            </div>
+        </div>
+    </section>
+   
+    <div id="trailerModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden flex items-center justify-center p-4">
+        <div class="relative w-full max-w-4xl">
+            <button id="trailerModalClose" class="absolute -top-12 right-0 text-white text-2xl hover:text-accent transition-colors">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="trailerModalContent" class="w-full rounded-xl overflow-hidden">
+                <!-- Trailer content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Remove loader when page is fully loaded
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('globalLoader');
+            if (loader) {
+                setTimeout(function() {
+                    loader.style.opacity = '0';
+                    loader.style.transition = 'opacity 0.5s ease';
+                    setTimeout(function() {
+                        if (loader.parentNode) {
+                            loader.parentNode.removeChild(loader);
+                        }
+                    }, 500);
+                }, 500);
+            }
+        });
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+        
+        // Initialize search functionality when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize voice search functionality
+            if (typeof initVoiceSearch === 'function') {
+                initVoiceSearch('searchInput', 'searchButton', 'voiceSearchButton');
+            }
+            
+            // Add event listener for search button
+            const searchButton = document.getElementById('searchButton');
+            const searchInput = document.getElementById('searchInput');
+            const searchLabel = document.getElementById('searchLabel');
+            
+            if (searchButton && searchInput) {
+                searchButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const query = searchInput.value.trim();
+                    if (query) {
+                        window.location.href = `search.html?q=${encodeURIComponent(query)}`;
+                    }
+                });
+                
+                // Add enter key support
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const query = searchInput.value.trim();
+                        if (query) {
+                            window.location.href = `search.html?q=${encodeURIComponent(query)}`;
+                        }
+                    }
+                });
+                
+                // Fix placeholder issue
+                searchInput.addEventListener('focus', function() {
+                    searchLabel.classList.add('a11y-hidden');
+                });
+                
+                searchInput.addEventListener('blur', function() {
+                    if (!this.value) {
+                        searchLabel.classList.remove('a11y-hidden');
+                    }
+                });
+                
+                // Handle input event to hide label when there's text
+                searchInput.addEventListener('input', function() {
+                    if (this.value) {
+                        searchLabel.classList.add('a11y-hidden');
+                    } else {
+                        searchLabel.classList.remove('a11y-hidden');
+                    }
+                });
+            }
+        });
+    </script>
+    <script async src="../js/script.js"></script>
+    <script defer src="../js/trailer.js"></script>
+    <script defer src="../js/trailer-cache.js"></script>
+    <script defer src="../js/voiceSearch.js"></script>
+</body>
+</html>

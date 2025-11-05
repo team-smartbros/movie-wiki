@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scraper Debug</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-4">
+    <h1 class="text-2xl font-bold mb-4">Scraper Debug Test</h1>
+    
+    <button id="testButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4">
+        Test Scraper Functions
+    </button>
+    
+    <div id="output" class="bg-gray-800 p-4 rounded">
+        <p>Click the button to test...</p>
+    </div>
+
+    <script>
+        // API base URL
+        const SCRAPER_API_BASE = 'https://web-1-production.up.railway.app';
+        
+        // Test function
+        async function testScraper() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>Testing scraper functions...</p>';
+            
+            try {
+                // Test popular movies
+                output.innerHTML += '<p>Fetching popular movies...</p>';
+                const popularMoviesResponse = await fetch(`${SCRAPER_API_BASE}/top`);
+                const popularMoviesData = await popularMoviesResponse.json();
+                output.innerHTML += `<p>Popular movies count: ${popularMoviesData.count}</p>`;
+                output.innerHTML += `<p>First movie: ${popularMoviesData.items[0]?.title}</p>`;
+                
+                // Test popular TV shows
+                output.innerHTML += '<p>Fetching popular TV shows...</p>';
+                const popularTVResponse = await fetch(`${SCRAPER_API_BASE}/popular`);
+                const popularTVData = await popularTVResponse.json();
+                output.innerHTML += `<p>Popular TV shows count: ${popularTVData.count}</p>`;
+                output.innerHTML += `<p>First TV show: ${popularTVData.items[0]?.title}</p>`;
+                
+                // Test upcoming
+                output.innerHTML += '<p>Fetching upcoming content...</p>';
+                const upcomingResponse = await fetch(`${SCRAPER_API_BASE}/upcoming`);
+                const upcomingData = await upcomingResponse.json();
+                output.innerHTML += `<p>Upcoming count: ${upcomingData.count}</p>`;
+                output.innerHTML += `<p>First upcoming: ${upcomingData.items[0]?.title}</p>`;
+                
+                output.innerHTML += '<p class="text-green-400">All tests completed successfully!</p>';
+            } catch (error) {
+                output.innerHTML += `<p class="text-red-400">Error: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+        
+        document.getElementById('testButton').addEventListener('click', testScraper);
+    </script>
+</body>
+</html>

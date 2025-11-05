@@ -1,0 +1,2401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Details - Movie Wiki</title>
+    <link rel="icon" href="../assets/favicon.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#22d3ee',
+                        dark: '#0c1221'
+                    },
+                    fontFamily: {
+                        'sans': ['Poppins', 'sans-serif'],
+                        'body': ['Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Modern gradient background */
+        body {
+            background: linear-gradient(135deg, #0c1221 0%, #1a1f3a 100%);
+            background-attachment: fixed;
+            padding-bottom: 70px; /* Space for mobile nav */
+        }
+        
+        /* Glassmorphism */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(34, 211, 238, 0.1);
+        }
+        
+        /* Mobile bottom navigation */
+        .mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(34, 211, 238, 0.2);
+            z-index: 1000;
+        }
+        
+        @media (min-width: 768px) {
+            .mobile-nav {
+                display: none;
+            }
+            body {
+                padding-bottom: 0;
+            }
+        }
+        
+        /* Share button */
+        .share-btn {
+            position: fixed;
+            right: 20px;
+            top: 100px;
+            z-index: 100;
+        }
+        
+        /* Mobile share button */
+        .mobile-share-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 100;
+        }
+        
+        @media (max-width: 768px) {
+            .share-btn {
+                display: none !important;
+            }
+        }
+        
+        /* Comment card */
+        .comment-card {
+            background: rgba(30, 41, 59, 0.5);
+            border-left: 3px solid #22d3ee;
+            transition: all 0.3s ease;
+        }
+        .comment-card:hover {
+            background: rgba(30, 41, 59, 0.8);
+            transform: translateX(4px);
+        }
+        
+        .carousel-container {
+            scroll-behavior: smooth;
+        }
+        .cast-image {
+            transition: all 0.3s ease;
+        }
+        .cast-image:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        .media-carousel::-webkit-scrollbar {
+            height: 8px;
+        }
+        .media-carousel::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .media-carousel::-webkit-scrollbar-thumb {
+            background: #22d3ee;
+            border-radius: 4px;
+        }
+        .section-divider {
+            border-top: 1px solid #334155;
+        }
+        /* Ensure media elements fit within carousel - mobile responsive */
+        #carouselMediaContainer img,
+        #carouselMediaContainer video {
+            max-width: 100%;
+            width: 100%;
+            height: auto;
+            max-height: 60vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Mobile - larger images */
+        @media (max-width: 767px) {
+            #carouselMediaContainer img,
+            #carouselMediaContainer video {
+                max-height: 70vh;
+            }
+        }
+        
+        /* Desktop - smaller images */
+        @media (min-width: 1024px) {
+            #carouselMediaContainer img,
+            #carouselMediaContainer video {
+                max-width: 80vw;
+                max-height: 65vh;
+            }
+        }
+        
+        #carouselMediaContainer iframe {
+            width: 100%;
+            height: 60vh;
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Mobile - larger video player */
+        @media (max-width: 767px) {
+            #carouselMediaContainer iframe {
+                height: 70vh;
+                max-height: 70vh;
+            }
+        }
+        
+        /* Desktop - smaller video player */
+        @media (min-width: 1024px) {
+            #carouselMediaContainer iframe {
+                width: 80vw;
+                height: 65vh;
+            }
+        }
+        /* Cast images sizing */
+        #castImagesContainer img {
+            object-fit: cover;
+        }
+        #additionalMediaContainer img {
+            object-fit: cover;
+        }
+        /* Video thumbnails */
+        .video-thumbnail {
+            position: relative;
+        }
+        .video-thumbnail .play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            opacity: 0.8;
+            font-size: 2rem;
+        }
+        /* Fix cast & crew layout */
+        #movieCast li, #movieCrew li {
+            line-height: 1.4;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .md\:grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+                /* Responsive banner ads */
+        .banner-ad-container {
+            width: 100%;
+            max-width: 728px;
+            margin: 0 auto;
+            min-height: 90px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .banner-ad-container ins {
+            display: block;
+            width: 100% !important;
+            height: 90px !important;
+            min-height: 90px;
+            max-width: 728px;
+        }
+        
+        /* Mobile ad adjustments */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+                min-height: 60px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100%;
+                width: 100% !important;
+                height: 60px !important;
+                min-height: 60px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-ad-container {
+                min-height: 50px;
+            }
+            
+            .banner-ad-container ins {
+                height: 50px !important;
+                min-height: 50px;
+            }
+        }
+        
+        /* Media carousel improvements */
+        #mediaCarousel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        /* Larger video player on mobile */
+        @media (max-width: 767px) {
+            #mediaCarousel {
+                padding: 10px;
+            }
+            
+            #mediaCarousel iframe {
+                height: 60vh;
+            }
+        }
+        
+        /* Desktop - larger player */
+        @media (min-width: 1024px) {
+            #mediaCarousel iframe {
+                height: 85vh;
+            }
+        }
+        
+        /* Mobile-friendly navigation buttons */
+        @media (max-width: 767px) {
+            #mediaCarousel .absolute {
+                top: 10px;
+                right: 10px;
+            }
+            
+            #mediaCarousel .absolute.left-4 {
+                left: 10px;
+            }
+            
+            #mediaCarousel .absolute.right-4 {
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-primary text-white min-h-screen font-body">
+    <!-- Top Navigation Bar -->
+    <nav class="glass-card sticky top-0 z-50 border-b border-gray-700">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-film text-accent text-2xl"></i>
+                    <h1 class="text-xl md:text-2xl font-bold text-accent font-sans">Movie Wiki</h1>
+                </div>
+                <div class="hidden md:flex items-center gap-6">
+                    <a href="index.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="forum.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-comments"></i>
+                        <span>Forum</span>
+                    </a>
+                    <button id="loginBtn" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-user"></i>
+                        <span id="userNameDisplay">Login</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-nav md:hidden">
+        <div class="flex justify-around items-center py-3">
+            <a href="../index.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 text-accent">
+                <i class="fas fa-film text-xl"></i>
+                <span class="text-xs">Details</span>
+            </a>
+            <a href="../forum.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-comments text-xl"></i>
+                <span class="text-xs">Forum</span>
+            </a>
+            <button id="mobileLoginBtn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-user text-xl"></i>
+                <span class="text-xs" id="mobileUserName">Login</span>
+            </button>
+        </div>
+    </div>
+       <!-- Banner Ad -->
+    <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container">
+        <ins style="width: 728px;height:90px" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"><script src="//data527.click/js/responsive.js" async></script></ins>
+    </div>
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator" class="container mx-auto px-4 py-16 text-center hidden">
+        <div class="flex flex-col items-center justify-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-accent mb-6"></i>
+            <p class="text-2xl text-gray-300 mb-2">Loading Movie Details</p>
+            <p class="text-gray-500">Please wait while we fetch the information...</p>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    <div id="errorMessage" class="container mx-auto px-4 py-8 text-center hidden">
+        <p class="text-xl text-red-500">Failed to load movie details. Please try again.</p>
+        <button onclick="window.location.href='../index.html'" class="mt-4 bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Home
+        </button>
+    </div>
+
+    <!-- Movie Details -->
+    <section id="movieDetails" class="container mx-auto px-4 py-8 hidden">
+        <div class="bg-secondary rounded-xl shadow-lg overflow-hidden">
+            <div class="md:flex">
+                <div class="md:w-1/3 p-6 flex justify-center">
+                    <img id="moviePoster" src="" alt="Movie Poster" class="rounded-lg shadow-lg w-full max-w-md">
+                </div>
+                <div class="md:w-2/3 p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 id="movieTitle" class="text-3xl font-bold text-accent font-sans"></h2>
+                        <button onclick="window.location.href='../index.html'" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i>Back
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Movie Information</h3>
+                            <ul class="space-y-2">
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Year:</span>
+                                    <span id="movieYear"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Rating:</span>
+                                    <span id="movieRating"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Length:</span>
+                                    <span id="movieDuration"></span>
+                                </li>
+                                <li class="flex" id="episodesRow" style="display: none;">
+                                    <span class="font-semibold w-32">Episodes:</span>
+                                    <span id="movieEpisodes"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Genres:</span>
+                                    <span id="movieGenres"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">IMDb ID:</span>
+                                    <span id="movieImdbId"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Type:</span>
+                                    <span id="movieType"></span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Cast & Crew</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <h4 class="font-semibold text-gray-300 mb-1">Cast</h4>
+                                    <div id="movieCast" class="space-y-1">
+                                        <!-- Cast will be populated here -->
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-300 mb-1">Crew</h4>
+                                    <ul id="movieCrew" class="space-y-1">
+                                        <!-- Crew will be populated here -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        <button id="trailerButton" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-play-circle mr-2"></i>Watch Trailer
+                        </button>
+                        <button id="photosButton" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-images mr-2"></i>View Photos
+                        </button>
+                        <button id="streamButton" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-film mr-2"></i>Stream Movie
+                        </button>
+                        <button id="shareButton" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-share-alt mr-2"></i>Share
+                        </button>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Plot</h3>
+                        <p id="moviePlot" class="leading-relaxed"></p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Keywords</h3>
+                        <div id="movieKeywords" class="flex flex-wrap">
+                            <!-- Keywords will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cast Photos Carousel Section -->
+            <div id="castPhotosSection" class="px-6 pb-6 section-divider pt-6 hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-2xl font-bold text-accent font-sans"><i class="fas fa-users mr-2"></i>Cast Photos</h3>
+                    <div class="flex gap-2">
+                        <button id="prevCastButton" class="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button id="nextCastButton" class="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="castPhotosContainer" class="flex overflow-x-hidden space-x-4 pb-4 carousel-container">
+                    <!-- Cast photos will be populated here -->
+                </div>
+            </div>
+            
+            <!-- All Videos Section -->
+            <div id="allVideosSection" class="px-6 pb-6 section-divider pt-6 hidden">
+                <h3 class="text-2xl font-bold text-accent mb-4 font-sans"><i class="fas fa-video mr-2"></i>All Videos</h3>
+                <div id="allVideosContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- All videos will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Additional Media Section -->
+            <div id="additionalMediaSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Additional Media</h3>
+                <div id="additionalMediaContainer" class="flex overflow-x-auto space-x-4 pb-4 media-carousel">
+                    <!-- Additional media will be populated here -->
+                </div>
+            </div>
+            
+            <div class="section-divider my-6"></div>
+            
+            <!-- Additional Information Section -->
+            <div id="additionalInfoSection" class="px-6 pb-6">
+                <!-- Additional information will be populated here -->
+            </div>
+            
+            <!-- Featured Review Section -->
+            <div id="reviewsSection" class="px-6 pb-6 section-divider pt-6 hidden">
+                <h3 class="text-2xl font-bold text-accent mb-4 font-sans"><i class="fas fa-star mr-2"></i>Featured Review</h3>
+                <div id="featuredReview" class="bg-gray-800 p-6 rounded-lg">
+                    <!-- Featured review will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Budget & Box Office Section -->
+            <div id="budgetBoxOfficeSection" class="px-6 pb-6 section-divider pt-6 hidden">
+                <h3 class="text-2xl font-bold text-accent mb-4 font-sans"><i class="fas fa-dollar-sign mr-2"></i>Budget & Box Office</h3>
+                <div id="budgetBoxOfficeInfo" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Budget & box office info will be populated here -->
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Comments Section -->
+    <section class="container mx-auto px-4 py-12">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-3xl font-bold mb-8 flex items-center gap-3 text-accent">
+                <i class="fas fa-comments"></i>
+                <span>Community Comments</span>
+            </h2>
+            
+            <!-- Post Comment Form -->
+            <div class="glass-card rounded-xl p-6 mb-8">
+                <h3 class="text-xl font-bold mb-4">Share Your Thoughts</h3>
+                <div id="commentFormAuth" class="hidden">
+                    <form id="commentForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-300">
+                                <i class="fas fa-comment-dots mr-1"></i>Your Comment
+                            </label>
+                            <textarea 
+                                id="commentText" 
+                                required
+                                rows="4"
+                                placeholder="What did you think about this movie?..." 
+                                class="w-full px-4 py-3 rounded-lg bg-secondary text-white focus:outline-none focus:ring-2 focus:ring-accent border border-gray-700"
+                            ></textarea>
+                            <p class="text-xs text-gray-400 mt-1">
+                                <span id="charCount">0</span>/500 characters
+                            </p>
+                        </div>
+                        <button 
+                            type="submit" 
+                            class="bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center gap-2"
+                        >
+                            <i class="fas fa-paper-plane"></i>
+                            Post Comment
+                        </button>
+                    </form>
+                </div>
+                <div id="commentFormGuest" class="text-center py-6">
+                    <i class="fas fa-sign-in-alt text-accent text-4xl mb-4"></i>
+                    <p class="text-gray-300 mb-4">Please sign in to post comments</p>
+                    <button id="guestLoginBtn" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center gap-2 mx-auto">
+                        <i class="fab fa-google"></i>
+                        Sign in with Google
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Comments List -->
+            <div>
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold">All Comments (<span id="commentCount">0</span>)</h3>
+                    <select id="commentSort" class="px-4 py-2 rounded-lg bg-secondary text-white border border-gray-700">
+                        <option value="recent">Most Recent</option>
+                        <option value="popular">Most Liked</option>
+                    </select>
+                </div>
+                
+                <div id="commentsContainer" class="space-y-4">
+                    <div class="text-center py-12">
+                        <i class="fas fa-spinner fa-spin text-accent text-3xl mb-4"></i>
+                        <p class="text-gray-400">Loading comments...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Media Carousel Section -->
+    <section id="mediaCarouselSection" class="fixed inset-0 bg-dark bg-opacity-95 z-50 hidden">
+        <div class="w-full h-full flex flex-col">
+            <div class="flex justify-between items-center p-4 bg-secondary">
+                <h2 id="carouselTitle" class="text-2xl font-bold text-accent font-sans"></h2>
+                <button id="closeCarouselButton" class="text-white hover:text-accent text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex-grow flex flex-col items-center justify-center p-4 relative">
+                <button id="prevMediaButton" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-3xl z-10 bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div id="carouselMediaContainer" class="w-full flex justify-center items-center mb-4">
+                    <!-- Carousel media will be populated here -->
+                </div>
+                <div id="carouselMediaInfo" class="text-center w-full">
+                    <!-- Media info (title, description) will be populated here -->
+                </div>
+                <button id="nextMediaButton" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-3xl z-10 bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div id="carouselIndicators" class="flex justify-center p-4 space-x-2">
+                <!-- Carousel indicators will be populated here -->
+            </div>
+        </div>
+    </section>
+<!-- Firebase App is always required and must be first -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<!-- Add additional services that you want to use -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<!-- Firebase App is always required and must be first -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // API Base URLs
+        const API_BASE = 'https://imdb.iamidiotareyoutoo.com';
+        
+        // Enhanced CORS Proxy with better, faster proxies and intelligent fallback
+        const CORS_PROXIES = [
+            'https://corsproxy.io/?',                      // Tier 1: Fastest, high reliability
+            'https://api.allorigins.win/raw?url=',         // Tier 2: Good reliability
+            'https://api.codetabs.com/v1/proxy?quest=',    // Tier 3: Alternative
+            'https://thingproxy.freeboard.io/fetch/',      // Tier 4: Fallback
+            'https://cors-anywhere.herokuapp.com/'         // Tier 5: Last resort
+        ];
+        
+        // Powerful video proxy services that strip cookies and headers
+        const VIDEO_PROXIES = [
+            'https://corsproxy.io/?',                                    // High performance, strips cookies
+            'https://api.allorigins.win/raw?url=',                       // Reliable, bypasses CORS
+            'https://cors-anywhere.herokuapp.com/',                       // Classic proxy
+            'https://api.codetabs.com/v1/proxy?quest=',                  // Alternative
+            'https://thingproxy.freeboard.io/fetch/'                     // Fallback
+        ];
+        
+        let currentProxyIndex = 0;
+        let currentVideoProxyIndex = 0;
+        let proxySuccessCount = Array(CORS_PROXIES.length).fill(0);
+        let proxyFailCount = Array(CORS_PROXIES.length).fill(0);
+        
+        // Enhanced proxy selection with performance tracking
+        function selectBestProxy() {
+            // Calculate success rate for each proxy
+            const proxyScores = CORS_PROXIES.map((_, index) => {
+                const totalAttempts = proxySuccessCount[index] + proxyFailCount[index];
+                if (totalAttempts === 0) return 0.5; // Default score for untested proxies
+                return proxySuccessCount[index] / totalAttempts;
+            });
+            
+            // Find proxy with highest success rate
+            let bestIndex = 0;
+            let bestScore = -1;
+            
+            for (let i = 0; i < proxyScores.length; i++) {
+                if (proxyScores[i] > bestScore) {
+                    bestScore = proxyScores[i];
+                    bestIndex = i;
+                }
+            }
+            
+            return bestIndex;
+        }
+        
+        // Powerful video fetch with multiple proxy attempts and cookie stripping
+        async function fetchVideoWithProxy(url, options = {}) {
+            console.log('🎥 Fetching video from:', url);
+            
+            // Try direct fetch first (for incognito-like behavior)
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    credentials: 'omit',  // Don't send cookies
+                    mode: 'cors',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'Accept': 'video/mp4,video/*;q=0.9,*/*;q=0.8',
+                        'Referer': 'https://www.imdb.com/',
+                        ...options.headers
+                    }
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Direct video fetch succeeded');
+                    return response;
+                }
+                console.log(`❌ Direct fetch failed: ${response.status}`);
+            } catch (error) {
+                console.log('❌ Direct fetch error:', error.message);
+            }
+            
+            // Select the best performing proxy based on historical data
+            const bestProxyIndex = selectBestProxy();
+            const proxyOrder = [bestProxyIndex];
+            
+            // Add other proxies in order
+            for (let i = 0; i < VIDEO_PROXIES.length; i++) {
+                if (i !== bestProxyIndex) {
+                    proxyOrder.push(i);
+                }
+            }
+            
+            // Try video proxies with cookie stripping in order of performance
+            for (const proxyIndex of proxyOrder) {
+                const proxy = VIDEO_PROXIES[proxyIndex];
+                const proxiedUrl = proxy + encodeURIComponent(url);
+                
+                try {
+                    console.log(`🔄 Trying video proxy ${proxyIndex + 1}:`, proxy.substring(0, 30) + '...');
+                    
+                    const response = await fetch(proxiedUrl, {
+                        ...options,
+                        credentials: 'omit',
+                        mode: 'cors',
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                            'Accept': 'video/mp4,video/*;q=0.9,*/*;q=0.8'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        console.log(`✅ Video proxy ${proxyIndex + 1} succeeded!`);
+                        proxySuccessCount[proxyIndex]++;
+                        currentVideoProxyIndex = proxyIndex;
+                        return response;
+                    } else {
+                        console.log(`❌ Proxy ${proxyIndex + 1} failed: ${response.status}`);
+                        proxyFailCount[proxyIndex]++;
+                    }
+                } catch (error) {
+                    console.log(`❌ Proxy ${proxyIndex + 1} error:`, error.message);
+                    proxyFailCount[proxyIndex]++;
+                }
+            }
+            
+            // All proxies failed
+            throw new Error('All video fetch attempts failed (direct + all proxies)');
+        }
+        
+        // Helper to get proxied video URL
+        function getProxiedVideoUrl(originalUrl) {
+            // Use the last successful proxy or first one
+            const proxy = VIDEO_PROXIES[currentVideoProxyIndex];
+            return proxy + encodeURIComponent(originalUrl);
+        }
+        // Improved fetch with proxy that quickly switches to better proxies
+        async function fetchWithProxy(url, options = {}) {
+            // Try direct fetch first with clean headers
+            try {
+                const directOptions = {
+                    ...options,
+                    credentials: 'omit',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'Accept': 'application/json, text/plain, */*',
+                        'Referer': 'https://www.imdb.com/',
+                        ...options.headers
+                    }
+                };
+                
+                const response = await fetch(url, directOptions);
+                if (response.ok) {
+                    console.log('✅ Direct fetch succeeded');
+                    return response;
+                }
+                console.log(`Direct fetch failed with status: ${response.status}`);
+            } catch (error) {
+                console.log('Direct fetch failed:', error.message);
+            }
+            
+            // Select the best performing proxy based on historical data
+            const bestProxyIndex = selectBestProxy();
+            const proxyOrder = [bestProxyIndex];
+            
+            // Add other proxies in order
+            for (let i = 0; i < CORS_PROXIES.length; i++) {
+                if (i !== bestProxyIndex) {
+                    proxyOrder.push(i);
+                }
+            }
+            
+            // Try with CORS proxies in order of performance
+            for (const proxyIndex of proxyOrder) {
+                const proxy = CORS_PROXIES[proxyIndex];
+                const proxiedUrl = proxy + encodeURIComponent(url);
+                
+                try {
+                    console.log(`🔄 Trying proxy ${proxyIndex + 1}:`, proxy);
+                    
+                    const proxyOptions = {
+                        ...options,
+                        credentials: 'omit',
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                            'Accept': 'application/json, text/plain, */*',
+                            ...options.headers
+                        }
+                    };
+                    
+                    const response = await fetch(proxiedUrl, proxyOptions);
+                    if (response.ok) {
+                        console.log(`✅ Success with proxy ${proxyIndex + 1}`);
+                        proxySuccessCount[proxyIndex]++;
+                        currentProxyIndex = proxyIndex; // Remember working proxy
+                        return response;
+                    } else {
+                        console.log(`❌ Proxy ${proxyIndex + 1} failed with status: ${response.status}`);
+                        proxyFailCount[proxyIndex]++;
+                    }
+                } catch (error) {
+                    console.log(`❌ Proxy ${proxyIndex + 1} failed:`, error.message);
+                    proxyFailCount[proxyIndex]++;
+                }
+            }
+            
+            // All proxies failed, throw error
+            throw new Error('All fetch attempts failed (direct + proxies)');
+        }
+        
+        // Format duration
+        function formatDuration(duration) {
+            if (!duration || duration === 'N/A') return 'N/A';
+            
+            // If it's already formatted (e.g., "2h 30m")
+            if (duration.includes('h') || duration.includes('m')) {
+                return duration;
+            }
+            
+            // If it's in minutes, convert to hours and minutes
+            const minutes = parseInt(duration);
+            if (isNaN(minutes)) return duration;
+            
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            
+            if (hours > 0) {
+                return `${hours}h ${mins}m`;
+            } else {
+                return `${mins}m`;
+            }
+        }
+        
+        // Function to display proxy performance statistics (for debugging)
+        function displayProxyStats() {
+            console.log('=== Proxy Performance Statistics ===');
+            CORS_PROXIES.forEach((proxy, index) => {
+                const successes = proxySuccessCount[index];
+                const failures = proxyFailCount[index];
+                const total = successes + failures;
+                const successRate = total > 0 ? (successes / total * 100).toFixed(2) : '0.00';
+                
+                console.log(`Proxy ${index + 1}: ${proxy.substring(0, 30)}...`);
+                console.log(`  Successes: ${successes}, Failures: ${failures}, Success Rate: ${successRate}%`);
+            });
+            console.log('====================================');
+        }
+        
+        // Add periodic stats logging
+        setInterval(displayProxyStats, 300000); // Log every 5 minutes
+        
+        // Get movie ID from URL
+        function getMovieIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            console.log('URL Parameters:', window.location.search);
+            console.log('All URL params:', Object.fromEntries(urlParams));
+            const id = urlParams.get('id');
+            console.log('Extracted ID:', id);
+            return id;
+        }
+        
+        // Fetch movie details
+        async function fetchMovieDetails() {
+            const movieId = getMovieIdFromUrl();
+            console.log('Movie ID for fetch:', movieId);
+            if (!movieId) {
+                document.getElementById('loadingIndicator').classList.add('hidden');
+                document.getElementById('errorMessage').classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                // Show loading indicator
+                document.getElementById('loadingIndicator').classList.remove('hidden');
+                document.getElementById('movieDetails').classList.add('hidden');
+                document.getElementById('errorMessage').classList.add('hidden');
+                
+                // Fetch detailed movie information
+                const url = `${API_BASE}/search?tt=${movieId}`;
+                console.log('Fetching URL:', url);
+                const response = await fetchWithProxy(url);
+                const data = await response.json();
+                console.log('API Response:', data);
+                
+                if (data.ok) {
+                    displayMovieDetails(data.short, movieId, data);
+                } else {
+                    console.log('API returned not ok');
+                    document.getElementById('loadingIndicator').classList.add('hidden');
+                    document.getElementById('errorMessage').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error fetching movie details:', error);
+                document.getElementById('loadingIndicator').classList.add('hidden');
+                document.getElementById('errorMessage').classList.remove('hidden');
+            }
+        }
+        
+        // Display movie details
+        function displayMovieDetails(movie, movieId, fullData) {
+            console.log('Displaying movie details:', { movie, movieId, fullData });
+            if (!fullData || !fullData.ok) {
+                console.log('No valid data provided');
+                return;
+            }
+            
+            // Hide loading indicator and show movie details
+            document.getElementById('loadingIndicator').classList.add('hidden');
+            document.getElementById('movieDetails').classList.remove('hidden');
+            
+            // Extract from 'short' schema.org data
+            const shortData = fullData.short || {};
+            const topData = fullData.top || {};
+            
+            // Extract key information from proper structure
+            const title = shortData.name || topData.titleText?.text || shortData['#TITLE'] || 'Unknown Title';
+            const year = topData.releaseYear?.year || shortData.datePublished?.split('-')[0] || shortData['#YEAR'] || 'N/A';
+            const rating = shortData.aggregateRating?.ratingValue || topData.ratingsSummary?.aggregateRating || shortData['#RATING'] || 'N/A';
+            const duration = topData.runtime?.displayableProperty?.value?.plainText || shortData.duration || shortData['#TIME'] || 'N/A';
+            const genres = shortData.genre ? (Array.isArray(shortData.genre) ? shortData.genre.join(', ') : shortData.genre) : (topData.genres?.genres?.map(g => g.text || g.genre?.text).join(', ')) || shortData['#GENRES'] || 'N/A';
+            const plot = shortData.description || topData.plot?.plotText?.plainText || shortData['#PLOT'] || 'No plot available';
+            const poster = shortData.image || topData.primaryImage?.url || shortData['#IMG_POSTER'] || 'https://placehold.co/300x450?text=No+Image&font=opensans';
+            const type = shortData['@type'] || (topData.titleType?.text === 'TV Series' ? 'TVSeries' : 'Movie');
+            const imdbId = fullData.imdbId || movieId || 'N/A';
+            
+            // Get episode count for TV series - check multiple sources with enhanced logging
+            let episodes = null;
+            let seasons = null;
+            
+            console.log('=== EPISODE DETECTION DEBUG ===');
+            console.log('Full topData.episodes:', JSON.stringify(topData.episodes, null, 2));
+            console.log('fullData.main:', fullData.main ? 'exists' : 'missing');
+            
+            // Method 1: From top.episodes.episodes.total (primary source)
+            if (topData.episodes?.episodes?.total) {
+                episodes = topData.episodes.episodes.total;
+                console.log('✅ Method 1 success - episodes from top.episodes.episodes.total:', episodes);
+            } else {
+                console.log('❌ Method 1 failed - top.episodes.episodes.total not found');
+            }
+            
+            // Method 2: From top.episodes.totalEpisodes.total (alternative)
+            if (!episodes && topData.episodes?.totalEpisodes?.total) {
+                episodes = topData.episodes.totalEpisodes.total;
+                console.log('✅ Method 2 success - episodes from top.episodes.totalEpisodes.total:', episodes);
+            } else if (!episodes) {
+                console.log('❌ Method 2 failed - top.episodes.totalEpisodes.total not found');
+            }
+            
+            // Method 3: From main.episodes (if it exists)
+            if (!episodes && fullData.main?.episodes?.episodes?.total) {
+                episodes = fullData.main.episodes.episodes.total;
+                console.log('✅ Method 3 success - episodes from main.episodes.episodes.total:', episodes);
+            } else if (!episodes) {
+                console.log('❌ Method 3 failed - main.episodes not found');
+            }
+            
+            // Get season count from multiple sources
+            if (topData.episodes?.seasons && Array.isArray(topData.episodes.seasons)) {
+                seasons = topData.episodes.seasons.length;
+                console.log('✅ Seasons from top.episodes.seasons:', seasons);
+            } else if (fullData.main?.episodes?.seasons && Array.isArray(fullData.main.episodes.seasons)) {
+                seasons = fullData.main.episodes.seasons.length;
+                console.log('✅ Seasons from main.episodes.seasons:', seasons);
+            }
+            
+            // Method 4: From short data actors field (fallback)
+            if (!episodes && shortData['#ACTORS']) {
+                const episodeMatch = shortData['#ACTORS'].match(/(\d+)\s*episodes?/i);
+                if (episodeMatch) {
+                    episodes = parseInt(episodeMatch[1]);
+                    console.log('✅ Method 4 success - episodes from #ACTORS:', episodes);
+                }
+            }
+            
+            // Method 5: From titleType and year range (indicates series)
+            const yearString = shortData['#YEAR'] || year.toString();
+            const isSeries = yearString.includes('–') || yearString.includes('-') || type === 'TVSeries' || topData.titleType?.text === 'TV Series';
+            
+            console.log('=== FINAL DETECTION RESULTS ===');
+            console.log('Type:', type);
+            console.log('Is Series:', isSeries);
+            console.log('Episodes found:', episodes);
+            console.log('Seasons found:', seasons);
+            console.log('Year string:', yearString);
+            console.log('===========================');
+            
+            console.log('Extracted data:', { title, year, rating, duration, genres, plot, poster, type, imdbId });
+            
+            // Update the HTML elements directly with better handling
+            document.getElementById('movieTitle').textContent = title;
+            document.getElementById('movieYear').textContent = year !== 'N/A' ? year : 'Not Available';
+            document.getElementById('movieRating').textContent = rating !== 'N/A' ? `⭐ ${rating}/10` : 'Not Rated';
+            
+            // For TV shows, show episode count instead of duration
+            if ((type === 'TVSeries' || isSeries) && episodes) {
+                const episodeText = seasons ? `${episodes} episodes (${seasons} seasons)` : `${episodes} episodes`;
+                document.getElementById('movieDuration').textContent = episodeText;
+                console.log('Showing episodes:', episodeText);
+            } else if (type === 'TVSeries' || isSeries) {
+                // TV series but no episode count - show "TV Series" instead of duration
+                document.getElementById('movieDuration').textContent = 'TV Series';
+                console.log('TV Series detected but no episode count');
+            } else {
+                document.getElementById('movieDuration').textContent = duration !== 'N/A' ? duration : 'Unknown';
+                console.log('Showing duration:', duration);
+            }
+            
+            // Hide the separate episodes row since we're showing it in duration field for TV shows
+            document.getElementById('episodesRow').style.display = 'none';
+            
+            document.getElementById('movieGenres').textContent = genres !== 'N/A' ? genres : 'Not Specified';
+            document.getElementById('movieImdbId').textContent = imdbId !== 'N/A' ? imdbId : 'Unknown';
+            document.getElementById('movieType').textContent = type === 'TVSeries' ? 'TV Series' : 'Movie';
+            document.getElementById('moviePoster').src = poster;
+            document.getElementById('moviePoster').alt = title;
+            document.getElementById('moviePlot').textContent = plot;
+            
+            // Update cast information - show names only
+            const mainData = fullData.main || {};
+            const castV2 = mainData.castV2 || topData.castV2 || [];
+            let castHTML = '';
+            
+            if (castV2.length > 0 && castV2[0].credits) {
+                const castMembers = castV2[0].credits.slice(0, 5);
+                castMembers.forEach(castMember => {
+                    const actorName = castMember.name?.nameText?.text || 'Unknown Actor';
+                    const characters = castMember.creditedRoles?.edges?.[0]?.node?.characters?.edges?.map(e => e.node.name).join(', ') || 'Unknown Role';
+                    
+                    castHTML += `<p class="text-sm text-gray-300">${actorName} <span class="text-gray-500">as ${characters}</span></p>`;
+                });
+                document.getElementById('movieCast').innerHTML = castHTML;
+                
+                // Populate Cast Photos Section
+                populateCastPhotos(castV2[0].credits);
+            } else {
+                document.getElementById('movieCast').innerHTML = '<p class="text-sm text-gray-400">No cast information available</p>';
+            }
+            
+            // Update crew information from principalCreditsV2 or crewV2
+            const principalCredits = topData.principalCreditsV2 || [];
+            const crewV2 = mainData.crewV2 || topData.crewV2 || [];
+            let crewHTML = '';
+            
+            // Get directors
+            const directorGroup = principalCredits.find(g => g.grouping?.text === 'Director' || g.grouping?.text === 'Directors');
+            if (directorGroup && directorGroup.credits) {
+                const directors = directorGroup.credits.map(c => c.name?.nameText?.text).filter(Boolean).join(', ');
+                if (directors) {
+                    crewHTML += `<li class="flex mb-2">
+                        <span class="font-semibold w-32 text-accent">Director:</span>
+                        <span class="text-white">${directors}</span>
+                    </li>`;
+                }
+            }
+            
+            // Get writers/creators
+            const writerGroup = principalCredits.find(g => g.grouping?.text === 'Writers' || g.grouping?.text === 'Creators');
+            if (writerGroup && writerGroup.credits) {
+                const writers = writerGroup.credits.map(c => c.name?.nameText?.text).filter(Boolean).join(', ');
+                if (writers) {
+                    crewHTML += `<li class="flex mb-2">
+                        <span class="font-semibold w-32 text-accent">${writerGroup.grouping.text}:</span>
+                        <span class="text-white">${writers}</span>
+                    </li>`;
+                }
+            }
+            
+            // Get production companies
+            const production = topData.production?.edges || [];
+            if (production.length > 0) {
+                const companies = production.map(p => p.node?.company?.companyText?.text).filter(Boolean).join(', ');
+                if (companies) {
+                    crewHTML += `<li class="flex mb-2">
+                        <span class="font-semibold w-32 text-accent">Production:</span>
+                        <span class="text-white">${companies}</span>
+                    </li>`;
+                }
+            }
+            
+            document.getElementById('movieCrew').innerHTML = crewHTML || '<li>No crew information available</li>';
+            
+            // Update keywords from schema.org or top.keywords
+            const keywords = shortData.keywords?.split(',') || topData.keywords?.edges?.map(e => e.node?.text).filter(Boolean) || [];
+            let keywordsHTML = '';
+            
+            if (keywords.length > 0) {
+                keywords.slice(0, 10).forEach(keyword => {
+                    const keywordText = typeof keyword === 'string' ? keyword.trim() : keyword;
+                    if (keywordText) {
+                        keywordsHTML += `<span class="bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-xs px-3 py-1.5 rounded-full mr-2 mb-2 inline-block hover:scale-105 transition">${keywordText}</span>`;
+                    }
+                });
+                document.getElementById('movieKeywords').innerHTML = keywordsHTML;
+            } else {
+                document.getElementById('movieKeywords').innerHTML = '<p class="text-gray-400">No keywords available</p>';
+            }
+            
+            // Populate all sections
+            populateFeaturedReview(fullData);
+            populateBudgetBoxOffice(fullData);
+            populateAllVideos(fullData);
+            populateAdditionalDetails(fullData);
+            
+            // Add event listeners for buttons
+            document.getElementById('trailerButton').onclick = function() {
+                // Get video URLs from primaryVideos or trailer
+                const videos = topData.primaryVideos?.edges || [];
+                const trailer = shortData.trailer;
+                
+                if (videos.length > 0) {
+                    const videoData = videos.map(v => v.node).filter(Boolean);
+                    showVideoCarousel(videoData, 0, 'Videos & Trailers');
+                } else if (trailer && trailer.url) {
+                    // Open IMDB video page
+                    window.open(trailer.url, '_blank');
+                } else {
+                    alert('No trailers available for this title.');
+                }
+            };
+            
+            document.getElementById('photosButton').onclick = function() {
+                // Get images from titleMainImages
+                const images = mainData.titleMainImages?.edges || topData.images?.edges || [];
+                
+                if (images.length > 0) {
+                    const imageData = images.map(i => i.node).filter(Boolean);
+                    showImageCarousel(imageData, 0, 'Photos');
+                } else {
+                    alert('No photos available for this title.');
+                }
+            };
+            
+            document.getElementById('streamButton').onclick = function() {
+                if (type === 'TVSeries') {
+                    // For TV shows, redirect to stream page which will handle season/episode selection
+                    window.location.href = `stream.html?id=${movieId}&title=${encodeURIComponent(title)}&type=tv`;
+                } else {
+                    // For movies, go directly to streaming
+                    window.location.href = `stream.html?id=${movieId}&title=${encodeURIComponent(title)}&type=movie`;
+                }
+            };
+        }
+        
+        // Helper function to format duration for schema.org
+        function formatDurationForSchema(duration) {
+            if (!duration || duration === 'N/A') return undefined;
+            
+            // If it's already formatted (e.g., "2h 12m")
+            if (duration.includes('h') || duration.includes('m')) {
+                let schemaDuration = "PT";
+                if (duration.includes('h')) {
+                    const hours = duration.match(/(\d+)h/);
+                    if (hours) schemaDuration += hours[1] + "H";
+                }
+                if (duration.includes('m')) {
+                    const minutes = duration.match(/(\d+)m/);
+                    if (minutes) schemaDuration += minutes[1] + "M";
+                }
+                return schemaDuration;
+            }
+            
+            // If it's in minutes, convert to ISO 8601 duration format
+            const minutes = parseInt(duration);
+            if (isNaN(minutes)) return undefined;
+            
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = minutes % 60;
+            
+            let schemaDuration = "PT";
+            if (hours > 0) {
+                schemaDuration += hours + "H";
+            }
+            if (remainingMinutes > 0) {
+                schemaDuration += remainingMinutes + "M";
+            }
+            
+            return schemaDuration;
+        }
+        
+        // Populate Cast Photos Section with Carousel
+        function populateCastPhotos(castMembers) {
+            const container = document.getElementById('castPhotosContainer');
+            const section = document.getElementById('castPhotosSection');
+            
+            if (!castMembers || castMembers.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+            
+            let photosHTML = '';
+            window.castPhotos = castMembers; // Store globally for carousel
+            
+            castMembers.slice(0, 20).forEach((castMember, index) => {
+                const actorName = castMember.name?.nameText?.text || 'Unknown Actor';
+                const actorImage = castMember.name?.primaryImage?.url || 'https://placehold.co/200x300?text=No+Image&font=opensans';
+                const characters = castMember.creditedRoles?.edges?.[0]?.node?.characters?.edges?.map(e => e.node.name).join(', ') || 'Unknown Role';
+                
+                photosHTML += `
+                    <div class="flex-shrink-0 w-48 bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition-transform cursor-pointer cast-image">
+                        <img src="${actorImage}" alt="${actorName}" class="w-full h-64 object-cover">
+                        <div class="p-3">
+                            <p class="font-semibold text-sm text-white truncate">${actorName}</p>
+                            <p class="text-xs text-gray-400 truncate">${characters}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = photosHTML;
+            section.classList.remove('hidden');
+            
+            // Set up carousel controls
+            let scrollPosition = 0;
+            const scrollAmount = 220; // Width of card + gap
+            
+            document.getElementById('prevCastButton').onclick = () => {
+                scrollPosition = Math.max(0, scrollPosition - scrollAmount);
+                container.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+            };
+            
+            document.getElementById('nextCastButton').onclick = () => {
+                const maxScroll = container.scrollWidth - container.clientWidth;
+                scrollPosition = Math.min(maxScroll, scrollPosition + scrollAmount);
+                container.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+            };
+        }
+        
+        // Populate Featured Review
+        function populateFeaturedReview(fullData) {
+            const container = document.getElementById('featuredReview');
+            const section = document.getElementById('reviewsSection');
+            
+            const mainData = fullData.main || {};
+            const featuredReviews = mainData.featuredReviews?.edges || [];
+            
+            if (featuredReviews.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+            
+            const review = featuredReviews[0].node;
+            const author = review.author?.nickName || review.author?.username?.text || 'Anonymous';
+            const summary = review.summary?.originalText || 'No summary';
+            const reviewText = review.text?.originalText?.plaidHtml || review.text?.originalText?.plainText || 'No review text available';
+            const rating = review.authorRating ? `⭐ ${review.authorRating}/10` : '';
+            const date = review.submissionDate || '';
+            
+            // Clean HTML from review text
+            const cleanText = reviewText.replace(/<br\/?>/g, '\n').replace(/<[^>]*>/g, '').substring(0, 500);
+            
+            const reviewHTML = `
+                <div class="mb-3">
+                    <h4 class="text-xl font-bold text-white mb-1">${summary}</h4>
+                    <div class="flex items-center gap-3 text-sm text-gray-400 mb-3">
+                        <span><i class="fas fa-user mr-1"></i>${author}</span>
+                        ${rating ? `<span>${rating}</span>` : ''}
+                        ${date ? `<span><i class="fas fa-calendar mr-1"></i>${date}</span>` : ''}
+                    </div>
+                </div>
+                <p class="text-gray-300 leading-relaxed">${cleanText}${cleanText.length >= 500 ? '...' : ''}</p>
+            `;
+            
+            container.innerHTML = reviewHTML;
+            section.classList.remove('hidden');
+        }
+        
+        // Populate Budget & Box Office
+        function populateBudgetBoxOffice(fullData) {
+            const container = document.getElementById('budgetBoxOfficeInfo');
+            const section = document.getElementById('budgetBoxOfficeSection');
+            
+            const mainData = fullData.main || {};
+            const budget = mainData.productionBudget?.budget;
+            const lifetimeGross = mainData.lifetimeGross?.total;
+            const openingWeekend = mainData.openingWeekendGross?.gross?.total;
+            const worldwideGross = mainData.worldwideGross?.total;
+            
+            let hasData = false;
+            let boxOfficeHTML = '';
+            
+            if (budget) {
+                hasData = true;
+                boxOfficeHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1">Budget</p>
+                        <p class="text-2xl font-bold text-accent">$${(budget.amount / 1000000).toFixed(1)}M</p>
+                    </div>
+                `;
+            }
+            
+            if (openingWeekend) {
+                hasData = true;
+                boxOfficeHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1">Opening Weekend</p>
+                        <p class="text-2xl font-bold text-green-400">$${(openingWeekend.amount / 1000000).toFixed(1)}M</p>
+                    </div>
+                `;
+            }
+            
+            if (lifetimeGross) {
+                hasData = true;
+                boxOfficeHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1">Domestic Gross</p>
+                        <p class="text-2xl font-bold text-blue-400">$${(lifetimeGross.amount / 1000000).toFixed(1)}M</p>
+                    </div>
+                `;
+            }
+            
+            if (worldwideGross) {
+                hasData = true;
+                boxOfficeHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1">Worldwide Gross</p>
+                        <p class="text-2xl font-bold text-yellow-400">$${(worldwideGross.amount / 1000000).toFixed(1)}M</p>
+                    </div>
+                `;
+            }
+            
+            if (hasData) {
+                container.innerHTML = boxOfficeHTML;
+                section.classList.remove('hidden');
+            } else {
+                section.classList.add('hidden');
+            }
+        }
+        
+        // Populate All Videos Section
+        function populateAllVideos(fullData) {
+            const container = document.getElementById('allVideosContainer');
+            const section = document.getElementById('allVideosSection');
+            
+            const topData = fullData.top || {};
+            const mainData = fullData.main || {};
+            const videos = topData.primaryVideos?.edges || mainData.videoStrip?.edges || [];
+            
+            if (videos.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+            
+            let videosHTML = '';
+            const videoNodes = [];
+            
+            videos.forEach((videoEdge, index) => {
+                const video = videoEdge.node;
+                if (!video) return;
+                
+                const thumbnail = video.thumbnail?.url || 'https://placehold.co/300x200?text=Video&font=opensans';
+                const title = video.name?.value || video.contentTitle?.text || 'Video';
+                const runtime = video.runtime?.value ? `${Math.floor(video.runtime.value / 60)}:${String(video.runtime.value % 60).padStart(2, '0')}` : '';
+                const contentType = video.contentType?.displayName?.value || 'Video';
+                
+                videoNodes.push(video);
+                
+                videosHTML += `
+                    <div class="bg-gray-800 rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform video-thumbnail" 
+                         onclick="showVideoCarousel(window.allVideos, ${index}, 'All Videos')">
+                        <div class="relative">
+                            <img src="${thumbnail}" alt="${title}" class="w-full h-40 object-cover">
+                            <div class="play-icon">
+                                <i class="fas fa-play-circle text-5xl"></i>
+                            </div>
+                            ${runtime ? `<span class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">${runtime}</span>` : ''}
+                        </div>
+                        <div class="p-3">
+                            <p class="text-xs text-accent mb-1">${contentType}</p>
+                            <p class="text-sm text-white font-medium truncate">${title}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            if (videosHTML) {
+                container.innerHTML = videosHTML;
+                section.classList.remove('hidden');
+                
+                // Store videos globally for carousel
+                window.allVideos = videoNodes;
+            } else {
+                section.classList.add('hidden');
+            }
+        }
+        
+        // Populate Additional Details
+        function populateAdditionalDetails(fullData) {
+            const container = document.getElementById('additionalInfoSection');
+            const topData = fullData.top || {};
+            const mainData = fullData.main || {};
+            const shortData = fullData.short || {};
+            
+            let detailsHTML = '<h3 class="text-2xl font-bold text-accent mb-4 font-sans"><i class="fas fa-info-circle mr-2"></i>Additional Information</h3>';
+            detailsHTML += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+            
+            // Countries of Origin
+            const countries = topData.countriesOfOrigin?.countries || [];
+            if (countries.length > 0) {
+                const countryNames = countries.map(c => c.id || c.text).join(', ');
+                detailsHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1"><i class="fas fa-globe mr-1"></i>Countries of Origin</p>
+                        <p class="text-white font-medium">${countryNames}</p>
+                    </div>
+                `;
+            }
+            
+            // Language
+            const languages = topData.spokenLanguages?.spokenLanguages || [];
+            if (languages.length > 0) {
+                const langNames = languages.map(l => l.text).join(', ');
+                detailsHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1"><i class="fas fa-language mr-1"></i>Languages</p>
+                        <p class="text-white font-medium">${langNames}</p>
+                    </div>
+                `;
+            }
+            
+            // Content Rating
+            const contentRating = topData.certificate?.rating;
+            if (contentRating) {
+                detailsHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1"><i class="fas fa-exclamation-triangle mr-1"></i>Content Rating</p>
+                        <p class="text-white font-medium">${contentRating}</p>
+                    </div>
+                `;
+            }
+            
+            // Release Date
+            const releaseDate = topData.releaseDate;
+            if (releaseDate) {
+                const formattedDate = `${releaseDate.month}/${releaseDate.day}/${releaseDate.year}`;
+                detailsHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1"><i class="fas fa-calendar mr-1"></i>Release Date</p>
+                        <p class="text-white font-medium">${formattedDate} (${releaseDate.country?.text || 'N/A'})</p>
+                    </div>
+                `;
+            }
+            
+            // Awards
+            const wins = mainData.wins?.total || 0;
+            const nominations = mainData.nominationsExcludeWins?.total || 0;
+            if (wins > 0 || nominations > 0) {
+                detailsHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1"><i class="fas fa-trophy mr-1"></i>Awards</p>
+                        <p class="text-white font-medium">${wins} wins & ${nominations} nominations</p>
+                    </div>
+                `;
+            }
+            
+            // Metacritic Score
+            const metacritic = topData.metacritic?.metascore?.score;
+            if (metacritic) {
+                detailsHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1"><i class="fas fa-star-half-alt mr-1"></i>Metacritic Score</p>
+                        <p class="text-2xl font-bold text-yellow-400">${metacritic}/100</p>
+                    </div>
+                `;
+            }
+            
+            // IMDb Votes
+            const voteCount = topData.ratingsSummary?.voteCount;
+            if (voteCount) {
+                detailsHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1"><i class="fas fa-users mr-1"></i>IMDb Votes</p>
+                        <p class="text-white font-medium">${voteCount.toLocaleString()}</p>
+                    </div>
+                `;
+            }
+            
+            // Popularity Rank
+            const popularityRank = topData.meterRanking?.currentRank;
+            if (popularityRank) {
+                detailsHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1"><i class="fas fa-chart-line mr-1"></i>Popularity Rank</p>
+                        <p class="text-white font-medium">#${popularityRank}</p>
+                    </div>
+                `;
+            }
+            
+            // Filming Locations
+            const filmingLocations = topData.filmingLocations?.edges;
+            if (filmingLocations && filmingLocations.length > 0) {
+                const locations = filmingLocations.slice(0, 3).map(e => e.node?.text).filter(Boolean).join(', ');
+                if (locations) {
+                    detailsHTML += `
+                        <div class="bg-gray-800 p-4 rounded-lg">
+                            <p class="text-gray-400 text-sm mb-1"><i class="fas fa-map-marker-alt mr-1"></i>Filming Locations</p>
+                            <p class="text-white font-medium">${locations}</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Original Title
+            const originalTitle = topData.originalTitleText?.text;
+            if (originalTitle && originalTitle !== topData.titleText?.text) {
+                detailsHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm mb-1"><i class="fas fa-file-alt mr-1"></i>Original Title</p>
+                        <p class="text-white font-medium">${originalTitle}</p>
+                    </div>
+                `;
+            }
+            
+            // Plot Summary (from short data)
+            const plotSummary = shortData.reviewBody || shortData.abstract;
+            if (plotSummary && plotSummary !== shortData.description) {
+                detailsHTML += `
+                    <div class="bg-gray-800 p-4 rounded-lg md:col-span-2 lg:col-span-3">
+                        <p class="text-gray-400 text-sm mb-2"><i class="fas fa-align-left mr-1"></i>Extended Summary</p>
+                        <p class="text-white leading-relaxed">${plotSummary}</p>
+                    </div>
+                `;
+            }
+            
+            detailsHTML += '</div>';
+            container.innerHTML = detailsHTML;
+        }
+        
+        // Video carousel functions
+        function showVideoCarousel(videos, startIndex, title) {
+            if (!videos || videos.length === 0) return;
+            
+            window.currentVideos = videos;
+            window.currentVideoIndex = startIndex;
+            window.currentMediaTitle = title;
+            window.isVideoCarousel = true;
+            
+            updateCarousel();
+            document.getElementById('mediaCarouselSection').classList.remove('hidden');
+        }
+        
+        // Image carousel functions
+        function showImageCarousel(images, startIndex, title) {
+            if (!images || images.length === 0) return;
+            
+            window.currentImages = images;
+            window.currentImageIndex = startIndex;
+            window.currentMediaTitle = title;
+            window.isVideoCarousel = false;
+            
+            updateCarousel();
+            document.getElementById('mediaCarouselSection').classList.remove('hidden');
+        }
+        
+        function updateCarousel() {
+            const mediaContainer = document.getElementById('carouselMediaContainer');
+            const infoContainer = document.getElementById('carouselMediaInfo');
+            const titleElement = document.getElementById('carouselTitle');
+            const indicatorsContainer = document.getElementById('carouselIndicators');
+            
+            titleElement.textContent = window.currentMediaTitle;
+            
+            // Clear previous content
+            mediaContainer.innerHTML = '';
+            infoContainer.innerHTML = '';
+            
+            if (window.isVideoCarousel && window.currentVideos) {
+                const video = window.currentVideos[window.currentVideoIndex];
+                
+                // Try multiple methods to get video URL
+                let videoUrl = null;
+                const playbackURLs = video.playbackURLs || [];
+                
+                // Try different quality options
+                const qualityOptions = ['DEF_1080p', 'DEF_720p', 'DEF_480p', 'DEF_360p', 'DEF_AUTO'];
+                for (const quality of qualityOptions) {
+                    const playback = playbackURLs.find(p => p.videoDefinition === quality);
+                    if (playback && playback.url) {
+                        videoUrl = playback.url;
+                        break;
+                    }
+                }
+                
+                // Fallback to first available URL
+                if (!videoUrl && playbackURLs.length > 0) {
+                    videoUrl = playbackURLs[0].url;
+                }
+                
+                // Alternative: try to get from video preview or other sources
+                if (!videoUrl && video.previewURLs && video.previewURLs.length > 0) {
+                    videoUrl = video.previewURLs[0].url;
+                }
+                
+                if (videoUrl) {
+                    console.log('🎥 Original video URL:', videoUrl);
+                    
+                    // Create video element with mobile-responsive sizing
+                    const videoElement = document.createElement('video');
+                    videoElement.controls = true;
+                    videoElement.autoplay = true;
+                    videoElement.className = 'w-full max-w-full h-auto max-h-[80vh] mx-auto rounded';
+                    videoElement.style.maxWidth = '100%';
+                    videoElement.style.objectFit = 'contain';
+                    videoElement.poster = video.thumbnail?.url || '';
+                    videoElement.crossOrigin = 'anonymous';
+                    videoElement.playsInline = true; // Important for iOS
+                    
+                    // First attempt: Try direct URL
+                    videoElement.src = videoUrl;
+                    
+                    let proxyAttemptCount = 0;
+                    
+                    // Enhanced error handling with automatic proxy fallback
+                    videoElement.onerror = function(e) {
+                        console.error('❌ Video playback failed:', e);
+                        
+                        if (proxyAttemptCount < VIDEO_PROXIES.length) {
+                            // Try next proxy
+                            const proxy = VIDEO_PROXIES[proxyAttemptCount];
+                            const proxiedUrl = proxy + encodeURIComponent(videoUrl);
+                            
+                            console.log(`🔄 Attempting proxy ${proxyAttemptCount + 1}:`, proxy.substring(0, 30) + '...');
+                            
+                            videoElement.src = proxiedUrl;
+                            proxyAttemptCount++;
+                        } else {
+                            // All proxies failed, show error message with refresh instructions
+                            console.error('❌ All video proxies failed');
+                            mediaContainer.innerHTML = `
+                                <div class="text-center p-4 md:p-8">
+                                    <p class="text-white text-lg md:text-xl mb-3 md:mb-4">⚠️ Video Playback Blocked</p>
+                                    <p class="text-gray-400 text-xs md:text-sm mb-3 md:mb-4">IMDb is blocking video playback due to strict security policies.</p>
+                                    
+                                    <div class="bg-blue-900 border border-blue-600 rounded-lg p-3 md:p-4 mb-4 max-w-lg mx-auto">
+                                        <p class="text-blue-200 font-semibold text-sm md:text-base mb-2">💡 Solutions:</p>
+                                        <ul class="text-left text-xs md:text-sm text-blue-200 space-y-1 mb-3">
+                                            <li>• Open video in new tab (below)</li>
+                                            <li>• Try incognito/private browsing mode</li>
+                                            <li>• Use a VPN service</li>
+                                            <li>• Wait a few minutes and retry</li>
+                                        </ul>
+                                        
+                                        <div class="flex flex-col gap-2 mt-4">
+                                            <button class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300 text-sm" onclick="window.open('${videoUrl}', '_blank')">
+                                                Open Video in New Tab
+                                            </button>
+                                            <button class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-sm" onclick="location.reload()">
+                                                Reload Page
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <p class="text-gray-300 text-xs md:text-sm mb-4 md:mb-6">Other options:</p>
+                                    <ul class="text-left max-w-md mx-auto text-xs md:text-sm text-gray-400 space-y-1 md:space-y-2 mb-4 md:mb-6 px-4">
+                                        <li>• Search for "${video.name?.value || video.contentTitle?.text || 'trailer'}" on YouTube</li>
+                                        <li>• Try a different browser</li>
+                                        <li>• Clear browser cache and cookies</li>
+                                    </ul>
+                                    ${video.thumbnail?.url ? `<img src="${video.thumbnail.url}" alt="Thumbnail" class="max-w-full md:max-w-md mx-auto mt-4 rounded">` : ''}
+                                </div>
+                            `;
+                        }
+                    };
+                    
+                    // Success handler - log to console only
+                    videoElement.onloadeddata = function() {
+                        if (proxyAttemptCount === 0) {
+                            console.log('✅ Video loaded successfully (direct playback)');
+                        } else {
+                            console.log(`✅ Video loaded via proxy ${proxyAttemptCount}: ${VIDEO_PROXIES[proxyAttemptCount - 1]}`);
+                        }
+                    };
+                    
+                    mediaContainer.appendChild(videoElement);
+                    
+                    // Add video title (mobile responsive) to info container
+                    const videoTitle = document.createElement('p');
+                    videoTitle.className = 'text-center text-white mt-4 text-base md:text-lg px-2';
+                    videoTitle.textContent = video.name?.value || video.contentTitle?.text || 'Video';
+                    infoContainer.appendChild(videoTitle);
+                } else {
+                    // Show thumbnail with message if video URL not available
+                    mediaContainer.innerHTML = `
+                        <div class="text-center">
+                            <p class="text-white mb-4">🎬 Video not available for direct playback</p>
+                            ${video.thumbnail?.url ? `<img src="${video.thumbnail.url}" alt="Thumbnail" class="max-w-md mx-auto rounded">` : ''}
+                        </div>
+                    `;
+                    
+                    // Add video title to info container
+                    const videoTitle = document.createElement('p');
+                    videoTitle.className = 'text-center text-gray-400 mt-4 text-base md:text-lg px-2';
+                    videoTitle.textContent = video.name?.value || video.contentTitle?.text || 'Video';
+                    infoContainer.appendChild(videoTitle);
+                }
+                
+                // Update indicators for videos
+                indicatorsContainer.innerHTML = '';
+                window.currentVideos.forEach((item, index) => {
+                    const indicator = document.createElement('div');
+                    indicator.className = `w-3 h-3 rounded-full cursor-pointer transition ${index === window.currentVideoIndex ? 'bg-accent scale-125' : 'bg-gray-600 hover:bg-gray-400'}`;
+                    indicator.onclick = () => {
+                        window.currentVideoIndex = index;
+                        updateCarousel();
+                    };
+                    indicatorsContainer.appendChild(indicator);
+                });
+            } else if (!window.isVideoCarousel && window.currentImages) {
+                const image = window.currentImages[window.currentImageIndex];
+                
+                const img = document.createElement('img');
+                img.src = image.url || image.id || 'https://placehold.co/800x600?text=No+Image&font=opensans';
+                img.alt = image.caption?.plainText || 'Image';
+                img.className = 'w-full max-w-full h-auto max-h-[60vh] md:max-h-[70vh] object-contain mx-auto rounded';
+                
+                // Add error handling for images
+                img.onerror = function() {
+                    this.src = 'https://placehold.co/800x600?text=Image+Not+Available&font=opensans';
+                };
+                
+                mediaContainer.appendChild(img);
+                
+                // Add image caption (mobile responsive) to info container
+                if (image.caption?.plainText) {
+                    const caption = document.createElement('p');
+                    caption.className = 'text-center text-white mt-4 text-base md:text-lg px-2';
+                    caption.textContent = image.caption.plainText;
+                    infoContainer.appendChild(caption);
+                }
+                
+                // Update indicators for images
+                indicatorsContainer.innerHTML = '';
+                window.currentImages.forEach((item, index) => {
+                    const indicator = document.createElement('div');
+                    indicator.className = `w-3 h-3 rounded-full cursor-pointer transition ${index === window.currentImageIndex ? 'bg-accent scale-125' : 'bg-gray-600 hover:bg-gray-400'}`;
+                    indicator.onclick = () => {
+                        window.currentImageIndex = index;
+                        updateCarousel();
+                    };
+                    indicatorsContainer.appendChild(indicator);
+                });
+            }
+        }
+        
+        function showPrevMedia() {
+            if (window.isVideoCarousel && window.currentVideos) {
+                window.currentVideoIndex = (window.currentVideoIndex - 1 + window.currentVideos.length) % window.currentVideos.length;
+                updateCarousel();
+            } else if (!window.isVideoCarousel && window.currentImages) {
+                window.currentImageIndex = (window.currentImageIndex - 1 + window.currentImages.length) % window.currentImages.length;
+                updateCarousel();
+            }
+        }
+        
+        function showNextMedia() {
+            if (window.isVideoCarousel && window.currentVideos) {
+                window.currentVideoIndex = (window.currentVideoIndex + 1) % window.currentVideos.length;
+                updateCarousel();
+            } else if (!window.isVideoCarousel && window.currentImages) {
+                window.currentImageIndex = (window.currentImageIndex + 1) % window.currentImages.length;
+                updateCarousel();
+            }
+        }
+        
+        function hideMediaCarousel() {
+            document.getElementById('mediaCarouselSection').classList.add('hidden');
+            window.currentVideos = null;
+            window.currentImages = null;
+            window.currentVideoIndex = 0;
+            window.currentImageIndex = 0;
+            window.currentMediaTitle = '';
+            window.isVideoCarousel = false;
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchMovieDetails();
+            
+            // Add keyboard navigation
+            document.addEventListener('keydown', function(e) {
+                // ESC key to close modals
+                if (e.key === 'Escape') {
+                    hideMediaCarousel();
+                }
+                
+                // Left/Right arrows for carousel navigation
+                if (document.getElementById('mediaCarouselSection') && 
+                    !document.getElementById('mediaCarouselSection').classList.contains('hidden')) {
+                    if (e.key === 'ArrowLeft') {
+                        showPrevMedia();
+                    } else if (e.key === 'ArrowRight') {
+                        showNextMedia();
+                    }
+                }
+            });
+            
+            // Close carousel button
+            if (document.getElementById('closeCarouselButton')) {
+                document.getElementById('closeCarouselButton').onclick = hideMediaCarousel;
+            }
+            if (document.getElementById('prevMediaButton')) {
+                document.getElementById('prevMediaButton').onclick = showPrevMedia;
+            }
+            if (document.getElementById('nextMediaButton')) {
+                document.getElementById('nextMediaButton').onclick = showNextMedia;
+            }
+        });
+        
+        // ===== FIREBASE & AUTH INTEGRATION =====
+        
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeTE5otOE58jq1-bIPNbiYdwiwX88iT00",
+            authDomain: "movie-wiki-86d4d.firebaseapp.com",
+            databaseURL: "https://movie-wiki-86d4d-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "movie-wiki-86d4d",
+            storageBucket: "movie-wiki-86d4d.firebasestorage.app",
+            messagingSenderId: "453451714779",
+            appId: "1:453451714779:web:e94ad0ef8df299b733fcfe",
+            measurementId: "G-91SHQF7F4P"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+        
+        let currentUser = null;
+        let currentMovieId = null;
+        
+        // Google Sign-In
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    console.log('✅ Signed in:', result.user.displayName);
+                })
+                .catch((error) => {
+                    console.error('Sign-in error:', error);
+                    alert('Failed to sign in. Please try again.');
+                });
+        }
+        
+        // Auth State Observer
+        auth.onAuthStateChanged((user) => {
+            currentUser = user;
+            updateAuthUI(user);
+            
+            if (user && currentMovieId) {
+                loadComments(currentMovieId);
+            }
+        });
+        
+        // Update UI based on auth state
+        function updateAuthUI(user) {
+            const loginBtn = document.getElementById('loginBtn');
+            const mobileLoginBtn = document.getElementById('mobileLoginBtn');
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            const mobileUserName = document.getElementById('mobileUserName');
+            const commentFormAuth = document.getElementById('commentFormAuth');
+            const commentFormGuest = document.getElementById('commentFormGuest');
+            
+            if (user) {
+                // User is signed in
+                const displayName = user.displayName || 'User';
+                const shortName = displayName.split(' ')[0]; // First name only
+                
+                userNameDisplay.textContent = shortName;
+                mobileUserName.textContent = shortName;
+                loginBtn.innerHTML = `<i class="fas fa-user-circle"></i><span>${shortName}</span>`;
+                mobileLoginBtn.innerHTML = `<i class="fas fa-user-circle text-xl"></i><span class="text-xs">${shortName}</span>`;
+                
+                commentFormAuth.classList.remove('hidden');
+                commentFormGuest.classList.add('hidden');
+            } else {
+                // User is signed out
+                userNameDisplay.textContent = 'Login';
+                mobileUserName.textContent = 'Login';
+                loginBtn.innerHTML = `<i class="fas fa-user"></i><span>Login</span>`;
+                mobileLoginBtn.innerHTML = `<i class="fas fa-user text-xl"></i><span class="text-xs">Login</span>`;
+                
+                commentFormAuth.classList.add('hidden');
+                commentFormGuest.classList.remove('hidden');
+            }
+        }
+        
+        // Login button handlers
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            if (currentUser) {
+                // Show user menu (logout option)
+                if (confirm(`Sign out ${currentUser.displayName}?`)) {
+                    auth.signOut();
+                }
+            } else {
+                signInWithGoogle();
+            }
+        });
+        
+        document.getElementById('mobileLoginBtn').addEventListener('click', () => {
+            if (currentUser) {
+                if (confirm(`Sign out ${currentUser.displayName}?`)) {
+                    auth.signOut();
+                }
+            } else {
+                signInWithGoogle();
+            }
+        });
+        
+        document.getElementById('guestLoginBtn').addEventListener('click', signInWithGoogle);
+        
+        // ===== COMMENTS FUNCTIONALITY =====
+        
+        // Character counter
+        document.getElementById('commentText').addEventListener('input', function() {
+            const count = this.value.length;
+            document.getElementById('charCount').textContent = count;
+            
+            if (count > 500) {
+                this.value = this.value.substring(0, 500);
+                document.getElementById('charCount').textContent = '500';
+            }
+        });
+        
+        // ===== RATE LIMITING FOR FIREBASE =====
+        const rateLimits = {
+            comments: {
+                maxPerHour: 10,       // Max 10 comments per hour per user
+                maxPerDay: 30,        // Max 30 comments per day per user
+                cooldown: 10000       // 10 seconds between comments
+            },
+            likes: {
+                maxPerMinute: 20,     // Max 20 likes per minute
+                cooldown: 500         // 0.5 seconds between likes
+            }
+        };
+        
+        const userActivity = {
+            lastCommentTime: 0,
+            commentsThisHour: 0,
+            commentsToday: 0,
+            hourStart: Date.now(),
+            dayStart: Date.now(),
+            lastLikeTime: 0,
+            likesThisMinute: 0,
+            minuteStart: Date.now()
+        };
+        
+        // Check if user can comment
+        function canUserComment() {
+            const now = Date.now();
+            
+            // Reset hourly count
+            if (now - userActivity.hourStart > 3600000) {
+                userActivity.commentsThisHour = 0;
+                userActivity.hourStart = now;
+            }
+            
+            // Reset daily count
+            if (now - userActivity.dayStart > 86400000) {
+                userActivity.commentsToday = 0;
+                userActivity.dayStart = now;
+            }
+            
+            // Check cooldown
+            if (now - userActivity.lastCommentTime < rateLimits.comments.cooldown) {
+                const wait = Math.ceil((rateLimits.comments.cooldown - (now - userActivity.lastCommentTime)) / 1000);
+                return { allowed: false, reason: `Please wait ${wait} seconds before commenting again` };
+            }
+            
+            // Check hourly limit
+            if (userActivity.commentsThisHour >= rateLimits.comments.maxPerHour) {
+                return { allowed: false, reason: `You've reached the hourly limit of ${rateLimits.comments.maxPerHour} comments` };
+            }
+            
+            // Check daily limit
+            if (userActivity.commentsToday >= rateLimits.comments.maxPerDay) {
+                return { allowed: false, reason: `You've reached the daily limit of ${rateLimits.comments.maxPerDay} comments` };
+            }
+            
+            return { allowed: true };
+        }
+        
+        // Check if user can like
+        function canUserLike() {
+            const now = Date.now();
+            
+            // Reset minute count
+            if (now - userActivity.minuteStart > 60000) {
+                userActivity.likesThisMinute = 0;
+                userActivity.minuteStart = now;
+            }
+            
+            // Check cooldown
+            if (now - userActivity.lastLikeTime < rateLimits.likes.cooldown) {
+                return { allowed: false, reason: 'Please slow down' };
+            }
+            
+            // Check minute limit
+            if (userActivity.likesThisMinute >= rateLimits.likes.maxPerMinute) {
+                return { allowed: false, reason: 'Too many likes, please wait a minute' };
+            }
+            
+            return { allowed: true };
+        }
+        
+        // ===== END RATE LIMITING =====
+        
+        // Submit comment
+        document.getElementById('commentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!currentUser) {
+                alert('⚠️ Please sign in to post comments');
+                return;
+            }
+            
+            // Check rate limit
+            const canComment = canUserComment();
+            if (!canComment.allowed) {
+                alert(`⏱️ ${canComment.reason}`);
+                return;
+            }
+            
+            const text = document.getElementById('commentText').value.trim();
+            
+            if (!text || !currentMovieId) {
+                return;
+            }
+            
+            const comment = {
+                userId: currentUser.uid,
+                userName: currentUser.displayName,
+                userPhoto: currentUser.photoURL,
+                text,
+                likes: 0,
+                likedBy: {},
+                timestamp: Date.now()
+            };
+            
+            try {
+                await database.ref(`comments/${currentMovieId}`).push(comment);
+                
+                // Update rate limit counters
+                userActivity.lastCommentTime = Date.now();
+                userActivity.commentsThisHour++;
+                userActivity.commentsToday++;
+                
+                document.getElementById('commentText').value = '';
+                document.getElementById('charCount').textContent = '0';
+                loadComments(currentMovieId);
+                
+                // Show success with remaining quota
+                const remaining = rateLimits.comments.maxPerHour - userActivity.commentsThisHour;
+                if (remaining <= 3) {
+                    alert(`✅ Comment posted! (${remaining} comments remaining this hour)`);
+                }
+            } catch (error) {
+                console.error('Error posting comment:', error);
+                alert('❌ Failed to post comment. Please try again.');
+            }
+        });
+        
+        // Load comments
+        function loadComments(movieId) {
+            const container = document.getElementById('commentsContainer');
+            container.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-accent text-3xl mb-4"></i><p class="text-gray-400">Loading comments...</p></div>';
+            
+            database.ref(`comments/${movieId}`).once('value', (snapshot) => {
+                const comments = [];
+                snapshot.forEach((childSnapshot) => {
+                    comments.push({
+                        id: childSnapshot.key,
+                        ...childSnapshot.val()
+                    });
+                });
+                
+                // Sort by timestamp (recent first)
+                comments.sort((a, b) => b.timestamp - a.timestamp);
+                
+                displayComments(comments, movieId);
+            });
+        }
+        
+        // Display comments
+        function displayComments(comments, movieId) {
+            const container = document.getElementById('commentsContainer');
+            document.getElementById('commentCount').textContent = comments.length;
+            
+            if (comments.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 glass-card rounded-xl">
+                        <i class="fas fa-comments text-gray-500 text-5xl mb-4"></i>
+                        <p class="text-gray-400 text-lg">No comments yet. Be the first to share your thoughts!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = comments.map(c => `
+                <div class="comment-card rounded-xl p-6">
+                    <div class="flex items-start gap-4">
+                        <img src="${c.userPhoto || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(c.userName) + '&background=22d3ee&color=fff'}" 
+                             alt="${c.userName}" 
+                             class="w-12 h-12 rounded-full">
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-bold text-white">${c.userName}</h4>
+                                <span class="text-sm text-gray-400">${formatCommentDate(c.timestamp)}</span>
+                            </div>
+                            <p class="text-gray-300 mb-3">${c.text}</p>
+                            <div class="flex items-center gap-4">
+                                <button class="like-btn ${c.likedBy && currentUser && c.likedBy[currentUser.uid] ? 'text-accent' : 'text-gray-400'} hover:text-accent transition-colors flex items-center gap-2" 
+                                        data-movie-id="${movieId}" 
+                                        data-comment-id="${c.id}">
+                                    <i class="fas fa-heart"></i>
+                                    <span>${c.likes || 0}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Add like button listeners
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.addEventListener('click', handleLike);
+            });
+        }
+        
+        // Handle like
+        async function handleLike(e) {
+            if (!currentUser) {
+                alert('⚠️ Please sign in to like comments');
+                return;
+            }
+            
+            // Check rate limit
+            const canLike = canUserLike();
+            if (!canLike.allowed) {
+                return; // Silently ignore (no alert spam)
+            }
+            
+            const btn = e.currentTarget;
+            const movieId = btn.getAttribute('data-movie-id');
+            const commentId = btn.getAttribute('data-comment-id');
+            
+            try {
+                const ref = database.ref(`comments/${movieId}/${commentId}`);
+                const snapshot = await ref.once('value');
+                const comment = snapshot.val();
+                
+                if (!comment) return;
+                
+                const likedBy = comment.likedBy || {};
+                const hasLiked = likedBy[currentUser.uid];
+                
+                if (hasLiked) {
+                    // Unlike
+                    delete likedBy[currentUser.uid];
+                    await ref.update({
+                        likes: Math.max((comment.likes || 0) - 1, 0),
+                        likedBy
+                    });
+                } else {
+                    // Like
+                    likedBy[currentUser.uid] = true;
+                    await ref.update({
+                        likes: (comment.likes || 0) + 1,
+                        likedBy
+                    });
+                }
+                
+                // Update rate limit counters
+                userActivity.lastLikeTime = Date.now();
+                userActivity.likesThisMinute++;
+                
+                loadComments(movieId);
+            } catch (error) {
+                console.error('Error liking comment:', error);
+            }
+        }
+        
+        // Format comment date
+        function formatCommentDate(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (seconds < 60) return 'Just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            if (hours < 24) return `${hours}h ago`;
+            if (days < 7) return `${days}d ago`;
+            return date.toLocaleDateString();
+        }
+        
+        // Comment sort
+        document.getElementById('commentSort').addEventListener('change', function() {
+            database.ref(`comments/${currentMovieId}`).once('value', (snapshot) => {
+                const comments = [];
+                snapshot.forEach((childSnapshot) => {
+                    comments.push({
+                        id: childSnapshot.key,
+                        ...childSnapshot.val()
+                    });
+                });
+                
+                if (this.value === 'recent') {
+                    comments.sort((a, b) => b.timestamp - a.timestamp);
+                } else {
+                    comments.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+                }
+                
+                displayComments(comments, currentMovieId);
+            });
+        });
+        
+        // ===== SHARE FUNCTIONALITY =====
+        
+        // Share function (reusable)
+        function handleShare() {
+            console.log('🔗 Share button clicked');
+            const movieTitle = document.getElementById('movieTitle').textContent;
+            const movieRating = document.getElementById('movieRating').textContent;
+            const shareUrl = window.location.href;
+            
+            const shareText = `🎬 Check out ${movieTitle} on Movie Wiki!\n⭐ Rating: ${movieRating}\n🔗 ${shareUrl}`;
+            
+            console.log('Share data:', { movieTitle, shareUrl });
+            
+            // Try Web Share API first (mobile)
+            if (navigator.share) {
+                console.log('📱 Using Web Share API');
+                navigator.share({
+                    title: movieTitle,
+                    text: shareText,
+                    url: shareUrl
+                }).then(() => {
+                    console.log('✅ Shared successfully');
+                }).catch(err => {
+                    console.log('❌ Share cancelled or failed:', err);
+                });
+            } else {
+                console.log('💻 Web Share not available, using fallback');
+                // Check if clipboard API exists
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                        console.log('✅ Copied to clipboard');
+                        alert('✅ Link copied to clipboard!');
+                    }).catch((err) => {
+                        console.error('❌ Clipboard failed:', err);
+                        showShareModal(shareUrl, shareText);
+                    });
+                } else {
+                    // Clipboard API not available (HTTP or old browser)
+                    console.log('⚠️ Clipboard API not available, showing modal');
+                    showShareModal(shareUrl, shareText);
+                }
+            }
+        }
+        
+        // Attach share handler
+        document.getElementById('shareButton').addEventListener('click', handleShare);
+        
+        // Share modal function
+        function showShareModal(url, text) {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+            
+            const content = document.createElement('div');
+            content.style.cssText = 'background: #1e293b; padding: 2rem; border-radius: 1rem; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);';
+            
+            content.innerHTML = `
+                <h3 style="color: #22d3ee; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">
+                    📤 Share This Movie
+                </h3>
+                <p style="color: #cbd5e1; margin-bottom: 1rem;">
+                    Copy the link below:
+                </p>
+                <input type="text" value="${url}" readonly 
+                    style="width: 100%; padding: 0.75rem; background: #0f172a; color: white; border: 2px solid #22d3ee; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem;" 
+                    onclick="this.select()" id="shareUrlInput">
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <button onclick="var input = document.getElementById('shareUrlInput'); input.select(); document.execCommand('copy'); alert('Copied!');" 
+                        style="flex: 1; padding: 0.75rem; background: linear-gradient(to right, #22d3ee, #3b82f6); color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">
+                        📋 Copy Link
+                    </button>
+                    <button onclick="this.parentElement.parentElement.parentElement.remove();" 
+                        style="flex: 1; padding: 0.75rem; background: #475569; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">
+                        Close
+                    </button>
+                </div>
+                <div style="padding-top: 1rem; border-top: 1px solid #475569;">
+                    <p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.5rem;">Or share via:</p>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <a href="https://wa.me/?text=${encodeURIComponent(text)}" target="_blank" 
+                            style="flex: 1; padding: 0.5rem; background: #25D366; color: white; text-align: center; border-radius: 0.5rem; text-decoration: none; font-size: 0.875rem;">
+                            WhatsApp
+                        </a>
+                        <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}" target="_blank" 
+                            style="flex: 1; padding: 0.5rem; background: #1DA1F2; color: white; text-align: center; border-radius: 0.5rem; text-decoration: none; font-size: 0.875rem;">
+                            Twitter
+                        </a>
+                        <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}" target="_blank" 
+                            style="flex: 1; padding: 0.5rem; background: #1877F2; color: white; text-align: center; border-radius: 0.5rem; text-decoration: none; font-size: 0.875rem;">
+                            Facebook
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // Auto-select text
+            setTimeout(() => document.getElementById('shareUrlInput').select(), 100);
+            
+            // Close on background click
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+        
+        // Set movie ID when details load
+        const urlParams = new URLSearchParams(window.location.search);
+        currentMovieId = urlParams.get('id');
+        if (currentMovieId) {
+            loadComments(currentMovieId);
+        }
+    </script>
+    
+    <!-- Footer -->
+    <footer class="glass-card border-t border-gray-700 py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-film text-accent"></i>
+                        <span class="font-bold text-accent">Movie Wiki</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-2">&copy; 2025 Movie Wiki. All rights reserved.</p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a href="privacy-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Privacy Policy</a>
+                    <a href="terms-of-service.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Terms of Service</a>
+                    <a href="disclaimer.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Disclaimer</a>
+                    <a href="cookie-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        // Remove loader when page is fully loaded
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('globalLoader');
+            if (loader) {
+                setTimeout(function() {
+                    loader.style.opacity = '0';
+                    loader.style.transition = 'opacity 0.5s ease';
+                    setTimeout(function() {
+                        if (loader.parentNode) {
+                            loader.parentNode.removeChild(loader);
+                        }
+                    }, 500);
+                }, 500);
+            }
+        });
+    </script>
+</body>
+</html>

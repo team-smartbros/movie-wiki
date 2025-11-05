@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Wiki - Discover Movies & TV Shows</title>
+    <link rel="icon" href="../assets/favicon.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #1e293b;
+            --accent: #22d3ee;
+            --dark: #020617;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: var(--primary);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 70px;
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding-bottom: 0;
+            }
+        }
+        
+        .bg-primary {
+            background-color: var(--primary);
+        }
+        
+        .bg-secondary {
+            background-color: var(--secondary);
+        }
+        
+        .text-accent {
+            color: var(--accent);
+        }
+        
+        .border-accent {
+            border-color: var(--accent);
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(34, 211, 238, 0.1);
+        }
+        
+        .movie-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(34, 211, 238, 0.2);
+        }
+        
+        .movie-card img {
+            transition: transform 0.3s ease;
+        }
+        
+        .movie-card:hover img {
+            transform: scale(1.05);
+        }
+        
+        .mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(34, 211, 238, 0.2);
+            z-index: 1000;
+        }
+        
+        @media (min-width: 768px) {
+            .mobile-nav {
+                display: none;
+            }
+        }
+        
+        /* Marquee animation */
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        .animate-marquee {
+            animation: marquee 15s linear infinite;
+        }
+        
+        /* Search label styling */
+        #searchLabel {
+            position: absolute;
+            top: 50%;
+            left: 1rem;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        
+        #searchLabel.a11y-hidden {
+            display: none;
+        }
+        
+        /* Search input styling */
+        #searchInput {
+            width: 100%;
+            padding: 0.75rem 3rem 0.75rem 1rem;
+            border-radius: 0.5rem;
+            background-color: var(--secondary);
+            border: 1px solid #475569;
+            color: white;
+            font-size: 1rem;
+        }
+        
+        #searchInput:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.3);
+        }
+        
+        #searchInput::placeholder {
+            color: #94a3b8;
+        }
+        
+        /* Search button styling */
+        #voiceSearchButton, #searchButton {
+            position: absolute;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        #voiceSearchButton {
+            right: 2.5rem;
+        }
+        
+        #searchButton {
+            right: 1rem;
+        }
+        
+        /* Genre pill styling */
+        .genre-pill {
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .genre-pill:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 12px rgba(34, 211, 238, 0.3);
+            background-color: #2d3748;
+        }
+        
+        .genre-pill.active {
+            background-color: var(--secondary);
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(34, 211, 238, 0.2);
+        }
+        
+        /* Scrollbar styling */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Responsive banner ads */
+        .banner-ad-container {
+            width: 100%;
+            max-width: 728px;
+            margin: 0 auto;
+            min-height: 90px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .banner-ad-container ins {
+            display: block;
+            width: 100% !important;
+            height: 90px !important;
+            min-height: 90px;
+            max-width: 728px;
+        }
+
+        /* Featured Trailers Section */
+        #featuredTrailersContainer {
+            position: relative;
+            height: 300px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(30, 41, 59, 0.5);
+        }
+        
+        #trailersCarousel {
+            display: flex;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            height: 100%;
+            width: 100%;
+        }
+        
+        .trailer-item {
+            flex: 0 0 100%;
+            height: 100%;
+            position: relative;
+            scroll-snap-align: start;
+            overflow: hidden;
+        }
+        
+        .trailer-item .thumbnail-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+        }
+        
+        .trailer-item .thumbnail-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        
+        .trailer-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+            display: flex;
+            align-items: flex-end;
+            padding: 1rem;
+            border-radius: 12px;
+        }
+        
+        .trailer-info {
+            color: white;
+        }
+        
+        .trailer-info h3 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .trailer-controls {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 30;
+        }
+        
+        .trailer-control-btn {
+            background: rgba(34, 211, 238, 0.8);
+            color: #0f172a;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: all 0.3s ease;
+            z-index: 35;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        
+        .trailer-control-btn:hover {
+            background: #22d3ee;
+            transform: scale(1.1);
+        }
+        
+        /* Ensure play button is always visible */
+        .trailer-control-btn:not(:disabled) {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        
+        /* Responsive adjustments for featured trailers */
+        @media (max-width: 768px) {
+            #featuredTrailersContainer {
+                height: 200px;
+            }
+            
+            .trailer-info h3 {
+                font-size: 1rem;
+            }
+            
+            .trailer-control-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #featuredTrailersContainer {
+                height: 150px;
+            }
+            
+            .trailer-overlay {
+                padding: 0.5rem;
+            }
+            
+            .trailer-info h3 {
+                font-size: 0.875rem;
+            }
+            
+            .trailer-info p {
+                font-size: 0.75rem;
+            }
+            
+            .trailer-control-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Trailer Modal */
+        #trailerModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .video-player-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .aspect-ratio-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+        }
+        
+        .aspect-ratio-wrapper video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        
+        .close-trailer-modal {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+        
+        .close-trailer-modal:hover {
+            color: var(--accent);
+        }
+
+        /* Mobile ad adjustments */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+                min-height: 60px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100%;
+                width: 100% !important;
+                height: 60px !important;
+                min-height: 60px;
+            }
+            
+            .trailer-card img {
+                height: 100%;
+                object-fit: cover;
+            }
+            
+            .trailer-overlay {
+                padding: 1.25rem 0.75rem 0.75rem;
+            }
+            
+            .trailer-title {
+                font-size: 1.1rem;
+            }
+            
+            .trailer-meta {
+                font-size: 0.75rem;
+                gap: 0.5rem;
+            }
+            
+            .trailer-button {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .trailer-button i {
+                font-size: 1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-ad-container {
+                min-height: 50px;
+            }
+            
+            .banner-ad-container ins {
+                height: 50px !important;
+                min-height: 50px;
+            }
+            
+            .trailer-card img {
+                height: 100%;
+                object-fit: cover;
+            }
+            
+            .trailer-overlay {
+                padding: 1rem 0.5rem 0.5rem;
+            }
+            
+            .trailer-title {
+                font-size: 1rem;
+            }
+            
+            .trailer-meta {
+                font-size: 0.7rem;
+            }
+        }
+        
+        /* Loader styling */
+        .loader {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(34, 211, 238, 0.3);
+            border-top: 2px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Scroll indicators */
+        .scroll-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            background: rgba(34, 211, 238, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+        }
+        
+        .scroll-indicator.visible {
+            opacity: 1;
+        }
+        
+        .scroll-left {
+            left: 10px;
+        }
+        
+        .scroll-right {
+            right: 10px;
+        }
+        
+        .trailer-control-btn {
+            background: rgba(34, 211, 238, 0.8);
+            color: #0f172a;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: all 0.3s ease;
+            z-index: 35;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        
+        .trailer-control-btn:hover {
+            background: #22d3ee;
+            transform: scale(1.1);
+        }
+        
+        /* Ensure play button is always visible */
+        .trailer-control-btn:not(:disabled) {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        
+        /* Responsive adjustments for featured trailers */
+        @media (max-width: 768px) {
+            #featuredTrailersContainer {
+                height: 200px;
+            }
+            
+            .trailer-info h3 {
+                font-size: 1rem;
+            }
+            
+            .trailer-control-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #featuredTrailersContainer {
+                height: 150px;
+            }
+            
+            .trailer-overlay {
+                padding: 0.5rem;
+            }
+            
+            .trailer-info h3 {
+                font-size: 0.875rem;
+            }
+            
+            .trailer-info p {
+                font-size: 0.75rem;
+            }
+            
+            .trailer-control-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 0.875rem;
+            }
+        }
+        
+        /* Close button for trailer player */
+        .trailer-close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(34, 211, 238, 0.8);
+            color: #0f172a;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            z-index: 40;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .trailer-close-btn:hover {
+            background: #22d3ee;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body class="bg-primary text-white min-h-screen font-body">
+    <!-- Global Loader -->
+    <div id="globalLoader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+         background: rgba(15, 23, 42, 0.95); z-index: 9999; display: flex; 
+         justify-content: center; align-items: center; flex-direction: column;">
+        <div style="font-size: 3rem; color: #22d3ee; margin-bottom: 1rem; animation: pulse 2s infinite;">
+            <i class="fas fa-film"></i>
+        </div>
+        <div style="color: #94a3b8; font-size: 1.2rem; margin-bottom: 2rem;">Loading Movie Wiki...</div>
+        <div style="display: flex; gap: 0.5rem;">
+            <div style="width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; 
+                        animation: bounce 1.5s infinite ease-in-out;"></div>
+            <div style="width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; 
+                        animation: bounce 1.5s infinite ease-in-out 0.2s;"></div>
+            <div style="width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; 
+                        animation: bounce 1.5s infinite ease-in-out 0.4s;"></div>
+        </div>
+        
+        <style>
+            @keyframes pulse {
+                0% { transform: scale(1); opacity: 0.8; }
+                50% { transform: scale(1.1); opacity: 1; }
+                100% { transform: scale(1); opacity: 0.8; }
+            }
+            
+            @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-15px); }
+            }
+        </style>
+    </div>
+    
+    <!-- Navigation Bar -->
+    <nav class="glass-card sticky top-0 z-50 border-b border-gray-700">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-film text-accent text-2xl"></i>
+                    <h1 class="text-2xl font-bold text-accent font-sans">Movie Wiki</h1>
+                </div>
+                <div class="hidden md:flex items-center gap-4">
+                    <a href="./index.html" class="text-accent flex items-center gap-2">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="./forum.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-comments"></i>
+                        <span>Forum</span>
+                    </a>
+                    <button id="loginBtn" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-user"></i>
+                        <span id="userNameDisplay">Login</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-nav md:hidden">
+        <div class="flex justify-around items-center py-3">
+            <a href="./index.html" class="flex flex-col items-center gap-1 text-accent">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="#genreFilters" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-filter text-xl"></i>
+                <span class="text-xs">Filter</span>
+            </a>
+            <a href="./forum.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-comments text-xl"></i>
+                <span class="text-xs">Forum</span>
+            </a>
+            <button id="mobileLoginBtn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-user text-xl"></i>
+                <span class="text-xs" id="mobileUserName">Login</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Welcome Section -->
+    <section id="welcomeSection" class="container mx-auto px-4 py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-5xl font-bold mb-4 text-accent font-sans">Discover Movies & TV Shows</h1>
+            <p class="text-lg mb-6 max-w-2xl mx-auto text-gray-300">Find detailed information, trailers, and streaming options for your favorite movies and web series</p>
+        </div>
+        
+        <!-- Marquee Message -->
+        <div class="mb-8 overflow-hidden rounded-lg bg-gradient-to-r from-blue-900 to-indigo-900 border border-blue-700 py-3">
+            <div class="whitespace-nowrap relative">
+                <p class="text-blue-200 font-medium inline-block animate-marquee">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Please be patient while data is fetched. For first load, it may take some time.
+                    <i class="fas fa-info-circle ml-2"></i>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Search Bar -->
+        <div class="search max-w-2xl mx-auto mb-8">
+            <div class="search-container relative">
+                <input 
+                    type="search" 
+                    id="searchInput" 
+                    name="search" 
+                    autocomplete="off"
+                    class="w-full py-3 pl-4 pr-12 rounded-lg bg-secondary border border-gray-600 text-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50"
+                >
+                <label for="searchInput" id="searchLabel" class="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-400 pointer-events-none transition-all duration-200">
+                    Type <span>or dictate</span> to search
+                </label>
+                <button 
+                    id="voiceSearchButton" 
+                    title="Dictate"
+                    class="absolute right-10 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-accent transition-colors"
+                >
+                    <i class="fas fa-microphone"></i>
+                    <svg width="1.25rem" height="1.25rem" viewBox="0 0 100 100" class="hidden">
+                        <g stroke="#fff" stroke-width="15">
+                            <path d="M20,20 20,80">
+                                <animate attributeName="d" values="M20,40 20,60;M20,20 20,80;M20,40 20,60" dur="1s" repeatCount="indefinite" />
+                            </path>
+                            <path d="M50,10 50,90">
+                                <animate attributeName="d" values="M50,10 50,90;M50,40 50,60;M50,10 50,90" dur="1s" repeatCount="indefinite" />
+                            </path>
+                            <path d="M80,20 80,80">
+                                <animate attributeName="d" values="M80,40 80,60;M80,20 80,80;M80,40 80,60" dur="1s" repeatCount="indefinite" />
+                            </path>
+                        </g>
+                    </svg>
+                    <span class="a11y-hidden"></span>
+                </button>
+                <button 
+                    id="searchButton" 
+                    title="Search"
+                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-accent transition-colors"
+                >
+                    <i class="fas fa-search"></i>
+                    <span class="a11y-hidden"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Banner Ad -->
+        <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container">
+            <ins style="width: 728px;height:90px!important;display: block !important;;" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"></ins>
+            <script src="//data527.click/js/responsive.js" async></script>
+        </div>
+        
+        <!-- Genre Filters -->
+        <div class="mb-8 relative">
+            <h3 class="text-lg font-semibold mb-4 text-gray-300 flex items-center justify-center gap-2">
+                <i class="fas fa-filter"></i>
+                Filter by Genre
+            </h3>
+            <div id="genreFilters" class="flex overflow-x-auto pb-4 scrollbar-hide relative">
+                <div class="flex gap-3 min-w-max pl-2 pr-2 genre-pill-container">
+                    <button class="genre-pill active px-4 py-2 rounded-full bg-secondary border border-accent text-accent whitespace-nowrap flex-shrink-0" data-genre="all">
+                        <i class="fas fa-globe mr-1"></i>All
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="action">
+                        <i class="fas fa-fist-raised mr-1"></i>Action
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="comedy">
+                        <i class="fas fa-laugh mr-1"></i>Comedy
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="drama">
+                        <i class="fas fa-theater-masks mr-1"></i>Drama
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="horror">
+                        <i class="fas fa-ghost mr-1"></i>Horror
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="sci-fi">
+                        <i class="fas fa-rocket mr-1"></i>Sci-Fi
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="thriller">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Thriller
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="romance">
+                        <i class="fas fa-heart mr-1"></i>Romance
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="animation">
+                        <i class="fas fa-star mr-1"></i>Animation
+                    </button>
+                    <!-- Duplicate pills for infinite scrolling -->
+                    <button class="genre-pill active px-4 py-2 rounded-full bg-secondary border border-accent text-accent whitespace-nowrap flex-shrink-0" data-genre="all">
+                        <i class="fas fa-globe mr-1"></i>All
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="action">
+                        <i class="fas fa-fist-raised mr-1"></i>Action
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="comedy">
+                        <i class="fas fa-laugh mr-1"></i>Comedy
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="drama">
+                        <i class="fas fa-theater-masks mr-1"></i>Drama
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="horror">
+                        <i class="fas fa-ghost mr-1"></i>Horror
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="sci-fi">
+                        <i class="fas fa-rocket mr-1"></i>Sci-Fi
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="thriller">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Thriller
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="romance">
+                        <i class="fas fa-heart mr-1"></i>Romance
+                    </button>
+                    <button class="genre-pill px-4 py-2 rounded-full bg-secondary border border-gray-600 text-gray-300 whitespace-nowrap flex-shrink-0" data-genre="animation">
+                        <i class="fas fa-star mr-1"></i>Animation
+                    </button>
+                </div>
+            </div>
+            <!-- Scroll indicators -->
+            <div class="scroll-indicator scroll-left">
+                <i class="fas fa-chevron-left text-accent"></i>
+            </div>
+            <div class="scroll-indicator scroll-right">
+                <i class="fas fa-chevron-right text-accent"></i>
+            </div>
+        </div>
+    </section>
+        
+    <!-- Featured Trailers Section -->
+    <div class="mb-8 container mx-auto px-4">
+        <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-film mr-2"></i>Featured Trailers</h2>
+        <div id="featuredTrailersContainer" class="relative overflow-hidden rounded-xl">
+            <!-- Loader for trailers section -->
+            <div id="trailersLoader" class="absolute inset-0 flex items-center justify-center bg-secondary rounded-xl z-10">
+                <div class="text-center">
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent mb-4"></div>
+                    <p class="text-gray-400">Loading featured trailers...</p>
+                </div>
+            </div>
+            <div id="trailersCarousel" class="flex overflow-x-hidden snap-x snap-mandatory">
+                <!-- Featured trailers will be populated here -->
+            </div>
+            <div class="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none" id="scrollLeftBtn">
+                <button class="bg-accent text-primary rounded-full p-2 mx-2 pointer-events-auto opacity-0 transition-opacity duration-300">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+            <div class="absolute inset-y-0 right-0 flex items-center justify-center pointer-events-none" id="scrollRightBtn">
+                <button class="bg-accent text-primary rounded-full p-2 mx-2 pointer-events-auto opacity-0 transition-opacity duration-300">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Popular, Latest and Coming Soon Sections -->
+    <div class="mt-4">
+        <!-- Popular Section -->
+        <div class="mb-8 container mx-auto px-4">
+            <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-fire mr-2"></i>Popular</h2>
+            <div id="popularContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <!-- Popular content will be populated here -->
+            </div>
+        </div>
+        
+        <!-- Latest Section -->
+        <div class="mb-8 container mx-auto px-4">
+            <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-clock mr-2"></i>Latest</h2>
+            <div id="latestContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <!-- Latest content will be populated here -->
+            </div>
+        </div>
+        
+        <!-- Coming Soon Section -->
+        <div class="mb-8 container mx-auto px-4">
+            <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-calendar-alt mr-2"></i>Coming Soon</h2>
+            <div id="comingSoonContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <!-- Coming soon content will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    <section id="searchResults" class="container mx-auto px-4 py-8 hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-accent font-sans">Search Results</h2>
+            <button id="backToWelcome" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>New Search
+            </button>
+        </div>
+        <div id="resultsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Movie cards will be populated here -->
+        </div>
+    </section>
+
+    <!-- Movie Details -->
+    <section id="movieDetails" class="container mx-auto px-4 py-8 hidden">
+        <div class="bg-secondary rounded-xl shadow-lg overflow-hidden">
+            <div class="md:flex">
+                <div class="md:w-1/3 p-6 flex justify-center">
+                    <img id="moviePoster" src="" alt="Movie Poster" class="rounded-lg shadow-lg w-full max-w-md">
+                </div>
+                <div class="md:w-2/3 p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 id="movieTitle" class="text-3xl font-bold text-accent font-sans"></h2>
+                        <button id="backButton" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i>Back
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Movie Information</h3>
+                            <ul class="space-y-2">
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Year:</span>
+                                    <span id="movieYear"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Rating:</span>
+                                    <span id="movieRating"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Length:</span>
+                                    <span id="movieDuration"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Genres:</span>
+                                    <span id="movieGenres"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">IMDb ID:</span>
+                                    <span id="movieImdbId"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Type:</span>
+                                    <span id="movieType"></span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Cast & Crew</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <h4 class="font-semibold text-gray-300 mb-1">Cast</h4>
+                                    <div id="movieCast" class="space-y-1">
+                                        <!-- Cast will be populated here -->
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-300 mb-1">Crew</h4>
+                                    <ul id="movieCrew" class="space-y-1">
+                                        <!-- Crew will be populated here -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        <button id="trailerButton" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-play-circle mr-2"></i>Watch Trailer
+                        </button>
+                        <button id="photosButton" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-images mr-2"></i>View Photos
+                        </button>
+                        <button id="streamButton" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-film mr-2"></i>Stream Movie
+                        </button>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Plot</h3>
+                        <p id="moviePlot" class="leading-relaxed"></p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Keywords</h3>
+                        <div id="movieKeywords" class="flex flex-wrap">
+                            <!-- Keywords will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cast Images Section -->
+            <div id="castImagesSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Cast Images</h3>
+                <div id="castImagesContainer" class="flex overflow-x-auto space-x-4 pb-4 media-carousel">
+                    <!-- Cast images will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Additional Media Section -->
+            <div id="additionalMediaSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Additional Media</h3>
+                <div id="additionalMediaContainer" class="flex overflow-x-auto space-x-4 pb-4 media-carousel">
+                    <!-- Additional media will be populated here -->
+                </div>
+            </div>
+            
+            <div class="section-divider my-6"></div>
+            
+            <!-- Comments Section -->
+            <div class="px-6 pb-6">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Comments</h3>
+                <div class="bg-gray-800 rounded-lg p-4 mb-4">
+                    <textarea id="commentText" class="w-full bg-gray-700 text-white rounded-lg p-3 mb-3" placeholder="Add a comment..." rows="3"></textarea>
+                    <button id="postComment" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg">Post Comment</button>
+                </div>
+                <div id="commentsContainer" class="space-y-4">
+                    <!-- Comments will be populated here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trailer Modal -->
+    <div id="trailerModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 hidden">
+        <div class="relative w-full max-w-4xl">
+            <button id="trailerModalClose" class="absolute -top-12 right-0 text-white text-2xl hover:text-accent transition-colors">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="trailerModalContent" class="w-full rounded-xl overflow-hidden">
+                <!-- Trailer content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="glass-card border-t border-gray-700 py-6 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-film text-accent"></i>
+                        <span class="font-bold text-accent">Movie Wiki</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-2">&copy; 2025 Movie Wiki. All rights reserved.</p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a href="privacy-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Privacy Policy</a>
+                    <a href="terms-of-service.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Terms of Service</a>
+                    <a href="disclaimer.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Disclaimer</a>
+                    <a href="cookie-policy.html" class="text-gray-400 hover:text-accent transition-colors text-sm">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Remove loader when page is fully loaded
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('globalLoader');
+            if (loader) {
+                setTimeout(function() {
+                    loader.style.opacity = '0';
+                    loader.style.transition = 'opacity 0.5s ease';
+                    setTimeout(function() {
+                        if (loader.parentNode) {
+                            loader.parentNode.removeChild(loader);
+                        }
+                    }, 500);
+                }, 500);
+            }
+        });
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+        
+        // Initialize search functionality when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize voice search functionality
+            if (typeof initVoiceSearch === 'function') {
+                initVoiceSearch('searchInput', 'searchButton', 'voiceSearchButton');
+            }
+            
+            // Add event listener for search button
+            const searchButton = document.getElementById('searchButton');
+            const searchInput = document.getElementById('searchInput');
+            const searchLabel = document.getElementById('searchLabel');
+            
+            if (searchButton && searchInput) {
+                searchButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const query = searchInput.value.trim();
+                    if (query) {
+                        window.location.href = `search.html?q=${encodeURIComponent(query)}`;
+                    }
+                });
+                
+                // Add enter key support
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const query = searchInput.value.trim();
+                        if (query) {
+                            window.location.href = `search.html?q=${encodeURIComponent(query)}`;
+                        }
+                    }
+                });
+                
+                // Fix placeholder issue
+                searchInput.addEventListener('focus', function() {
+                    searchLabel.classList.add('a11y-hidden');
+                });
+                
+                searchInput.addEventListener('blur', function() {
+                    if (!this.value) {
+                        searchLabel.classList.remove('a11y-hidden');
+                    }
+                });
+                
+                // Handle input event to hide label when there's text
+                searchInput.addEventListener('input', function() {
+                    if (this.value) {
+                        searchLabel.classList.add('a11y-hidden');
+                    } else {
+                        searchLabel.classList.remove('a11y-hidden');
+                    }
+                });
+            }
+            
+            // Infinite scrolling for genre pills
+            const genreFiltersContainer = document.getElementById('genreFilters');
+            const genrePillContainer = genreFiltersContainer.querySelector('.genre-pill-container');
+            
+            if (genrePillContainer) {
+                // Get all unique genre pills
+                const originalPills = Array.from(genrePillContainer.children).slice(0, 9); // First 9 are original pills
+                
+                // Check if all pills fit in the container
+                function checkIfAllPillsFit() {
+                    const containerWidth = genreFiltersContainer.offsetWidth;
+                    const pillsWidth = Array.from(originalPills).reduce((total, pill) => {
+                        return total + pill.offsetWidth + 6; // 6px for gap
+                    }, 0);
+                    return pillsWidth <= containerWidth;
+                }
+                
+                // Duplicate the pills to create a seamless loop
+                function setupInfiniteScroll() {
+                    // Clear existing duplicates
+                    while (genrePillContainer.children.length > originalPills.length) {
+                        genrePillContainer.removeChild(genrePillContainer.lastChild);
+                    }
+                    
+                    // Add duplicates only if needed
+                    if (!checkIfAllPillsFit()) {
+                        originalPills.forEach(pill => {
+                            genrePillContainer.appendChild(pill.cloneNode(true));
+                        });
+                    }
+                }
+                
+                // Initial setup
+                setupInfiniteScroll();
+                
+                let scrollAmount = 0;
+                let animationFrameId;
+                const scrollSpeed = 0.5; // Adjust for desired speed
+                let isScrollingActive = !checkIfAllPillsFit(); // Only scroll if pills don't fit
+                
+                function animateScroll() {
+                    if (!isScrollingActive) return;
+                    
+                    scrollAmount += scrollSpeed;
+                    const totalWidth = genrePillContainer.scrollWidth / 2;
+                    
+                    if (scrollAmount >= totalWidth) {
+                        scrollAmount = 0; // Reset scroll to create a loop
+                    }
+                    genrePillContainer.scrollLeft = scrollAmount;
+                    animationFrameId = requestAnimationFrame(animateScroll);
+                }
+                
+                // Start scrolling animation if needed
+                function checkScreenSizeAndToggleScroll() {
+                    const allFit = checkIfAllPillsFit();
+                    isScrollingActive = !allFit && window.innerWidth <= 768;
+                    
+                    if (isScrollingActive) {
+                        setupInfiniteScroll();
+                        animateScroll();
+                    } else {
+                        cancelAnimationFrame(animationFrameId);
+                    }
+                }
+
+                // Initial check
+                checkScreenSizeAndToggleScroll();
+
+                // Listen for window resize events
+                let resizeTimeout;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => {
+                        setupInfiniteScroll();
+                        checkScreenSizeAndToggleScroll();
+                    }, 200);
+                });
+
+                // Pause on hover
+                genrePillContainer.addEventListener('mouseenter', () => {
+                    cancelAnimationFrame(animationFrameId);
+                });
+
+                genrePillContainer.addEventListener('mouseleave', () => {
+                    if (isScrollingActive) {
+                        animateScroll();
+                    }
+                });
+            }
+            
+            // Featured Trailers Carousel Functionality
+            // Wait for DOM to be fully loaded
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initFeaturedTrailers);
+            } else {
+                initFeaturedTrailers();
+            }
+            
+            function initFeaturedTrailers() {
+                const trailersSlider = document.getElementById('trailersSlider');
+                const prevTrailerBtn = document.getElementById('prevTrailer');
+                const nextTrailerBtn = document.getElementById('nextTrailer');
+                const trailerIndicators = document.getElementById('trailerIndicators');
+                const featuredTrailersContainer = document.getElementById('featuredTrailersContainer');
+                
+                if (trailersSlider && prevTrailerBtn && nextTrailerBtn) {
+                    let currentIndex = 0;
+                    let trailers = [];
+                    let slideInterval;
+                    let isPlaying = false; // Track if a trailer is currently playing
+                    
+                    // Sample trailer data (in a real app, this would come from an API)
+                    const sampleTrailers = [
+                        {
+                            id: '1',
+                            title: 'Sample Movie 1',
+                            year: '2023',
+                            rating: 'PG-13',
+                            image: 'https://placehold.co/1280x720/1e293b/22d3ee?text=Movie+1'
+                        },
+                        {
+                            id: '2',
+                            title: 'Sample Movie 2',
+                            year: '2024',
+                            rating: 'R',
+                            image: 'https://placehold.co/1280x720/1e293b/22d3ee?text=Movie+2'
+                        },
+                        {
+                            id: '3',
+                            title: 'Sample Movie 3',
+                            year: '2023',
+                            rating: 'PG',
+                            image: 'https://placehold.co/1280x720/1e293b/22d3ee?text=Movie+3'
+                        }
+                    ];
+                    
+                    // Initialize trailers
+                    function initTrailers() {
+                        if (!trailersSlider) return;
+                        
+                        trailers = sampleTrailers;
+                        renderTrailers();
+                        createIndicators();
+                        updateSlider();
+                        
+                        // Hide loader
+                        const trailersLoader = document.getElementById('trailersLoader');
+                        if (trailersLoader) {
+                            setTimeout(() => {
+                                trailersLoader.style.opacity = '0';
+                                trailersLoader.style.transition = 'opacity 0.5s ease';
+                                setTimeout(() => {
+                                    trailersLoader.style.display = 'none';
+                                }, 500);
+                            }, 1000);
+                        }
+                        
+                        startAutoSlide();
+                        
+                        // Add event listeners
+                        if (prevTrailerBtn) prevTrailerBtn.addEventListener('click', showPrevTrailer);
+                        if (nextTrailerBtn) nextTrailerBtn.addEventListener('click', showNextTrailer);
+                        
+                        // Pause auto-slide on hover
+                        if (featuredTrailersContainer) {
+                            featuredTrailersContainer.addEventListener('mouseenter', stopAutoSlide);
+                            featuredTrailersContainer.addEventListener('mouseleave', () => {
+                                if (!isPlaying) startAutoSlide();
+                            });
+                        }
+                    }
+                    
+                    // Render trailers
+                    function renderTrailers() {
+                        if (!trailersSlider) return;
+                        
+                        trailersSlider.innerHTML = '';
+                        if (!trailers || trailers.length === 0) return;
+                        
+                        trailers.forEach((trailer, index) => {
+                            const trailerCard = document.createElement('div');
+                            trailerCard.className = 'trailer-item flex-shrink-0 relative';
+                            trailerCard.innerHTML = `
+                                <div class="thumbnail-container">
+                                    <img src="${trailer.image}" alt="${trailer.title}" onerror="this.src='https://placehold.co/1280x720/1e293b/cccccc?text=No+Image'">
+                                    <div class="trailer-overlay">
+                                        <div class="trailer-info">
+                                            <h3>${trailer.title}</h3>
+                                            <p>${trailer.year} • ${trailer.rating}</p>
+                                        </div>
+                                    </div>
+                                    <div class="trailer-controls">
+                                        <button class="trailer-control-btn" data-trailer-id="${trailer.id}">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            // Add click event to play trailer
+                            const playButton = trailerCard.querySelector('.trailer-control-btn');
+                            if (playButton) {
+                                playButton.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+                                    openTrailerModal(trailer.id);
+                                });
+                            }
+                            
+                            trailersSlider.appendChild(trailerCard);
+                        });
+                    }
+                    
+                    // Function to open trailer modal
+                    function openTrailerModal(trailerId) {
+                        if (!trailers || trailers.length === 0) return;
+                        const trailer = trailers.find(t => t.id === trailerId);
+                        if (!trailer) return;
+                        
+                        // Stop auto slide
+                        isPlaying = true;
+                        stopAutoSlide();
+                        
+                        // Hide navigation buttons
+                        if (prevTrailerBtn) prevTrailerBtn.style.display = 'none';
+                        if (nextTrailerBtn) nextTrailerBtn.style.display = 'none';
+                        
+                        // Create modal content (in a real app, this would be the actual trailer)
+                        const modal = document.getElementById('trailerModal');
+                        const modalContent = document.getElementById('trailerModalContent');
+                        
+                        if (!modal || !modalContent) return;
+                        
+                        modalContent.innerHTML = `
+                            <div class="video-player-container" style="width: 100%; height: 100%; position: relative;">
+                                <div class="aspect-ratio-wrapper" style="position: relative; width: 100%; padding-top: 56.25%;">
+                                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; background: #1e293b; border-radius: 12px;">
+                                        <i class="fas fa-film" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                                        <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">${trailer.title}</h3>
+                                        <p style="margin-bottom: 1rem;">In a real application, this would show the trailer video player</p>
+                                        <p>Year: ${trailer.year} | Rating: ${trailer.rating}</p>
+                                        <button class="trailer-close-btn" style="position: absolute; top: 1rem; right: 1rem; background: rgba(34, 211, 238, 0.8); color: #0f172a; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; transition: all 0.3s ease; z-index: 40; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);" onclick="closeTrailerModal()">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Show modal
+                        modal.classList.remove('hidden');
+                        
+                        // Add close event to the existing close button
+                        const closeBtn = document.getElementById('trailerModalClose');
+                        if (closeBtn) {
+                            const closeHandler = function() {
+                                closeTrailerModal();
+                                closeBtn.removeEventListener('click', closeHandler);
+                            };
+                            closeBtn.addEventListener('click', closeHandler);
+                        }
+                        
+                        // Close modal when clicking outside
+                        const modalClickHandler = function(e) {
+                            if (e.target === modal) {
+                                closeTrailerModal();
+                                modal.removeEventListener('click', modalClickHandler);
+                            }
+                        };
+                        modal.addEventListener('click', modalClickHandler);
+                        
+                        // Prevent closing when clicking on content
+                        const modalContentClickHandler = function(e) {
+                            e.stopPropagation();
+                        };
+                        modalContent.addEventListener('click', modalContentClickHandler);
+                    }
+                    
+                    // Function to close trailer modal
+                    function closeTrailerModal() {
+                        const modal = document.getElementById('trailerModal');
+                        if (modal) {
+                            modal.classList.add('hidden');
+                        }
+                        
+                        // Clear modal content
+                        const modalContent = document.getElementById('trailerModalContent');
+                        if (modalContent) {
+                            modalContent.innerHTML = '';
+                        }
+                        
+                        // Resume auto slide
+                        if (typeof window.resumeTrailerAutoSlide === 'function') {
+                            window.resumeTrailerAutoSlide();
+                        }
+                    }
+                    
+                    // Create indicators
+                    function createIndicators() {
+                        if (!trailerIndicators) return;
+                        
+                        trailerIndicators.innerHTML = '';
+                        if (!trailers || trailers.length === 0) return;
+                        
+                        trailers.forEach((_, index) => {
+                            const indicator = document.createElement('div');
+                            indicator.className = `indicator ${index === 0 ? 'active' : ''}`;
+                            indicator.dataset.index = index;
+                            indicator.addEventListener('click', () => {
+                                goToTrailer(index);
+                            });
+                            trailerIndicators.appendChild(indicator);
+                        });
+                    }
+                    
+                    // Update slider position
+                    function updateSlider() {
+                        if (!trailersSlider) return;
+                        
+                        // Safely get the parent element
+                        const parentElement = trailersSlider.parentElement;
+                        if (!parentElement) return;
+                        
+                        const slideWidth = parentElement.clientWidth;
+                        trailersSlider.style.transform = `translateX(-${currentIndex * slideWidth}px)`;
+                        
+                        // Update indicators
+                        const indicators = trailerIndicators.querySelectorAll('.indicator');
+                        if (indicators) {
+                            indicators.forEach((indicator, index) => {
+                                indicator.classList.toggle('active', index === currentIndex);
+                            });
+                        }
+                    }
+                    
+                    // Show next trailer
+                    function showNextTrailer() {
+                        if (!trailers || trailers.length === 0) return;
+                        currentIndex = (currentIndex + 1) % trailers.length;
+                        updateSlider();
+                    }
+                    
+                    // Show previous trailer
+                    function showPrevTrailer() {
+                        if (!trailers || trailers.length === 0) return;
+                        currentIndex = (currentIndex - 1 + trailers.length) % trailers.length;
+                        updateSlider();
+                    }
+                    
+                    // Go to specific trailer
+                    function goToTrailer(index) {
+                        if (!trailers || trailers.length === 0) return;
+                        currentIndex = index;
+                        updateSlider();
+                    }
+                    
+                    // Auto slide functionality
+                    function startAutoSlide() {
+                        // Only start if no trailer is playing
+                        if (isPlaying) return;
+                        
+                        stopAutoSlide();
+                        if (trailers && trailers.length > 0) {
+                            slideInterval = setInterval(showNextTrailer, 5000); // Change slide every 5 seconds
+                        }
+                        
+                        // Show navigation buttons when auto-sliding
+                        if (prevTrailerBtn) prevTrailerBtn.style.display = 'block';
+                        if (nextTrailerBtn) nextTrailerBtn.style.display = 'block';
+                    }
+                    
+                    function stopAutoSlide() {
+                        if (slideInterval) {
+                            clearInterval(slideInterval);
+                            slideInterval = null;
+                        }
+                    }
+                    
+                    // Function to resume auto sliding (when trailer playback stops)
+                    window.resumeTrailerAutoSlide = function() {
+                        isPlaying = false;
+                        // Show navigation buttons again
+                        if (prevTrailerBtn) prevTrailerBtn.style.display = 'block';
+                        if (nextTrailerBtn) nextTrailerBtn.style.display = 'block';
+                        startAutoSlide();
+                    };
+                    
+                    // Initialize the trailers when the page loads
+                    initTrailers();
+                    
+                    // Handle window resize
+                    window.addEventListener('resize', () => {
+                        // Debounce resize events
+                        clearTimeout(window.resizeTimeout);
+                        window.resizeTimeout = setTimeout(() => {
+                            updateSlider();
+                        }, 100);
+                    });
+                }
+            }
+        });
+    </script>
+    <script async src="../js/script.js"></script>
+    <script defer src="../js/trailer.js"></script>
+    <script defer src="../js/trailer-cache.js"></script>
+    <script defer src="../js/voiceSearch.js"></script>
+</body>
+</html>

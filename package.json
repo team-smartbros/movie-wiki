@@ -1,0 +1,25 @@
+{
+  "name": "movie-wiki-proxy",
+  "version": "1.0.0",
+  "description": "Local proxy server for Movie Wiki application",
+  "main": "proxy-server.js",
+  "scripts": {
+    "start": "node proxy-server.js",
+    "dev": "nodemon proxy-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "proxy",
+    "movie",
+    "imdb",
+    "video"
+  ],
+  "author": "Movie Wiki Team",
+  "license": "MIT"
+}
