@@ -409,7 +409,15 @@ async function fetchMoviesBySection(section, count) {
         
         if (!response.ok) {
             console.warn(`Failed to fetch ${section} movies with status ${response.status}`);
-            return [];
+            // Return basic movie info even if we can't fetch details
+            return Array(count).fill().map((_, i) => ({
+                id: null,
+                title: `${section} Movie ${i + 1}`,
+                year: 'N/A',
+                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                rating: 'N/A',
+                genre: 'N/A'
+            }));
         }
         
         const data = await response.json();
@@ -418,15 +426,25 @@ async function fetchMoviesBySection(section, count) {
         // Check if data has items
         if (!data || !data.items || !Array.isArray(data.items)) {
             console.warn(`Invalid data structure for ${section} movies:`, data);
-            return [];
+            // Return basic movie info even if we can't fetch details
+            return Array(count).fill().map((_, i) => ({
+                id: null,
+                title: `${section} Movie ${i + 1}`,
+                year: 'N/A',
+                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                rating: 'N/A',
+                genre: 'N/A'
+            }));
         }
         
         // Extract titles based on section
         let titles = [];
+        let rawItems = [];
         if (data.items) {
             if (section === 'latest') {
                 // For latest, get items 5-10 (next 5 after popular)
-                titles = data.items.slice(5, 5 + count).map(item => {
+                rawItems = data.items.slice(5, 5 + count);
+                titles = rawItems.map(item => {
                     // Remove numbering prefix if present
                     const title = item.title.replace(/^\d+\.\s*/, '');
                     console.log(`Extracted title for ${section}:`, title);
@@ -434,7 +452,8 @@ async function fetchMoviesBySection(section, count) {
                 });
             } else {
                 // For popular and coming soon, get first 'count' items
-                titles = data.items.slice(0, count).map(item => {
+                rawItems = data.items.slice(0, count);
+                titles = rawItems.map(item => {
                     // Remove numbering prefix if present
                     const title = item.title.replace(/^\d+\.\s*/, '');
                     console.log(`Extracted title for ${section}:`, title);
@@ -444,15 +463,61 @@ async function fetchMoviesBySection(section, count) {
         }
         
         console.log(`Extracted titles for ${section}:`, titles);
+        console.log(`Raw items for ${section}:`, rawItems);
         
         // Fetch detailed movie information for each title
         const movies = [];
         for (let i = 0; i < Math.min(titles.length, count); i++) {
             console.log(`Fetching details for ${section} movie ${i + 1}/${Math.min(titles.length, count)}:`, titles[i]);
-            const movie = await fetchMovieDetailsByTitle(titles[i]);
-            if (movie) {
-                console.log(`Successfully fetched details for ${section} movie:`, movie.title);
-                movies.push(movie);
+            
+            // Try to get movie details from the raw item first
+            const rawItem = rawItems[i];
+            if (rawItem) {
+                // Try to extract ID from the raw item
+                let id = null;
+                if (rawItem.id) {
+                    id = rawItem.id;
+                } else if (rawItem.url) {
+                    const idMatch = rawItem.url.match(/\/title\/(tt\d+)\//);
+                    if (idMatch) {
+                        id = idMatch[1];
+                    }
+                }
+                
+                // Create movie object from raw item data
+                const movieFromRaw = {
+                    id: id,
+                    title: titles[i],
+                    year: rawItem.year || 'N/A',
+                    image: rawItem.image || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                    rating: rawItem.rating || 'N/A',
+                    genre: rawItem.genre || 'N/A'
+                };
+                
+                console.log(`Movie from raw item ${i}:`, movieFromRaw);
+                
+                // If we have an ID, try to fetch more detailed info
+                if (id) {
+                    const detailedMovie = await fetchMovieDetailsByTitle(titles[i]);
+                    if (detailedMovie) {
+                        movies.push(detailedMovie);
+                    } else {
+                        movies.push(movieFromRaw);
+                    }
+                } else {
+                    // If no ID, use the raw item data
+                    movies.push(movieFromRaw);
+                }
+            } else {
+                // Fallback to fetching details by title
+                const movie = await fetchMovieDetailsByTitle(titles[i]);
+                if (movie) {
+                    movies.push(movie);
+                }
+            }
+            
+            if (movies[movies.length - 1]) {
+                console.log(`Successfully fetched details for ${section} movie:`, movies[movies.length - 1].title);
             } else {
                 console.log(`Failed to fetch details for ${section} movie:`, titles[i]);
             }
@@ -463,7 +528,15 @@ async function fetchMoviesBySection(section, count) {
         
     } catch (error) {
         console.error(`Error fetching ${section} movies:`, error);
-        return [];
+        // Return basic movie info even if we encounter an error
+        return Array(count).fill().map((_, i) => ({
+            id: null,
+            title: `${section} Movie ${i + 1}`,
+            year: 'N/A',
+            image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+            rating: 'N/A',
+            genre: 'N/A'
+        }));
     }
 }
 
@@ -508,7 +581,15 @@ async function fetchMoviesByGenre(genre, count) {
         
         if (!response.ok) {
             console.warn(`Failed to fetch ${genre} movies with status ${response.status}`);
-            return [];
+            // Return basic movie info even if we can't fetch details
+            return Array(count).fill().map((_, i) => ({
+                id: null,
+                title: `${genre} Movie ${i + 1}`,
+                year: 'N/A',
+                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                rating: 'N/A',
+                genre: genre
+            }));
         }
         
         const data = await response.json();
@@ -517,13 +598,23 @@ async function fetchMoviesByGenre(genre, count) {
         // Check if data has items
         if (!data || !data.items || !Array.isArray(data.items)) {
             console.warn(`Invalid data structure for ${genre} movies:`, data);
-            return [];
+            // Return basic movie info even if we can't fetch details
+            return Array(count).fill().map((_, i) => ({
+                id: null,
+                title: `${genre} Movie ${i + 1}`,
+                year: 'N/A',
+                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                rating: 'N/A',
+                genre: genre
+            }));
         }
         
         // Extract titles
         let titles = [];
+        let rawItems = [];
         if (data.items) {
-            titles = data.items.slice(0, count).map(item => {
+            rawItems = data.items.slice(0, count);
+            titles = rawItems.map(item => {
                 // Remove numbering prefix if present
                 const title = item.title.replace(/^\d+\.\s*/, '');
                 console.log(`Extracted title for ${genre}:`, title);
@@ -532,15 +623,61 @@ async function fetchMoviesByGenre(genre, count) {
         }
         
         console.log(`Extracted titles for ${genre}:`, titles);
+        console.log(`Raw items for ${genre}:`, rawItems);
         
         // Fetch detailed movie information for each title
         const movies = [];
         for (let i = 0; i < Math.min(titles.length, count); i++) {
             console.log(`Fetching details for ${genre} movie ${i + 1}/${Math.min(titles.length, count)}:`, titles[i]);
-            const movie = await fetchMovieDetailsByTitle(titles[i]);
-            if (movie) {
-                console.log(`Successfully fetched details for ${genre} movie:`, movie.title);
-                movies.push(movie);
+            
+            // Try to get movie details from the raw item first
+            const rawItem = rawItems[i];
+            if (rawItem) {
+                // Try to extract ID from the raw item
+                let id = null;
+                if (rawItem.id) {
+                    id = rawItem.id;
+                } else if (rawItem.url) {
+                    const idMatch = rawItem.url.match(/\/title\/(tt\d+)\//);
+                    if (idMatch) {
+                        id = idMatch[1];
+                    }
+                }
+                
+                // Create movie object from raw item data
+                const movieFromRaw = {
+                    id: id,
+                    title: titles[i],
+                    year: rawItem.year || 'N/A',
+                    image: rawItem.image || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                    rating: rawItem.rating || 'N/A',
+                    genre: genre
+                };
+                
+                console.log(`Movie from raw item ${i}:`, movieFromRaw);
+                
+                // If we have an ID, try to fetch more detailed info
+                if (id) {
+                    const detailedMovie = await fetchMovieDetailsByTitle(titles[i]);
+                    if (detailedMovie) {
+                        movies.push(detailedMovie);
+                    } else {
+                        movies.push(movieFromRaw);
+                    }
+                } else {
+                    // If no ID, use the raw item data
+                    movies.push(movieFromRaw);
+                }
+            } else {
+                // Fallback to fetching details by title
+                const movie = await fetchMovieDetailsByTitle(titles[i]);
+                if (movie) {
+                    movies.push(movie);
+                }
+            }
+            
+            if (movies[movies.length - 1]) {
+                console.log(`Successfully fetched details for ${genre} movie:`, movies[movies.length - 1].title);
             } else {
                 console.log(`Failed to fetch details for ${genre} movie:`, titles[i]);
             }
@@ -551,7 +688,15 @@ async function fetchMoviesByGenre(genre, count) {
         
     } catch (error) {
         console.error(`Error fetching ${genre} movies:`, error);
-        return [];
+        // Return basic movie info even if we encounter an error
+        return Array(count).fill().map((_, i) => ({
+            id: null,
+            title: `${genre} Movie ${i + 1}`,
+            year: 'N/A',
+            image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+            rating: 'N/A',
+            genre: genre
+        }));
     }
 }
 
@@ -587,7 +732,15 @@ async function fetchMovieDetailsByTitle(title) {
         
         if (!response.ok) {
             console.warn(`Failed to fetch details for movie: ${title}`);
-            return null;
+            // Return basic movie info even if we can't fetch details
+            return {
+                id: null,
+                title: title,
+                year: 'N/A',
+                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                rating: 'N/A',
+                genre: 'N/A'
+            };
         }
         
         const data = await response.json();
@@ -596,7 +749,15 @@ async function fetchMovieDetailsByTitle(title) {
         // Check if we have valid data
         if (!data) {
             console.warn(`No data received for movie: ${title}`);
-            return null;
+            // Return basic movie info even if we can't fetch details
+            return {
+                id: null,
+                title: title,
+                year: 'N/A',
+                image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                rating: 'N/A',
+                genre: 'N/A'
+            };
         }
         
         // Extract movie information
@@ -631,6 +792,19 @@ async function fetchMovieDetailsByTitle(title) {
             }
         }
         
+        // Try to extract ID from the search URL pattern
+        if (!id) {
+            // Try to extract ID from various possible URL formats
+            const possibleUrls = [short.url, top.url, short.imdburl].filter(url => url);
+            for (const url of possibleUrls) {
+                const idMatch = url.match(/\/title\/(tt\d+)/);
+                if (idMatch) {
+                    id = idMatch[1];
+                    break;
+                }
+            }
+        }
+        
         // If we still don't have an ID, this movie data is incomplete
         if (!id) {
             console.warn(`No ID found for movie: ${title}`);
@@ -659,7 +833,15 @@ async function fetchMovieDetailsByTitle(title) {
         
     } catch (error) {
         console.error(`Error fetching details for movie ${title}:`, error);
-        return null;
+        // Return basic movie info even if we encounter an error
+        return {
+            id: null,
+            title: title,
+            year: 'N/A',
+            image: 'https://placehold.co/300x450?text=No+Image&font=opensans',
+            rating: 'N/A',
+            genre: 'N/A'
+        };
     }
 }
 
@@ -690,6 +872,12 @@ async function displayTrailers(movies) {
     for (let i = 0; i < movies.length; i++) {
         const movie = movies[i];
         console.log(`Processing movie ${i}:`, movie);
+        
+        // Validate movie data
+        if (!movie || !movie.title) {
+            console.log(`Skipping invalid movie at index ${i}`);
+            continue;
+        }
         
         const trailerItem = document.createElement('div');
         trailerItem.className = 'trailer-item snap-start';
@@ -724,13 +912,23 @@ async function displayTrailers(movies) {
                 <i class="fas fa-play"></i>
             </button>` : '';
         
+        // Use the best available image
+        const imageUrl = movie.image || trailerInfo?.thumbnail || 'https://placehold.co/600x338?text=No+Image&font=opensans';
+        
+        // Use the best available title
+        const displayTitle = movie.title || 'Unknown Title';
+        
+        // Use the best available genre and year
+        const displayGenre = movie.genre || 'N/A';
+        const displayYear = movie.year || 'N/A';
+        
         console.log(`Movie ${i} has trailer: ${hasTrailer}`);
         
         trailerItem.innerHTML = `
             <div class="bg-gray-800 w-full h-full flex items-center justify-center rounded-xl relative">
                 <div class="thumbnail-container">
-                    <img src="${movie.image || trailerInfo?.thumbnail || 'https://placehold.co/600x338?text=No+Image&font=opensans'}" 
-                         alt="${movie.title} Trailer" 
+                    <img src="${imageUrl}" 
+                         alt="${displayTitle} Trailer" 
                          class="w-full h-full object-cover rounded-xl"
                          loading="lazy"
                          onerror="this.src='https://placehold.co/600x338?text=No+Image&font=opensans'">
@@ -741,8 +939,8 @@ async function displayTrailers(movies) {
                 </div>
                 <div class="trailer-overlay">
                     <div class="trailer-info">
-                        <h3>${movie.title}</h3>
-                        <p>${movie.genre || 'N/A'} • ${movie.year || 'N/A'}</p>
+                        <h3>${displayTitle}</h3>
+                        <p>${displayGenre} • ${displayYear}</p>
                     </div>
                 </div>
             </div>
@@ -787,8 +985,18 @@ function createPlaceholderTrailers() {
     // Clear existing content
     trailerContainer.innerHTML = '';
     
-    // Create 6 placeholder trailers
-    for (let i = 0; i < 6; i++) {
+    // Create 6 placeholder trailers with more realistic data
+    const placeholderMovies = [
+        { title: "The Matrix", genre: "Action, Sci-Fi", year: "1999" },
+        { title: "Inception", genre: "Action, Thriller", year: "2010" },
+        { title: "The Dark Knight", genre: "Action, Crime", year: "2008" },
+        { title: "Pulp Fiction", genre: "Crime, Drama", year: "1994" },
+        { title: "Forrest Gump", genre: "Drama, Romance", year: "1994" },
+        { title: "The Shawshank Redemption", genre: "Drama", year: "1994" }
+    ];
+    
+    for (let i = 0; i < placeholderMovies.length; i++) {
+        const movie = placeholderMovies[i];
         const trailerItem = document.createElement('div');
         trailerItem.className = 'trailer-item snap-start';
         trailerItem.setAttribute('data-index', i);
@@ -807,8 +1015,8 @@ function createPlaceholderTrailers() {
                 </div>
                 <div class="trailer-overlay">
                     <div class="trailer-info">
-                        <h3>Movie Title ${i + 1}</h3>
-                        <p>Genre • Year</p>
+                        <h3>${movie.title}</h3>
+                        <p>${movie.genre} • ${movie.year}</p>
                     </div>
                 </div>
             </div>
@@ -828,7 +1036,7 @@ function createPlaceholderTrailers() {
     }
     
     // Initialize carousel navigation
-    initializeCarouselNavigation();
+    initializeCarouselNavigation(placeholderMovies.length);
 }
 
 // Initialize carousel navigation
@@ -1123,17 +1331,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 const scrollWidth = genreFilters.scrollWidth;
                 const clientWidth = genreFilters.clientWidth;
                 
-                // Show left indicator if not at start
-                if (scrollLeft > 0) {
-                    scrollLeftBtn.classList.add('visible');
-                } else {
-                    scrollLeftBtn.classList.remove('visible');
-                }
+                // Check if scrolling is needed (content overflows container)
+                const needsScrolling = scrollWidth > clientWidth;
                 
-                // Show right indicator if not at end
-                if (scrollLeft + clientWidth < scrollWidth) {
-                    scrollRightBtn.classList.add('visible');
+                if (needsScrolling) {
+                    // Show left indicator if not at start
+                    if (scrollLeft > 0) {
+                        scrollLeftBtn.classList.add('visible');
+                    } else {
+                        scrollLeftBtn.classList.remove('visible');
+                    }
+                    
+                    // Show right indicator if not at end
+                    if (scrollLeft + clientWidth < scrollWidth) {
+                        scrollRightBtn.classList.add('visible');
+                    } else {
+                        scrollRightBtn.classList.remove('visible');
+                    }
                 } else {
+                    // Hide both indicators if no scrolling needed
+                    scrollLeftBtn.classList.remove('visible');
                     scrollRightBtn.classList.remove('visible');
                 }
             }
