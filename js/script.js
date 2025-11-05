@@ -1797,79 +1797,49 @@ async function scrapeByGenre(genre) {
                     const genreName = genre.split('-').map(word => 
                         word.charAt(0).toUpperCase() + word.slice(1)
                     ).join('-');
-                    popularHeader.innerHTML = `<i class="fas fa-film mr-2"></i>Popular ${genreName} Movies`;
+                    
+                    popularHeader.innerHTML = `<i class="fas fa-theater-masks mr-2"></i>${genreName}`;
                 }
             }
             
-            // Clear containers
-            const popularContainerEl = document.getElementById('popularContainer');
-            const latestContainerEl = document.getElementById('latestContainer');
-            const comingSoonContainerEl = document.getElementById('comingSoonContainer');
-            
-            if (popularContainerEl) {
-                popularContainerEl.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-12 col-span-full">
-                        <i class="fas fa-spinner fa-spin text-3xl text-accent mb-4"></i>
-                        <p class="text-gray-400">Loading ${genre} movies...</p>
-                    </div>
-                `;
-            }
-            
-            if (latestContainerEl) latestContainerEl.innerHTML = '';
-            if (comingSoonContainerEl) comingSoonContainerEl.innerHTML = '';
-            
-            // Get all items (up to 25)
-            const allItems = data.items.slice(0, 25);
-            
-            console.log(`📦 Fetching ${allItems.length} ${genre} movies with progressive display`);
-            
-            // Clear loading message
-            if (popularContainerEl) popularContainerEl.innerHTML = '';
-            
-            // Fetch details WITH progressive rendering (cards appear one by one)
-            await fetchDetailsSequentially(
-                allItems.map(item => item.title.replace(/^\d+\.\s*/, '')),
-                null,
-                'popularContainer',
-                true  // Enable progressive loading
+            // Extract titles
+            const titles = data.items.slice(0, 20).map(item => 
+                item.title.replace(/^\d+\.\s*/, '')
             );
+            console.log('Extracted titles:', titles);
             
-            console.log(`✅ Finished displaying ${genre} content progressively`);
-        } else {
-            console.warn(`⚠️ No items found for genre: ${genre}`);
-            showSectionHeaders();
-            const popularContainerEl = document.getElementById('popularContainer');
-            if (popularContainerEl) {
-                popularContainerEl.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-12 col-span-full">
-                        <i class="fas fa-search text-3xl text-gray-400 mb-4"></i>
-                        <p class="text-gray-400">No ${genre} content found</p>
-                    </div>
-                `;
+            // Fetch details for these titles
+            const results = await fetchDetailsSequentially(titles, null, 'popularContainer', true);
+            console.log('Genre content fetched:', results);
+            
+            // Notify trailer system that genre content has been loaded
+            if (typeof window.initializeFeaturedTrailers === 'function') {
+                setTimeout(() => {
+                    console.log('🎬 Notifying trailer system of genre change');
+                    window.initializeFeaturedTrailers();
+                }, 1000);
             }
-            const latestContainerEl = document.getElementById('latestContainer');
-            const comingSoonContainerEl = document.getElementById('comingSoonContainer');
-            if (latestContainerEl) latestContainerEl.innerHTML = '';
-            if (comingSoonContainerEl) comingSoonContainerEl.innerHTML = '';
+        } else {
+            // Show error in the container
+            const container = document.getElementById('popularContainer');
+            if (container) {
+                container.innerHTML = '<p class="text-center col-span-full text-red-500">No content found for this genre.</p>';
+            }
         }
     } catch (error) {
-        console.error(`❌ Error fetching ${genre} content:`, error);
-        console.error('Error details:', error.message);
-        showSectionHeaders();
-        const popularContainerEl = document.getElementById('popularContainer');
-        if (popularContainerEl) {
-            popularContainerEl.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-12 col-span-full">
-                    <i class="fas fa-exclamation-triangle text-3xl text-red-500 mb-4"></i>
-                    <p class="text-red-500">Failed to load ${genre} content</p>
-                    <p class="text-gray-400 text-sm mt-2">Please try again later</p>
-                </div>
-            `;
+        console.error('Error scraping by genre:', error);
+        
+        // Try fallback API
+        try {
+            console.log('Trying fallback API for genre content...');
+            // Show error in the container
+            const container = document.getElementById('popularContainer');
+            if (container) {
+                container.innerHTML = '<p class="text-center col-span-full text-red-500">Failed to load genre content. Please try again later.</p>';
+            }
+        } catch (fallbackError) {
+            console.error('Error with fallback for genre content:', fallbackError);
         }
-        const latestContainerEl = document.getElementById('latestContainer');
-        const comingSoonContainerEl = document.getElementById('comingSoonContainer');
-        if (latestContainerEl) latestContainerEl.innerHTML = '';
-        if (comingSoonContainerEl) comingSoonContainerEl.innerHTML = '';
     }
 }
 
@@ -1915,7 +1885,6 @@ function showSectionHeaders() {
     if (popularSection) popularSection.style.display = 'block';
     if (latestSection) latestSection.style.display = 'block';
     if (comingSoonSection) comingSoonSection.style.display = 'block';
-    
     // Restore Popular header with safety check
     if (popularSection) {
         const popularHeader = popularSection.querySelector('h2');

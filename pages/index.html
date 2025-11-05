@@ -217,11 +217,10 @@
 
         /* Featured Trailers Section */
         #featuredTrailersContainer {
+            height: 400px;
             position: relative;
-            height: 300px;
-            border-radius: 12px;
             overflow: hidden;
-            background: rgba(30, 41, 59, 0.5);
+            border-radius: 12px;
         }
         
         #trailersCarousel {
@@ -229,55 +228,46 @@
             overflow-x: hidden;
             scroll-behavior: smooth;
             height: 100%;
-            width: 100%;
+            position: relative;
         }
         
         .trailer-item {
-            flex: 0 0 100%;
+            min-width: 100%;
             height: 100%;
             position: relative;
-            scroll-snap-align: start;
-            overflow: hidden;
         }
         
-        .trailer-item .thumbnail-container {
+        .thumbnail-container {
             width: 100%;
             height: 100%;
             position: relative;
-            padding-top: 56.25%; /* 16:9 Aspect Ratio */
         }
         
-        .trailer-item .thumbnail-container img {
-            position: absolute;
-            top: 0;
-            left: 0;
+        .thumbnail-container img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 12px;
         }
         
         .trailer-overlay {
             position: absolute;
-            top: 0;
+            bottom: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-            display: flex;
-            align-items: flex-end;
-            padding: 1rem;
-            border-radius: 12px;
-        }
-        
-        .trailer-info {
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            padding: 1.5rem;
             color: white;
         }
         
         .trailer-info h3 {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: bold;
             margin-bottom: 0.5rem;
+        }
+        
+        .trailer-info p {
+            font-size: 1rem;
+            opacity: 0.9;
         }
         
         .trailer-controls {
@@ -285,28 +275,23 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            display: flex;
-            gap: 1rem;
-            z-index: 30;
+            z-index: 10;
         }
         
         .trailer-control-btn {
-            background: rgba(34, 211, 238, 0.8);
-            color: #0f172a;
-            border: none;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            background: rgba(34, 211, 238, 0.8);
+            color: white;
+            border: none;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             transition: all 0.3s ease;
-            z-index: 35;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            opacity: 1 !important;
-            pointer-events: auto !important;
         }
         
         .trailer-control-btn:hover {
@@ -314,20 +299,93 @@
             transform: scale(1.1);
         }
         
-        /* Ensure play button is always visible */
-        .trailer-control-btn:not(:disabled) {
-            opacity: 1 !important;
-            pointer-events: auto !important;
+        /* Auto-scroll indicators */
+        .auto-scroll-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(34, 211, 238, 0.3);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .auto-scroll-indicator:hover {
+            background: rgba(34, 211, 238, 0.6);
+        }
+        
+        #scrollLeftIndicator {
+            left: 10px;
+        }
+        
+        #scrollRightIndicator {
+            right: 10px;
+        }
+        
+        #featuredTrailersContainer:hover .auto-scroll-indicator {
+            opacity: 1;
+        }
+        
+        /* Loader styling */
+        #trailersLoader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(30, 41, 59, 0.9);
+            z-index: 10;
+            border-radius: 12px;
         }
         
         /* Responsive adjustments for featured trailers */
         @media (max-width: 768px) {
             #featuredTrailersContainer {
+                height: 250px;
+            }
+            
+            .trailer-info h3 {
+                font-size: 1.25rem;
+            }
+            
+            .trailer-info p {
+                font-size: 0.875rem;
+            }
+            
+            .trailer-control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.25rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #featuredTrailersContainer {
                 height: 200px;
+            }
+            
+            .trailer-overlay {
+                padding: 1rem;
             }
             
             .trailer-info h3 {
                 font-size: 1rem;
+            }
+            
+            .trailer-info p {
+                font-size: 0.75rem;
             }
             
             .trailer-control-btn {
@@ -337,30 +395,6 @@
             }
         }
         
-        @media (max-width: 480px) {
-            #featuredTrailersContainer {
-                height: 150px;
-            }
-            
-            .trailer-overlay {
-                padding: 0.5rem;
-            }
-            
-            .trailer-info h3 {
-                font-size: 0.875rem;
-            }
-            
-            .trailer-info p {
-                font-size: 0.75rem;
-            }
-            
-            .trailer-control-btn {
-                width: 35px;
-                height: 35px;
-                font-size: 0.875rem;
-            }
-        }
-
         /* Trailer Modal */
         #trailerModal {
             display: none;
@@ -856,6 +890,14 @@
     <div class="mb-8 container mx-auto px-4">
         <h2 class="text-3xl font-bold mb-6 text-accent font-sans"><i class="fas fa-film mr-2"></i>Featured Trailers</h2>
         <div id="featuredTrailersContainer" class="relative overflow-hidden rounded-xl">
+            <!-- Auto-scroll indicators -->
+            <button id="scrollLeftIndicator" class="auto-scroll-indicator">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button id="scrollRightIndicator" class="auto-scroll-indicator">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            
             <!-- Loader for trailers section -->
             <div id="trailersLoader" class="absolute inset-0 flex items-center justify-center bg-secondary rounded-xl z-10">
                 <div class="text-center">
@@ -863,18 +905,9 @@
                     <p class="text-gray-400">Loading featured trailers...</p>
                 </div>
             </div>
+            
             <div id="trailersCarousel" class="flex overflow-x-hidden snap-x snap-mandatory">
                 <!-- Featured trailers will be populated here -->
-            </div>
-            <div class="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none" id="scrollLeftBtn">
-                <button class="bg-accent text-primary rounded-full p-2 mx-2 pointer-events-auto opacity-0 transition-opacity duration-300">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-            </div>
-            <div class="absolute inset-y-0 right-0 flex items-center justify-center pointer-events-none" id="scrollRightBtn">
-                <button class="bg-accent text-primary rounded-full p-2 mx-2 pointer-events-auto opacity-0 transition-opacity duration-300">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
             </div>
         </div>
     </div>
