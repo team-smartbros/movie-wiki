@@ -65,14 +65,16 @@ function initTrailerCarousel() {
 }
 
 // Make sure the DOM is loaded before initializing
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        // Add a small delay to ensure main content has time to load
+function waitForDOMAndInit() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a small delay to ensure main content has time to load
+            setTimeout(initTrailerCarousel, 500);
+        });
+    } else {
+        // DOM is already loaded
         setTimeout(initTrailerCarousel, 500);
-    });
-} else {
-    // DOM is already loaded
-    setTimeout(initTrailerCarousel, 500);
+    }
 }
 
 // Initialize trailer carousel
@@ -80,9 +82,12 @@ function initializeTrailerCarousel() {
     trailerCarousel = document.getElementById('trailersCarousel');
     
     if (!trailerCarousel) {
-        console.warn('⚠️ Trailer carousel container not found');
+        console.warn('⚠️ Trailer carousel container not found, retrying in 1 second...');
+        setTimeout(initializeTrailerCarousel, 1000);
         return;
     }
+    
+    console.log('✅ Trailer carousel container found');
     
     // Start auto-scrolling
     startAutoScroll();
@@ -925,68 +930,83 @@ window.refreshTrailers = window.trailerModule.refreshTrailers;
 
 // Initialize genre filter functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Add event listeners to genre pills
-    const genrePills = document.querySelectorAll('.genre-pill');
-    genrePills.forEach(pill => {
-        pill.addEventListener('click', function() {
-            const genre = this.getAttribute('data-genre');
-            console.log(`Genre selected: ${genre}`);
-            
-            // Update active state
-            genrePills.forEach(p => p.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Update trailers for selected genre
-            if (window.trailerModule && typeof window.trailerModule.updateTrailersForGenre === 'function') {
-                window.trailerModule.updateTrailersForGenre(genre);
-            } else {
-                console.error('trailerModule not available or updateTrailersForGenre function not found');
-            }
-        });
-    });
+    console.log('DOM loaded, initializing genre filter functionality');
     
-    // Add scroll indicators for genre filters
-    const genreFilters = document.getElementById('genreFilters');
-    const scrollLeftBtn = document.querySelector('.scroll-indicator.scroll-left');
-    const scrollRightBtn = document.querySelector('.scroll-indicator.scroll-right');
-    
-    if (genreFilters && scrollLeftBtn && scrollRightBtn) {
-        // Show/hide scroll indicators based on scroll position
-        function updateScrollIndicators() {
-            const scrollLeft = genreFilters.scrollLeft;
-            const scrollWidth = genreFilters.scrollWidth;
-            const clientWidth = genreFilters.clientWidth;
-            
-            // Show left indicator if not at start
-            if (scrollLeft > 0) {
-                scrollLeftBtn.classList.add('visible');
-            } else {
-                scrollLeftBtn.classList.remove('visible');
-            }
-            
-            // Show right indicator if not at end
-            if (scrollLeft + clientWidth < scrollWidth) {
-                scrollRightBtn.classList.add('visible');
-            } else {
-                scrollRightBtn.classList.remove('visible');
-            }
+    // Small delay to ensure genre pills are rendered
+    setTimeout(function() {
+        // Add event listeners to genre pills
+        const genrePills = document.querySelectorAll('.genre-pill-container .genre-pill');
+        console.log('Found genre pills:', genrePills.length);
+        
+        if (genrePills.length > 0) {
+            genrePills.forEach((pill, index) => {
+                console.log(`Attaching event listener to pill ${index}:`, pill.textContent.trim());
+                pill.addEventListener('click', function() {
+                    const genre = this.getAttribute('data-genre');
+                    console.log(`Genre selected: ${genre}`);
+                    
+                    // Update active state
+                    genrePills.forEach(p => p.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update trailers for selected genre
+                    if (window.trailerModule && typeof window.trailerModule.updateTrailersForGenre === 'function') {
+                        window.trailerModule.updateTrailersForGenre(genre);
+                    } else {
+                        console.error('trailerModule not available or updateTrailersForGenre function not found');
+                    }
+                });
+            });
+        } else {
+            console.warn('No genre pills found');
         }
         
-        // Initial check
-        updateScrollIndicators();
+        // Add scroll indicators for genre filters
+        const genreFilters = document.getElementById('genreFilters');
+        const scrollLeftBtn = document.querySelector('.scroll-indicator.scroll-left');
+        const scrollRightBtn = document.querySelector('.scroll-indicator.scroll-right');
         
-        // Update on scroll (throttled)
-        genreFilters.addEventListener('scroll', throttle(updateScrollIndicators, 100));
-        
-        // Add click handlers for scroll buttons
-        scrollLeftBtn.addEventListener('click', function() {
-            genreFilters.scrollBy({ left: -200, behavior: 'smooth' });
-        });
-        
-        scrollRightBtn.addEventListener('click', function() {
-            genreFilters.scrollBy({ left: 200, behavior: 'smooth' });
-        });
-    }
+        if (genreFilters && scrollLeftBtn && scrollRightBtn) {
+            // Show/hide scroll indicators based on scroll position
+            function updateScrollIndicators() {
+                const scrollLeft = genreFilters.scrollLeft;
+                const scrollWidth = genreFilters.scrollWidth;
+                const clientWidth = genreFilters.clientWidth;
+                
+                // Show left indicator if not at start
+                if (scrollLeft > 0) {
+                    scrollLeftBtn.classList.add('visible');
+                } else {
+                    scrollLeftBtn.classList.remove('visible');
+                }
+                
+                // Show right indicator if not at end
+                if (scrollLeft + clientWidth < scrollWidth) {
+                    scrollRightBtn.classList.add('visible');
+                } else {
+                    scrollRightBtn.classList.remove('visible');
+                }
+            }
+            
+            // Initial check
+            updateScrollIndicators();
+            
+            // Update on scroll (throttled)
+            genreFilters.addEventListener('scroll', throttle(updateScrollIndicators, 100));
+            
+            // Add click handlers for scroll buttons
+            scrollLeftBtn.addEventListener('click', function() {
+                genreFilters.scrollBy({ left: -200, behavior: 'smooth' });
+            });
+            
+            scrollRightBtn.addEventListener('click', function() {
+                genreFilters.scrollBy({ left: 200, behavior: 'smooth' });
+            });
+        }
+    }, 100); // Small delay to ensure DOM is fully ready
 });
+
+// Start initialization when script loads
+waitForDOMAndInit();
 
 console.log('✅ trailer.js module initialized and exposed globally');

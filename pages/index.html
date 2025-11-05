@@ -7,9 +7,8 @@
     <link rel="icon" href="../assets/favicon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Preload critical resources -->
-    <link rel="preload" href="../assets/favicon.png" as="image">
-    
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
     <style>
         :root {
             --primary: #0f172a;
@@ -30,9 +29,6 @@
             font-family: 'Inter', sans-serif;
             min-height: 100vh;
             padding-bottom: 70px;
-            /* Enable hardware acceleration */
-            transform: translateZ(0);
-            -webkit-font-smoothing: antialiased;
         }
         
         @media (min-width: 768px) {
@@ -61,8 +57,6 @@
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(34, 211, 238, 0.1);
-            /* Optimize rendering */
-            will-change: transform;
         }
         
         .movie-card {
@@ -71,8 +65,6 @@
             overflow: hidden;
             transition: all 0.3s ease;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-            /* Optimize rendering */
-            will-change: transform;
         }
         
         .movie-card:hover {
@@ -82,8 +74,6 @@
         
         .movie-card img {
             transition: transform 0.3s ease;
-            /* Optimize image rendering */
-            image-rendering: -webkit-optimize-contrast;
         }
         
         .movie-card:hover img {
@@ -99,8 +89,6 @@
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(34, 211, 238, 0.2);
             z-index: 1000;
-            /* Optimize rendering */
-            will-change: transform;
         }
         
         @media (min-width: 768px) {
@@ -117,8 +105,6 @@
         
         .animate-marquee {
             animation: marquee 15s linear infinite;
-            /* Optimize animation */
-            will-change: transform;
         }
         
         /* Search label styling */
@@ -146,8 +132,6 @@
             border: 1px solid #475569;
             color: white;
             font-size: 1rem;
-            /* Optimize input rendering */
-            will-change: transform;
         }
         
         #searchInput:focus {
@@ -167,8 +151,6 @@
             border: none;
             cursor: pointer;
             z-index: 10;
-            /* Optimize button rendering */
-            will-change: transform;
         }
         
         #voiceSearchButton {
@@ -187,8 +169,6 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             border: none;
             outline: none;
-            /* Optimize rendering */
-            will-change: transform;
         }
         
         .genre-pill:hover {
@@ -225,8 +205,6 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            /* Optimize rendering */
-            will-change: transform;
         }
         
         .banner-ad-container ins {
@@ -244,8 +222,6 @@
             border-radius: 12px;
             overflow: hidden;
             background: rgba(30, 41, 59, 0.5);
-            /* Optimize rendering */
-            will-change: transform;
         }
         
         #trailersCarousel {
@@ -254,8 +230,6 @@
             scroll-behavior: smooth;
             height: 100%;
             width: 100%;
-            /* Optimize rendering */
-            will-change: scroll-position;
         }
         
         .trailer-item {
@@ -264,8 +238,6 @@
             position: relative;
             scroll-snap-align: start;
             overflow: hidden;
-            /* Optimize rendering */
-            will-change: transform;
         }
         
         .trailer-item .thumbnail-container {
@@ -283,8 +255,6 @@
             height: 100%;
             object-fit: cover;
             border-radius: 12px;
-            /* Optimize image loading */
-            loading: lazy;
         }
         
         .trailer-overlay {
@@ -337,8 +307,6 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             opacity: 1 !important;
             pointer-events: auto !important;
-            /* Optimize button rendering */
-            will-change: transform;
         }
         
         .trailer-control-btn:hover {
@@ -405,8 +373,6 @@
             z-index: 1000;
             justify-content: center;
             align-items: center;
-            /* Optimize rendering */
-            will-change: transform;
         }
         
         .video-player-container {
@@ -527,8 +493,6 @@
             border-top: 2px solid var(--accent);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            /* Optimize animation */
-            will-change: transform;
         }
         
         @keyframes spin {
@@ -552,8 +516,6 @@
             opacity: 0;
             transition: opacity 0.3s ease;
             z-index: 10;
-            /* Optimize rendering */
-            will-change: opacity;
         }
         
         .scroll-indicator.visible {
@@ -585,8 +547,6 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             opacity: 1 !important;
             pointer-events: auto !important;
-            /* Optimize button rendering */
-            will-change: transform;
         }
         
         .trailer-control-btn:hover {
@@ -660,23 +620,11 @@
             transition: all 0.3s ease;
             z-index: 40;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            /* Optimize button rendering */
-            will-change: transform;
         }
         
         .trailer-close-btn:hover {
             background: #22d3ee;
             transform: scale(1.1);
-        }
-        
-        /* Optimize section loading */
-        .section-container {
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
-        
-        .section-loading {
-            opacity: 0.7;
         }
     </style>
 </head>
@@ -787,7 +735,6 @@
                     name="search" 
                     autocomplete="off"
                     class="w-full py-3 pl-4 pr-12 rounded-lg bg-secondary border border-gray-600 text-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50"
-                    loading="lazy"
                 >
                 <label for="searchInput" id="searchLabel" class="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-400 pointer-events-none transition-all duration-200">
                     Type <span>or dictate</span> to search
@@ -974,7 +921,125 @@
 
     <!-- Movie Details -->
     <section id="movieDetails" class="container mx-auto px-4 py-8 hidden">
-        <!-- Movie details content -->
+        <div class="bg-secondary rounded-xl shadow-lg overflow-hidden">
+            <div class="md:flex">
+                <div class="md:w-1/3 p-6 flex justify-center">
+                    <img id="moviePoster" src="" alt="Movie Poster" class="rounded-lg shadow-lg w-full max-w-md">
+                </div>
+                <div class="md:w-2/3 p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 id="movieTitle" class="text-3xl font-bold text-accent font-sans"></h2>
+                        <button id="backButton" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i>Back
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Movie Information</h3>
+                            <ul class="space-y-2">
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Year:</span>
+                                    <span id="movieYear"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Rating:</span>
+                                    <span id="movieRating"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Length:</span>
+                                    <span id="movieDuration"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Genres:</span>
+                                    <span id="movieGenres"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">IMDb ID:</span>
+                                    <span id="movieImdbId"></span>
+                                </li>
+                                <li class="flex">
+                                    <span class="font-semibold w-32">Type:</span>
+                                    <span id="movieType"></span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Cast & Crew</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <h4 class="font-semibold text-gray-300 mb-1">Cast</h4>
+                                    <div id="movieCast" class="space-y-1">
+                                        <!-- Cast will be populated here -->
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-300 mb-1">Crew</h4>
+                                    <ul id="movieCrew" class="space-y-1">
+                                        <!-- Crew will be populated here -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        <button id="trailerButton" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-play-circle mr-2"></i>Watch Trailer
+                        </button>
+                        <button id="photosButton" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-images mr-2"></i>View Photos
+                        </button>
+                        <button id="streamButton" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-film mr-2"></i>Stream Movie
+                        </button>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Plot</h3>
+                        <p id="moviePlot" class="leading-relaxed"></p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Keywords</h3>
+                        <div id="movieKeywords" class="flex flex-wrap">
+                            <!-- Keywords will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cast Images Section -->
+            <div id="castImagesSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Cast Images</h3>
+                <div id="castImagesContainer" class="flex overflow-x-auto space-x-4 pb-4 media-carousel">
+                    <!-- Cast images will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Additional Media Section -->
+            <div id="additionalMediaSection" class="px-6 pb-6 hidden">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Additional Media</h3>
+                <div id="additionalMediaContainer" class="flex overflow-x-auto space-x-4 pb-4 media-carousel">
+                    <!-- Additional media will be populated here -->
+                </div>
+            </div>
+            
+            <div class="section-divider my-6"></div>
+            
+            <!-- Comments Section -->
+            <div class="px-6 pb-6">
+                <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Comments</h3>
+                <div class="bg-gray-800 rounded-lg p-4 mb-4">
+                    <textarea id="commentText" class="w-full bg-gray-700 text-white rounded-lg p-3 mb-3" placeholder="Add a comment..." rows="3"></textarea>
+                    <button id="postComment" class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg">Post Comment</button>
+                </div>
+                <div id="commentsContainer" class="space-y-4">
+                    <!-- Comments will be populated here -->
+                </div>
+            </div>
+        </div>
     </section>
 
     <!-- Trailer Modal -->
@@ -1185,10 +1250,9 @@
             }
         });
     </script>
-    
-    <!-- Load scripts asynchronously for better performance -->
-    <script src="../js/script.js" defer></script>
-    <script src="../js/trailer.js" defer></script>
-    <script src="../js/trailer-cache.js" defer></script>
+    <script async src="../js/script.js"></script>
+    <script defer src="../js/trailer.js"></script>
+    <script defer src="../js/trailer-cache.js"></script>
+    <script defer src="../js/voiceSearch.js"></script>
 </body>
 </html>
