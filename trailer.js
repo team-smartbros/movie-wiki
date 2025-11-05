@@ -741,140 +741,35 @@ function playTrailer(index, movieId, trailerData) {
     }
 }
 
-// Show error message for trailer playback issues
-function showTrailerError(message, trailerData = null) {
-    const modal = document.getElementById('trailerModal');
-    const modalContent = document.getElementById('trailerModalContent');
-    
-    if (modal && modalContent) {
-        // Lock body scroll
-        document.body.classList.add('modal-open');
-        
-        // Set modal content with error message
-        let errorMessageHTML = `
-            <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 rounded-xl">
-                <div class="text-center p-4 max-w-md">
-                    <p class="text-white text-lg mb-3">⚠️ ${message}</p>
-                    <div class="flex flex-col gap-2">
-                        <button class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="closeTrailerModal()">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Add search option if we have trailer data
-        if (trailerData && trailerData.title) {
-            const searchQuery = encodeURIComponent(trailerData.title);
-            errorMessageHTML = `
-                <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 rounded-xl">
-                    <div class="text-center p-4 max-w-md">
-                        <p class="text-white text-lg mb-3">⚠️ Video Playback Blocked</p>
-                        <p class="text-gray-400 text-sm mb-4">IMDb is blocking video playback due to strict security policies.</p>
-                        
-                        <div class="bg-blue-900 border border-blue-600 rounded-lg p-3 mb-4">
-                            <p class="text-blue-200 font-semibold text-sm mb-2">💡 Solutions:</p>
-                            <ul class="text-left text-xs text-blue-200 space-y-1">
-                                <li>• Open trailer in new tab (below)</li>
-                                <li>• Search on YouTube/Google</li>
-                                <li>• Try incognito mode</li>
-                                <li>• Use a VPN service</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="flex flex-col gap-2">
-                            <button class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('${trailerData.url || 'https://www.imdb.com'}', '_blank')">
-                                Open in New Tab
-                            </button>
-                            <button class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('https://www.youtube.com/results?search_query=${searchQuery}', '_blank')">
-                                Search on YouTube
-                            </button>
-                            <button class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('https://www.google.com/search?q=${searchQuery}+trailer', '_blank')">
-                                Search on Google
-                            </button>
-                            <button class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 mt-2" onclick="closeTrailerModal()">
-                                Close
-                            </button>
-                        </div>
-                        ${trailerData.thumbnail ? `<img src="${trailerData.thumbnail}" alt="Thumbnail" class="max-w-full mt-4 rounded">` : ''}
-                    </div>
-                </div>
-            `;
-        }
-        
-        modalContent.innerHTML = errorMessageHTML;
-        
-        // Show modal
-        modal.classList.remove('hidden');
-        
-        // Add event listener to close button
-        document.getElementById('trailerModalClose').onclick = closeTrailerModal;
-        
-        // Add event listener to close modal when clicking outside
-        modal.onclick = function(event) {
-            if (event.target === modal) {
-                closeTrailerModal();
-            }
-        };
-        
-        // Add event listener for ESC key
-        document.addEventListener('keydown', handleEscKey);
-    } else {
-        alert(message);
-        resumeAutoScroll(); // Resume scrolling if there's an error
-    }
-}
-
-// Handle ESC key to close modal
-function handleEscKey(event) {
-    if (event.key === 'Escape') {
-        closeTrailerModal();
-    }
-}
-
-// Close trailer modal
-function closeTrailerModal() {
-    const modal = document.getElementById('trailerModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        // Unlock body scroll
-        document.body.classList.remove('modal-open');
-        
-        // Remove ESC key listener
-        if (modal.handleEscKey) {
-            document.removeEventListener('keydown', modal.handleEscKey);
-        }
-        
-        // Clear modal content
-        const modalContent = document.getElementById('trailerModalContent');
-        if (modalContent) {
-            modalContent.innerHTML = '';
-        }
-        
-        // Resume auto-scrolling
-        resumeAutoScroll();
-    }
-}
-
 // Show trailer in modal with enhanced proxy support
 function showTrailerInModal(videoUrl, trailerData) {
+    console.log('Attempting to open trailer modal with URL:', videoUrl);
+    
     const modal = document.getElementById('trailerModal');
     const modalContent = document.getElementById('trailerModalContent');
     
     // Debug: Check if modal elements exist
-    console.log('Modal elements:', {modal, modalContent});
+    console.log('Modal elements found:', {modal, modalContent});
     
-    if (!modal || !modalContent) {
-        console.error('Trailer modal not found');
+    if (!modal) {
+        console.error('Trailer modal element not found in DOM');
         // Fallback: Show error in alert
-        alert('Unable to open trailer modal. Please try again.');
+        alert('Unable to open trailer modal - modal element not found. Please try again.');
+        resumeAutoScroll();
+        return;
+    }
+    
+    if (!modalContent) {
+        console.error('Trailer modal content element not found in DOM');
+        // Fallback: Show error in alert
+        alert('Unable to open trailer modal - content element not found. Please try again.');
         resumeAutoScroll();
         return;
     }
     
     // Lock body scroll
     document.body.classList.add('modal-open');
+    console.log('Body scroll locked');
     
     // Set loading state
     modalContent.innerHTML = `
@@ -884,32 +779,47 @@ function showTrailerInModal(videoUrl, trailerData) {
             </div>
         </div>
     `;
+    console.log('Loading state set');
     
     // Show modal immediately
     modal.classList.remove('hidden');
+    console.log('Modal shown');
     
     // Create video element after a short delay to ensure DOM is updated
     setTimeout(() => {
+        console.log('Creating modal video element');
         createModalVideoElement(videoUrl, trailerData);
     }, 100);
     
     // Add event listener to close button
     const closeButton = document.getElementById('trailerModalClose');
     if (closeButton) {
-        closeButton.onclick = closeTrailerModal;
+        console.log('Close button found, adding event listener');
+        closeButton.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Close button clicked');
+            closeTrailerModal();
+        };
+    } else {
+        console.warn('Close button not found');
     }
     
     // Add event listener to close modal when clicking outside
     modal.onclick = function(event) {
+        console.log('Modal clicked', event.target);
         // Check if click was on the modal background (not content)
         if (event.target === modal) {
+            console.log('Closing modal by clicking outside');
             closeTrailerModal();
         }
     };
     
     // Handle ESC key to close modal
     function handleEscKey(event) {
+        console.log('Key pressed:', event.key);
         if (event.key === 'Escape') {
+            console.log('ESC key pressed, closing modal');
             closeTrailerModal();
         }
     }
@@ -919,11 +829,14 @@ function showTrailerInModal(videoUrl, trailerData) {
     
     // Store reference to the handler so we can remove it later
     modal.handleEscKey = handleEscKey;
+    console.log('ESC key listener added');
 }
 
 // Create video element for modal with enhanced proxy support
 function createModalVideoElement(videoUrl, trailerData) {
     const container = document.querySelector('#trailerModalContent .video-container');
+    console.log('Video container found:', container);
+    
     if (!container) {
         console.error('Video container not found in modal');
         return;
@@ -969,6 +882,7 @@ function createModalVideoElement(videoUrl, trailerData) {
     
     // First attempt: Try direct URL
     videoElement.src = videoUrl;
+    console.log('Video source set to:', videoUrl);
     
     // Enhanced error handling with automatic proxy fallback
     videoElement.onerror = function(e) {
@@ -1198,6 +1112,38 @@ function showHLSPlaybackError(videoUrl, container, trailerData) {
             </div>
         </div>
     `;
+}
+
+// Close trailer modal
+function closeTrailerModal() {
+    console.log('Closing trailer modal');
+    const modal = document.getElementById('trailerModal');
+    if (modal) {
+        console.log('Modal found, hiding it');
+        modal.classList.add('hidden');
+        // Unlock body scroll
+        document.body.classList.remove('modal-open');
+        console.log('Body scroll unlocked');
+        
+        // Remove ESC key listener
+        if (modal.handleEscKey) {
+            console.log('Removing ESC key listener');
+            document.removeEventListener('keydown', modal.handleEscKey);
+        }
+        
+        // Clear modal content
+        const modalContent = document.getElementById('trailerModalContent');
+        if (modalContent) {
+            console.log('Clearing modal content');
+            modalContent.innerHTML = '';
+        }
+        
+        // Resume auto-scrolling
+        console.log('Resuming auto-scroll');
+        resumeAutoScroll();
+    } else {
+        console.warn('Modal not found when trying to close');
+    }
 }
 
 // Close trailer
