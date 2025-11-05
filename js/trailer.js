@@ -1,5 +1,12 @@
 // trailer.js - Trailer functionality for Movie Wiki
+// Check if script already loaded to prevent duplicate declarations
+if (window.trailerJSLoaded) {
+    console.log('✅ trailer.js already loaded, skipping initialization');
+    return;
+}
+
 console.log('✅ trailer.js loaded');
+window.trailerJSLoaded = true;
 
 // Use the existing API_BASE and CORS_PROXIES from script.js instead of redeclaring them
 let currentProxyIndex = 0;
