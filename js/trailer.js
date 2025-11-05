@@ -721,6 +721,7 @@ function playTrailer(index, movieId, trailerData) {
     
     // Pause auto-scrolling when trailer is played
     pauseAutoScroll();
+    console.log('Auto-scroll paused');
     
     if (trailerData && trailerData.url) {
         const trailerUrl = trailerData.url;
@@ -732,8 +733,8 @@ function playTrailer(index, movieId, trailerData) {
             return;
         }
         
-        // Show trailer in modal with enhanced proxy support
-        showTrailerInModal(trailerUrl, trailerData);
+        // Redirect to dedicated trailer page
+        redirectToTrailerPage(trailerUrl, trailerData, movieId);
     } else {
         // Fallback if no trailer URL
         console.log('No trailer URL available for movie', {index, movieId, trailerData});
@@ -743,444 +744,50 @@ function playTrailer(index, movieId, trailerData) {
 
 // Show error message for trailer playback issues
 function showTrailerError(message, trailerData = null) {
-    const modal = document.getElementById('trailerModal');
-    const modalContent = document.getElementById('trailerModalContent');
+    // For now, we'll show an alert since we're redirecting to a new page
+    alert(message + '\n\nYou will be redirected to the trailer page.');
     
-    if (modal && modalContent) {
-        // Lock body scroll
-        document.body.classList.add('modal-open');
-        
-        // Set modal content with error message
-        let errorMessageHTML = `
-            <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 rounded-xl">
-                <div class="text-center p-4 max-w-md">
-                    <p class="text-white text-lg mb-3">⚠️ ${message}</p>
-                    <div class="flex flex-col gap-2">
-                        <button class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="closeTrailerModal()">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Add search option if we have trailer data
-        if (trailerData && trailerData.title) {
-            const searchQuery = encodeURIComponent(trailerData.title);
-            errorMessageHTML = `
-                <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 rounded-xl">
-                    <div class="text-center p-4 max-w-md">
-                        <p class="text-white text-lg mb-3">⚠️ Video Playback Blocked</p>
-                        <p class="text-gray-400 text-sm mb-4">IMDb is blocking video playback due to strict security policies.</p>
-                        
-                        <div class="bg-blue-900 border border-blue-600 rounded-lg p-3 mb-4">
-                            <p class="text-blue-200 font-semibold text-sm mb-2">💡 Solutions:</p>
-                            <ul class="text-left text-xs text-blue-200 space-y-1">
-                                <li>• Open trailer in new tab (below)</li>
-                                <li>• Search on YouTube/Google</li>
-                                <li>• Try incognito mode</li>
-                                <li>• Use a VPN service</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="flex flex-col gap-2">
-                            <button class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('${trailerData.url || 'https://www.imdb.com'}', '_blank')">
-                                Open in New Tab
-                            </button>
-                            <button class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('https://www.youtube.com/results?search_query=${searchQuery}', '_blank')">
-                                Search on YouTube
-                            </button>
-                            <button class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('https://www.google.com/search?q=${searchQuery}+trailer', '_blank')">
-                                Search on Google
-                            </button>
-                            <button class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 mt-2" onclick="closeTrailerModal()">
-                                Close
-                            </button>
-                        </div>
-                        ${trailerData.thumbnail ? `<img src="${trailerData.thumbnail}" alt="Thumbnail" class="max-w-full mt-4 rounded">` : ''}
-                    </div>
-                </div>
-            `;
-        }
-        
-        modalContent.innerHTML = errorMessageHTML;
-        
-        // Show modal
-        modal.classList.remove('hidden');
-        
-        // Add event listener to close button
-        document.getElementById('trailerModalClose').onclick = closeTrailerModal;
-        
-        // Add event listener to close modal when clicking outside
-        modal.onclick = function(event) {
-            if (event.target === modal) {
-                closeTrailerModal();
-            }
-        };
-        
-        // Add event listener for ESC key
-        document.addEventListener('keydown', handleEscKey);
+    // If we have trailer data, redirect to trailer page anyway
+    if (trailerData && trailerData.url) {
+        setTimeout(() => {
+            redirectToTrailerPage(trailerData.url, trailerData);
+        }, 1000);
     } else {
-        alert(message);
-        resumeAutoScroll(); // Resume scrolling if there's an error
-    }
-}
-
-// Handle ESC key to close modal
-function handleEscKey(event) {
-    if (event.key === 'Escape') {
-        closeTrailerModal();
-    }
-}
-
-// Close trailer modal
-function closeTrailerModal() {
-    const modal = document.getElementById('trailerModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        // Unlock body scroll
-        document.body.classList.remove('modal-open');
-        // Remove ESC key listener
-        document.removeEventListener('keydown', handleEscKey);
-        // Resume auto-scrolling
+        // Resume auto-scroll if we can't play trailer
         resumeAutoScroll();
     }
 }
 
-// Show trailer in modal with enhanced proxy support
-function showTrailerInModal(videoUrl, trailerData) {
-    const modal = document.getElementById('trailerModal');
-    const modalContent = document.getElementById('trailerModalContent');
+// Redirect to dedicated trailer page
+function redirectToTrailerPage(videoUrl, trailerData, movieId) {
+    console.log('Redirecting to trailer page with URL:', videoUrl);
     
-    if (!modal || !modalContent) {
-        console.error('Trailer modal not found');
-        return;
+    // Get movie data from the trailer data store if available
+    const movie = window.trailerDataStore && window.trailerDataStore[movieId] ? 
+                  window.trailerDataStore[movieId].movie : null;
+    
+    // Build URL parameters
+    const params = new URLSearchParams();
+    params.set('url', videoUrl);
+    
+    if (trailerData.title) {
+        params.set('title', trailerData.title);
     }
     
-    // Lock body scroll
-    document.body.classList.add('modal-open');
-    
-    // Set loading state
-    modalContent.innerHTML = `
-        <div class="video-container">
-            <div class="absolute inset-0 flex items-center justify-center">
-                <i class="fas fa-spinner fa-spin text-4xl text-accent"></i>
-            </div>
-        </div>
-    `;
-    
-    // Show modal
-    modal.classList.remove('hidden');
-    
-    // Create video element after a short delay to ensure DOM is updated
-    setTimeout(() => {
-        createModalVideoElement(videoUrl, trailerData);
-    }, 100);
-    
-    // Add event listener to close button
-    document.getElementById('trailerModalClose').onclick = closeTrailerModal;
-    
-    // Add event listener to close modal when clicking outside
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            closeTrailerModal();
-        }
-    };
-    
-    // Handle ESC key to close modal
-    function handleEscKey(event) {
-        if (event.key === 'Escape') {
-            closeTrailerModal();
-        }
+    if (movieId) {
+        params.set('movieId', movieId);
     }
     
-    // Add event listener for ESC key
-    document.addEventListener('keydown', handleEscKey);
-}
-
-// Create video element for modal with enhanced proxy support
-async function createModalVideoElement(videoUrl, trailerData) {
-    const container = document.querySelector('#trailerModalContent .video-container');
-    if (!container) {
-        console.error('Video container not found in modal');
-        return;
+    if (movie) {
+        if (movie.title) params.set('title', movie.title);
+        if (movie.poster) params.set('poster', movie.poster);
+        if (movie.year) params.set('year', movie.year);
+        if (movie.plot) params.set('plot', movie.plot);
+        if (movie.rating) params.set('rating', movie.rating);
     }
     
-    // Clear container
-    container.innerHTML = '';
-    
-    // Log the video URL for debugging
-    console.log('Creating modal video element with URL:', videoUrl);
-    
-    // Create video element with proper attributes for embedding
-    const videoElement = document.createElement('video');
-    videoElement.controls = true;
-    videoElement.autoplay = true;
-    videoElement.className = 'rounded-xl';
-    videoElement.poster = trailerData.thumbnail || '';
-    videoElement.crossOrigin = 'anonymous';
-    videoElement.playsInline = true; // Important for iOS
-    videoElement.muted = true; // Start muted to allow autoplay
-    
-    // Add attributes to prevent controls on hover (as per requirements)
-    videoElement.setAttribute('controlsList', 'nodownload nofullscreen noremoteplayback');
-    videoElement.setAttribute('disableRemotePlayback', '');
-    
-    // Set additional attributes for better compatibility
-    videoElement.setAttribute('preload', 'auto');
-    videoElement.setAttribute('loop', 'false');
-    videoElement.setAttribute('style', 'width: 100%; height: 100%; object-fit: contain; max-width: 100%; max-height: 100%;');
-    
-    let proxyAttemptCount = 0;
-    
-    // Check if local proxy is available
-    const localProxyAvailable = await isLocalProxyAvailable();
-    console.log('Local proxy available:', localProxyAvailable);
-    
-    // Check if URL is M3U8 (HLS stream)
-    const isHLS = videoUrl.toLowerCase().includes('.m3u8');
-    
-    // Handle HLS streams differently
-    if (isHLS) {
-        console.log(' HLS stream detected');
-        // Try to use HLS.js library for better HLS support
-        loadHLSPlayer(videoUrl, videoElement, container, trailerData);
-        return;
-    }
-    
-    // First attempt: Try direct URL
-    videoElement.src = videoUrl;
-    
-    // Enhanced error handling with automatic proxy fallback
-    videoElement.onerror = function(e) {
-        console.error('❌ Video playback failed for URL:', videoUrl, e);
-        
-        // Check if we have more proxies to try
-        if (proxyAttemptCount < VIDEO_PROXIES.length) {
-            // If local proxy is not available, skip it
-            if (!localProxyAvailable && proxyAttemptCount === 0) {
-                proxyAttemptCount = 1;
-            }
-            
-            // Try next proxy
-            const proxy = VIDEO_PROXIES[proxyAttemptCount];
-            let proxiedUrl;
-            
-            // Special handling for local proxy
-            if (proxy.startsWith('http://localhost:3001/proxy/')) {
-                // Extract path and query from original URL
-                const urlObj = new URL(videoUrl);
-                proxiedUrl = proxy + urlObj.pathname + urlObj.search;
-            } else {
-                proxiedUrl = proxy + encodeURIComponent(videoUrl);
-            }
-            
-            console.log(`🔄 Attempting proxy ${proxyAttemptCount + 1}:`, proxy.substring(0, 50) + '...');
-            
-            videoElement.src = proxiedUrl;
-            proxyAttemptCount++;
-        } else {
-            // All proxies failed, show error message with multiple options
-            console.error('❌ All video proxies failed for URL:', videoUrl);
-            
-            // Extract movie title for search
-            const movieTitle = trailerData.title || 'Movie Trailer';
-            
-            // Get reference to close function for the button
-            const closeModalFunction = function() {
-                const modal = document.getElementById('trailerModal');
-                if (modal) {
-                    modal.classList.add('hidden');
-                    // Unlock body scroll
-                    document.body.classList.remove('modal-open');
-                    // Resume auto-scrolling
-                    resumeAutoScroll();
-                }
-            };
-            
-            container.innerHTML = `
-                <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 rounded-xl">
-                    <div class="text-center p-4 max-w-md">
-                        <p class="text-white text-lg mb-3">⚠️ Video Playback Blocked</p>
-                        <p class="text-gray-400 text-sm mb-4">IMDb is blocking video playback due to strict security policies.</p>
-                        
-                        <div class="bg-blue-900 border border-blue-600 rounded-lg p-3 mb-4">
-                            <p class="text-blue-200 font-semibold text-sm mb-2">💡 Solutions:</p>
-                            <ul class="text-left text-xs text-blue-200 space-y-1">
-                                <li>• Open trailer in new tab (below)</li>
-                                <li>• Search on YouTube/Google</li>
-                                <li>• Try incognito mode</li>
-                                <li>• Use a VPN service</li>
-                                <li>• Run local proxy server</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="flex flex-col gap-2">
-                            <button class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('${videoUrl}', '_blank')">
-                                Open in New Tab
-                            </button>
-                            <button class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('https://www.youtube.com/results?search_query=${encodeURIComponent(movieTitle)}', '_blank')">
-                                Search on YouTube
-                            </button>
-                            <button class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="location.reload()">
-                                Reload Page
-                            </button>
-                            <button class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 mt-2" onclick="window.open('http://localhost:3001', '_blank')">
-                                Start Local Proxy
-                            </button>
-                            <button class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 mt-2" onclick="(${closeModalFunction.toString()})()">
-                                Close
-                            </button>
-                        </div>
-                        ${trailerData.thumbnail ? `<img src="${trailerData.thumbnail}" alt="Thumbnail" class="max-w-full mt-4 rounded">` : ''}
-                    </div>
-                </div>
-            `;
-        }
-    };
-    
-    // Success handler
-    videoElement.onloadeddata = function() {
-        if (proxyAttemptCount === 0) {
-            console.log('✅ Video loaded successfully (direct playback) for URL:', videoUrl);
-        } else {
-            const proxyName = proxyAttemptCount === 1 && !localProxyAvailable ? 
-                VIDEO_PROXIES[1] : 
-                VIDEO_PROXIES[proxyAttemptCount - 1];
-            console.log(`✅ Video loaded via proxy ${proxyAttemptCount}: ${proxyName} for URL:`, videoUrl);
-        }
-        // Unmute after video starts playing
-        setTimeout(() => {
-            if (videoElement) {
-                videoElement.muted = false;
-            }
-        }, 1000);
-    };
-    
-    // Handle video play event
-    videoElement.onplay = function() {
-        console.log('▶️ Video started playing for URL:', videoUrl);
-    };
-    
-    // Handle video pause event
-    videoElement.onpause = function() {
-        console.log('⏸️ Video paused for URL:', videoUrl);
-    };
-    
-    // Handle video end event
-    videoElement.onended = function() {
-        console.log('⏹️ Video ended for URL:', videoUrl);
-    };
-    
-    container.appendChild(videoElement);
-}
-
-// Function to handle HLS streams with HLS.js
-function loadHLSPlayer(videoUrl, videoElement, container, trailerData) {
-    // Show loading state
-    container.innerHTML = `
-        <div class="absolute inset-0 flex items-center justify-center">
-            <i class="fas fa-spinner fa-spin text-4xl text-accent"></i>
-        </div>
-    `;
-    
-    // Load HLS.js library dynamically
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.1.5/dist/hls.min.js';
-    script.onload = function() {
-        if (Hls.isSupported()) {
-            // Clear loading state
-            container.innerHTML = '';
-            container.appendChild(videoElement);
-            
-            const hls = new Hls();
-            hls.loadSource(videoUrl);
-            hls.attachMedia(videoElement);
-            hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                console.log('✅ HLS stream loaded successfully');
-                videoElement.play();
-            });
-            
-            hls.on(Hls.Events.ERROR, function(event, data) {
-                console.error('❌ HLS playback error:', data);
-                if (data.fatal) {
-                    switch(data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            // Try to recover network error
-                            console.log('🔄 Trying to recover network error');
-                            hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            // Try to recover media error
-                            console.log('🔄 Trying to recover media error');
-                            hls.recoverMediaError();
-                            break;
-                        default:
-                            // Cannot recover
-                            console.error('❌ Fatal HLS error, cannot recover');
-                            showHLSPlaybackError(videoUrl, container, trailerData);
-                            break;
-                    }
-                }
-            });
-        } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-            // Fallback for Safari
-            console.log('▶️ Using native HLS support (Safari)');
-            container.innerHTML = '';
-            container.appendChild(videoElement);
-            videoElement.src = videoUrl;
-            videoElement.addEventListener('loadedmetadata', function() {
-                videoElement.play();
-            });
-        } else {
-            // HLS not supported
-            console.error('❌ HLS not supported in this browser');
-            showHLSPlaybackError(videoUrl, container, trailerData);
-        }
-    };
-    
-    script.onerror = function() {
-        console.error('❌ Failed to load HLS.js library');
-        showHLSPlaybackError(videoUrl, container, trailerData);
-    };
-    
-    document.head.appendChild(script);
-}
-
-// Function to show error when HLS playback fails
-function showHLSPlaybackError(videoUrl, container, trailerData) {
-    const movieTitle = trailerData.title || 'Movie Trailer';
-    
-    container.innerHTML = `
-        <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 rounded-xl">
-            <div class="text-center p-4 max-w-md">
-                <p class="text-white text-lg mb-3">⚠️ HLS Stream Playback Failed</p>
-                <p class="text-gray-400 text-sm mb-4">This video uses adaptive streaming which requires special handling.</p>
-                
-                <div class="bg-blue-900 border border-blue-600 rounded-lg p-3 mb-4">
-                    <p class="text-blue-200 font-semibold text-sm mb-2">💡 Solutions:</p>
-                    <ul class="text-left text-xs text-blue-200 space-y-1">
-                        <li>• Open stream in new tab (below)</li>
-                        <li>• Search for "${movieTitle}" on YouTube</li>
-                        <li>• Try a different browser</li>
-                    </ul>
-                </div>
-                
-                <div class="flex flex-col gap-2">
-                    <button class="bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('${videoUrl}', '_blank')">
-                        Open Stream in New Tab
-                    </button>
-                    <button class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300" onclick="window.open('https://www.youtube.com/results?search_query=${encodeURIComponent(movieTitle)}', '_blank')">
-                        Search on YouTube
-                    </button>
-                    <button class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 mt-2" onclick="closeTrailerModal()">
-                        Close
-                    </button>
-                </div>
-                ${trailerData.thumbnail ? `<img src="${trailerData.thumbnail}" alt="Thumbnail" class="max-w-full mt-4 rounded">` : ''}
-            </div>
-        </div>
-    `;
+    // Redirect to trailer page
+    window.location.href = `trailer.html?${params.toString()}`;
 }
 
 // Close trailer
@@ -1312,4 +919,3 @@ window.updateTrailersForGenre = window.trailerModule.updateTrailersForGenre;
 window.refreshTrailers = window.trailerModule.refreshTrailers;
 
 console.log('✅ trailer.js module initialized and exposed globally');
-
