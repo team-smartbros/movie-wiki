@@ -1021,10 +1021,14 @@ async function displayTrailers(movies) {
     // Add event listeners to play buttons (debounced)
     const playButtons = document.querySelectorAll('.play-btn');
     console.log(`Found ${playButtons.length} play buttons`);
-    
+
     playButtons.forEach(button => {
-        button.addEventListener('click', debounce(function() {
-            const index = parseInt(this.getAttribute('data-index'));
+        button.addEventListener('click', debounce(function(event) {
+            // Get the index from the button that was clicked, using closest to ensure we get the button even if icon was clicked
+            const clickedButton = event.target.closest('.play-btn');
+            if (!clickedButton) return;
+            
+            const index = parseInt(clickedButton.getAttribute('data-index'));
             let movieId = null;
             let trailerData = null;
             
@@ -1093,8 +1097,12 @@ function createPlaceholderTrailers() {
         // Add event listener to play button (always active)
         const playBtn = trailerItem.querySelector('.play-btn');
         if (playBtn) {
-            playBtn.addEventListener('click', function() {
-                const index = parseInt(this.getAttribute('data-index'));
+            playBtn.addEventListener('click', function(event) {
+                // Get the index from the button that was clicked, using closest to ensure we get the button even if icon was clicked
+                const clickedButton = event.target.closest('.play-btn');
+                if (!clickedButton) return;
+                
+                const index = parseInt(clickedButton.getAttribute('data-index'));
                 // Placeholder trailers don't have movie ID or trailer data
                 playTrailer(index, null, null);
             });
@@ -1121,8 +1129,12 @@ function initializeCarouselNavigation(count = 6) {
         const dot = document.createElement('div');
         dot.className = `carousel-dot ${i === 0 ? 'active' : ''}`;
         dot.setAttribute('data-index', i);
-        dot.addEventListener('click', function() {
-            const index = parseInt(this.getAttribute('data-index'));
+        dot.addEventListener('click', function(event) {
+            // Get the index from the dot that was clicked
+            const clickedDot = event.target.closest('.carousel-dot');
+            if (!clickedDot) return;
+            
+            const index = parseInt(clickedDot.getAttribute('data-index'));
             scrollToTrailer(index);
         });
         dotsContainer.appendChild(dot);
@@ -1393,3 +1405,6 @@ document.addEventListener('DOMContentLoaded', function() {
 waitForDOMAndInit();
 
 console.log('✅ trailer.js module initialized and exposed globally');
+
+// Start initialization when script loads
+waitForDOMAndInit();
