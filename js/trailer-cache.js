@@ -1,179 +1,195 @@
-// trailer-cache.js - Dedicated caching system for trailer URLs
-// This file provides a robust caching mechanism specifically for trailer data to ensure fast loading
-
+// trailer-cache.js - Trailer caching system for Movie Wiki
 console.log('✅ trailer-cache.js loaded');
 
-// Cache configuration
-const TRAILER_CACHE_DURATION = 2 * 60 * 60 * 1000; // 2 hours cache duration
-const TRAILER_CACHE_MAX_ENTRIES = 100; // Maximum number of trailer cache entries
-const TRAILER_CACHE_PREFIX = 'trailer_cache_';
-
-// Initialize cache
-let trailerCache = {};
-
-// Load cache from localStorage on startup
-function loadTrailerCache() {
-    try {
-        const cachedData = localStorage.getItem('trailerCache');
-        if (cachedData) {
-            const parsedData = JSON.parse(cachedData);
-            // Check if cache is still valid
-            if (Date.now() - parsedData.timestamp < TRAILER_CACHE_DURATION) {
-                trailerCache = parsedData.data;
-                console.log('✅ Trailer cache loaded from localStorage');
-            } else {
-                console.log('🗑️ Trailer cache expired, clearing');
-                clearTrailerCache();
+// Enhanced trailer cache with size limits and expiration
+class TrailerCache {
+    constructor(maxSize = 50, expirationTime = 30 * 60 * 1000) { // 30 minutes
+        this.cache = new Map();
+        this.maxSize = maxSize;
+        this.expirationTime = expirationTime;
+        this.accessOrder = []; // Track access order for LRU
+    }
+    
+    // Get cached trailer data
+    get(movieId) {
+        if (!this.cache.has(movieId)) {
+            return null;
+        }
+        
+        const cachedItem = this.cache.get(movieId);
+        
+        // Check if expired
+        if (Date.now() - cachedItem.timestamp > this.expirationTime) {
+            this.delete(movieId);
+            return null;
+        }
+        
+        // Update access order for LRU
+        this.updateAccessOrder(movieId);
+        
+        console.log(`✅ Cache hit for movie: ${movieId}`);
+        return cachedItem.data;
+    }
+    
+    // Set trailer data in cache
+    set(movieId, data) {
+        // If cache is at max size, remove least recently used item
+        if (this.cache.size >= this.maxSize) {
+            this.evictLRU();
+        }
+        
+        // Store with timestamp
+        this.cache.set(movieId, {
+            data: data,
+            timestamp: Date.now()
+        });
+        
+        // Update access order
+        this.updateAccessOrder(movieId);
+        
+        console.log(`✅ Cached trailer for movie: ${movieId}`);
+        this.saveToLocalStorage();
+    }
+    
+    // Delete specific item from cache
+    delete(movieId) {
+        this.cache.delete(movieId);
+        this.accessOrder = this.accessOrder.filter(id => id !== movieId);
+        this.saveToLocalStorage();
+    }
+    
+    // Clear entire cache
+    clear() {
+        this.cache.clear();
+        this.accessOrder = [];
+        this.saveToLocalStorage();
+    }
+    
+    // Update access order for LRU tracking
+    updateAccessOrder(movieId) {
+        // Remove from current position
+        this.accessOrder = this.accessOrder.filter(id => id !== movieId);
+        // Add to end (most recently used)
+        this.accessOrder.push(movieId);
+    }
+    
+    // Evict least recently used item
+    evictLRU() {
+        if (this.accessOrder.length > 0) {
+            const lruId = this.accessOrder[0];
+            this.delete(lruId);
+            console.log(`🗑️ Evicted LRU item: ${lruId}`);
+        }
+    }
+    
+    // Get cache statistics
+    getStats() {
+        return {
+            size: this.cache.size,
+            maxSize: this.maxSize,
+            accessOrderLength: this.accessOrder.length
+        };
+    }
+    
+    // Save cache to localStorage
+    saveToLocalStorage() {
+        try {
+            // Convert Map to serializable object
+            const serializableCache = {};
+            for (const [key, value] of this.cache.entries()) {
+                serializableCache[key] = value;
+            }
+            
+            const cacheData = {
+                cache: serializableCache,
+                accessOrder: this.accessOrder,
+                timestamp: Date.now()
+            };
+            
+            localStorage.setItem('trailerCache', JSON.stringify(cacheData));
+        } catch (error) {
+            console.warn('⚠️ Failed to save trailer cache to localStorage:', error);
+        }
+    }
+    
+    // Load cache from localStorage
+    loadFromLocalStorage() {
+        try {
+            const cacheData = localStorage.getItem('trailerCache');
+            if (!cacheData) return;
+            
+            const parsedData = JSON.parse(cacheData);
+            
+            // Check if cache is too old (1 hour)
+            if (Date.now() - parsedData.timestamp > 60 * 60 * 1000) {
+                localStorage.removeItem('trailerCache');
+                return;
+            }
+            
+            // Restore cache
+            this.cache = new Map();
+            for (const [key, value] of Object.entries(parsedData.cache)) {
+                // Check if individual items are expired
+                if (Date.now() - value.timestamp <= this.expirationTime) {
+                    this.cache.set(key, value);
+                }
+            }
+            
+            this.accessOrder = parsedData.accessOrder || [];
+            
+            console.log('✅ Trailer cache loaded from localStorage');
+        } catch (error) {
+            console.warn('⚠️ Failed to load trailer cache from localStorage:', error);
+            localStorage.removeItem('trailerCache'); // Clear corrupted cache
+        }
+    }
+    
+    // Clean expired entries
+    cleanExpired() {
+        const now = Date.now();
+        let cleanedCount = 0;
+        
+        for (const [key, value] of this.cache.entries()) {
+            if (now - value.timestamp > this.expirationTime) {
+                this.delete(key);
+                cleanedCount++;
             }
         }
-    } catch (error) {
-        console.warn('⚠️ Failed to load trailer cache:', error);
-        trailerCache = {};
-    }
-}
-
-// Save cache to localStorage
-function saveTrailerCache() {
-    try {
-        const cacheData = {
-            timestamp: Date.now(),
-            data: trailerCache
-        };
-        localStorage.setItem('trailerCache', JSON.stringify(cacheData));
-    } catch (error) {
-        console.warn('⚠️ Failed to save trailer cache:', error);
-    }
-}
-
-// Get cache key for a trailer
-function getTrailerCacheKey(movieId) {
-    return `${TRAILER_CACHE_PREFIX}${movieId}`;
-}
-
-// Get trailer data from cache
-function getCachedTrailer(movieId) {
-    try {
-        const key = getTrailerCacheKey(movieId);
-        const cachedItem = trailerCache[key];
         
-        if (cachedItem) {
-            // Check if item is still valid
-            if (Date.now() - cachedItem.timestamp < TRAILER_CACHE_DURATION) {
-                console.log(`✅ Found cached trailer for movie ${movieId}`);
-                return cachedItem.data;
-            } else {
-                // Remove expired item
-                console.log(`🗑️ Cached trailer for movie ${movieId} expired`);
-                delete trailerCache[key];
-                saveTrailerCache();
-                return null;
-            }
-        }
-        console.log(`📭 No cached trailer found for movie ${movieId}`);
-        return null;
-    } catch (error) {
-        console.warn(`⚠️ Error retrieving cached trailer for ${movieId}:`, error);
-        return null;
-    }
-}
-
-// Cache trailer data
-function cacheTrailer(movieId, trailerData) {
-    try {
-        // Check cache size and remove oldest entries if necessary
-        const cacheKeys = Object.keys(trailerCache);
-        if (cacheKeys.length >= TRAILER_CACHE_MAX_ENTRIES) {
-            // Remove oldest entry
-            const oldestKey = cacheKeys.reduce((oldest, key) => {
-                return trailerCache[key].timestamp < trailerCache[oldest].timestamp ? key : oldest;
-            });
-            delete trailerCache[oldestKey];
-            console.log(`🗑️ Removed oldest trailer cache entry: ${oldestKey}`);
+        if (cleanedCount > 0) {
+            console.log(`🧹 Cleaned ${cleanedCount} expired cache entries`);
         }
         
-        const key = getTrailerCacheKey(movieId);
-        trailerCache[key] = {
-            timestamp: Date.now(),
-            data: trailerData
-        };
-        
-        console.log(`✅ Cached trailer for movie ${movieId}`);
-        saveTrailerCache();
-        return true;
-    } catch (error) {
-        console.warn(`⚠️ Error caching trailer for ${movieId}:`, error);
-        return false;
+        return cleanedCount;
     }
 }
 
-// Clear trailer cache
-function clearTrailerCache() {
-    trailerCache = {};
-    try {
-        localStorage.removeItem('trailerCache');
-        console.log('🗑️ Trailer cache cleared');
-    } catch (error) {
-        console.warn('⚠️ Error clearing trailer cache:', error);
-    }
-}
+// Initialize trailer cache
+const trailerCache = new TrailerCache();
 
-// Get cache statistics
-function getTrailerCacheStats() {
-    const keys = Object.keys(trailerCache);
-    const totalEntries = keys.length;
-    const totalSize = JSON.stringify(trailerCache).length;
-    
-    // Calculate expiration times
-    const expirations = keys.map(key => {
-        const item = trailerCache[key];
-        return item.timestamp + TRAILER_CACHE_DURATION - Date.now();
-    });
-    
-    const avgExpiration = expirations.length > 0 
-        ? expirations.reduce((sum, exp) => sum + exp, 0) / expirations.length 
-        : 0;
-    
-    return {
-        totalEntries,
-        totalSize,
-        averageExpirationTime: avgExpiration
-    };
-}
+// Load existing cache data
+trailerCache.loadFromLocalStorage();
 
-// Clean up expired cache entries
-function cleanupExpiredTrailerCache() {
-    const now = Date.now();
-    let cleanedCount = 0;
-    
-    for (const key in trailerCache) {
-        const item = trailerCache[key];
-        if (now - item.timestamp >= TRAILER_CACHE_DURATION) {
-            delete trailerCache[key];
-            cleanedCount++;
-        }
-    }
-    
-    if (cleanedCount > 0) {
-        console.log(`🗑️ Cleaned up ${cleanedCount} expired trailer cache entries`);
-        saveTrailerCache();
-    }
-    
-    return cleanedCount;
-}
+// Clean expired entries on startup
+trailerCache.cleanExpired();
 
-// Initialize the cache when module loads
-loadTrailerCache();
+// Periodically clean expired entries (every 10 minutes)
+setInterval(() => {
+    trailerCache.cleanExpired();
+}, 10 * 60 * 1000);
 
-// Periodically clean up expired entries
-setInterval(cleanupExpiredTrailerCache, 30 * 60 * 1000); // Every 30 minutes
+// Save cache periodically (every 5 minutes)
+setInterval(() => {
+    trailerCache.saveToLocalStorage();
+}, 5 * 60 * 1000);
 
-// Expose functions globally
-window.trailerCache = {
-    get: getCachedTrailer,
-    set: cacheTrailer,
-    clear: clearTrailerCache,
-    stats: getTrailerCacheStats,
-    cleanup: cleanupExpiredTrailerCache
-};
+// Save cache before page unload
+window.addEventListener('beforeunload', () => {
+    trailerCache.saveToLocalStorage();
+});
+
+// Expose cache globally
+window.trailerCache = trailerCache;
 
 console.log('✅ Trailer cache system initialized');
+console.log('📊 Cache stats:', trailerCache.getStats());

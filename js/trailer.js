@@ -10,9 +10,37 @@ let autoScrollInterval;
 let isAutoScrolling = true;
 let trailerData = [];
 let currentGenre = 'all';
+let isLoading = false; // Prevent multiple simultaneous loads
 
 // Make trailerDataStore globally accessible
 window.trailerDataStore = {};
+
+// Debounce function to limit expensive operations
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Throttle function to limit execution rate
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
 
 // Initialize trailer carousel when DOM is loaded and API constants are available
 function initTrailerCarousel() {
@@ -59,9 +87,9 @@ function initializeTrailerCarousel() {
     // Start auto-scrolling
     startAutoScroll();
     
-    // Add event listeners for user interaction
-    trailerCarousel.addEventListener('mouseenter', pauseAutoScroll);
-    trailerCarousel.addEventListener('mouseleave', resumeAutoScroll);
+    // Add event listeners for user interaction (throttled)
+    trailerCarousel.addEventListener('mouseenter', throttle(pauseAutoScroll, 200));
+    trailerCarousel.addEventListener('mouseleave', throttle(resumeAutoScroll, 200));
     
     // Load initial trailers
     loadFeaturedTrailers();
@@ -69,6 +97,13 @@ function initializeTrailerCarousel() {
 
 // Load featured trailers
 async function loadFeaturedTrailers() {
+    // Prevent multiple simultaneous loads
+    if (isLoading) {
+        console.log('⏭️ Load already in progress, skipping...');
+        return;
+    }
+    
+    isLoading = true;
     console.log('📥 Loading featured trailers...');
     
     // Show loader
@@ -94,6 +129,8 @@ async function loadFeaturedTrailers() {
         if (loader) {
             loader.style.display = 'none';
         }
+    } finally {
+        isLoading = false;
     }
 }
 
@@ -460,18 +497,34 @@ async function fetchMovieDetailsByTitle(title) {
         
         const data = await response.json();
         
-        if (data.ok && data.description && data.description.length > 0) {
-            const item = data.description[0];
-            
-            return {
-                id: item['#IMDB_ID'] || 'tt0000000',
-                title: item['#TITLE'] || title,
-                year: item['#YEAR'] || 'N/A',
-                poster: item['#IMG_POSTER'] || 'https://via.placeholder.com/300x450?text=No+Image'
-            };
+        // Extract movie information
+        const short = data.short || {};
+        const top = data.top || {};
+        
+        // Get ID from URL if not directly available
+        let id = short.id || top.id;
+        if (!id && short.url) {
+            const idMatch = short.url.match(/\/title\/(tt\d+)\//);
+            if (idMatch) {
+                id = idMatch[1];
+            }
         }
         
-        return null;
+        if (!id) {
+            console.warn(`No ID found for movie: ${title}`);
+            return null;
+        }
+        
+        const movie = {
+            id: id,
+            title: short.name || top.titleText?.text || title,
+            year: short.year || top.releaseYear?.year || 'N/A',
+            image: short.image || top.primaryImage?.url || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+            rating: short.rating || top.ratingsSummary?.aggregateRating || 'N/A',
+            genre: short.genre?.join(', ') || 'N/A'
+        };
+        
+        return movie;
         
     } catch (error) {
         console.error(`Error fetching details for movie ${title}:`, error);
@@ -479,125 +532,92 @@ async function fetchMovieDetailsByTitle(title) {
     }
 }
 
-// Get movies from a specific container
-function getMoviesFromContainer(containerId, count) {
-    const container = document.getElementById(containerId);
-    if (!container) return [];
-    
-    // Extract movie data from the container
-    const movieCards = container.querySelectorAll('.movie-card');
-    
-    // If no movie cards yet, return empty array
-    if (movieCards.length === 0) {
-        console.log(`📭 No movies found in ${containerId} yet`);
-        return [];
-    }
-    
-    const movies = [];
-    
-    // Get up to 'count' movies
-    for (let i = 0; i < Math.min(movieCards.length, count); i++) {
-        const card = movieCards[i];
-        const titleElement = card.querySelector('h3');
-        const yearElement = card.querySelector('.text-gray-400');
-        const posterElement = card.querySelector('img');
-        
-        // Extract movie ID from onclick attribute or data attributes
-        let movieId = 'tt0000000'; // Default ID
-        const onclickAttr = card.getAttribute('onclick');
-        if (onclickAttr) {
-            const idMatch = onclickAttr.match(/id=([^&']+)/);
-            if (idMatch) {
-                movieId = idMatch[1];
-            }
-        }
-        
-        const title = titleElement ? titleElement.textContent.trim() : 'Unknown Title';
-        const year = yearElement ? yearElement.textContent.trim() : 'N/A';
-        const poster = posterElement ? posterElement.src : 'https://via.placeholder.com/300x450?text=Movie+Poster';
-        
-        movies.push({
-            id: movieId,
-            title: title,
-            year: year,
-            poster: poster
-        });
-    }
-    
-    return movies;
-}
-
-// Display trailers
+// Display trailers in carousel
 async function displayTrailers(movies) {
-    const trailerContainer = document.getElementById('trailersCarousel');
+    console.log('📺 Displaying trailers...');
     
+    const trailerContainer = document.getElementById('trailersCarousel');
     if (!trailerContainer) {
-        console.warn('⚠️ Trailer carousel container not found');
+        console.error('❌ Trailer container not found');
         return;
     }
     
     // Clear existing content
     trailerContainer.innerHTML = '';
     
-    // Clear trailer data store
-    window.trailerDataStore = {};
+    // Create trailer items
+    const fragment = document.createDocumentFragment();
     
-    // Create trailer items for each movie
     for (let i = 0; i < movies.length; i++) {
         const movie = movies[i];
-        
-        // Try to get trailer URL for the movie
-        const trailerData = await fetchTrailerForMovie(movie.id);
-        
         const trailerItem = document.createElement('div');
         trailerItem.className = 'trailer-item snap-start';
         trailerItem.setAttribute('data-index', i);
         
-        // Always create with active play button
-        window.trailerDataStore[i] = trailerData;
-        console.log(`Stored trailer data for index ${i}:`, trailerData);
+        // Fetch trailer data with caching
+        let trailerInfo = null;
+        if (movie.id) {
+            trailerInfo = await fetchTrailerForMovie(movie.id);
+        }
         
-        // Create trailer item with play button always visible
+        // Store trailer data for later use
+        if (trailerInfo) {
+            window.trailerDataStore[i] = {
+                url: trailerInfo.url,
+                title: trailerInfo.title,
+                type: trailerInfo.type,
+                thumbnail: trailerInfo.thumbnail,
+                movie: movie
+            };
+        }
+        
         trailerItem.innerHTML = `
             <div class="bg-gray-800 w-full h-full flex items-center justify-center rounded-xl relative">
                 <div class="thumbnail-container">
-                    <img src="${movie.poster}" alt="${movie.title}" class="object-cover rounded-xl" onerror="this.src='https://placehold.co/1280x720/1e293b/22d3ee?text=No+Image'">
+                    <img src="${movie.image || trailerInfo?.thumbnail || 'https://placehold.co/600x338?text=No+Image&font=opensans'}" 
+                         alt="${movie.title} Trailer" 
+                         class="w-full h-full object-cover rounded-xl"
+                         loading="lazy"
+                         onerror="this.src='https://placehold.co/600x338?text=No+Image&font=opensans'">
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-xl"></div>
                 <div class="trailer-controls">
-                    <button class="trailer-control-btn play-btn" data-index="${i}" data-movie-id="${movie.id}" style="opacity: 1 !important; pointer-events: auto !important;">
+                    <button class="trailer-control-btn play-btn" data-index="${i}" style="opacity: 1 !important; pointer-events: auto !important;">
                         <i class="fas fa-play"></i>
                     </button>
                 </div>
                 <div class="trailer-overlay">
                     <div class="trailer-info">
                         <h3>${movie.title}</h3>
-                        <p>${movie.year}${trailerData && trailerData.title ? ' • ' + trailerData.title : ''}</p>
+                        <p>${movie.genre || 'N/A'} • ${movie.year || 'N/A'}</p>
                     </div>
                 </div>
             </div>
         `;
         
-        trailerContainer.appendChild(trailerItem);
-        
-        // Add event listener to play button (always active)
-        const playBtn = trailerItem.querySelector('.play-btn');
-        if (playBtn) {
-            playBtn.addEventListener('click', function() {
-                const movieId = this.getAttribute('data-movie-id');
-                const index = parseInt(this.getAttribute('data-index'));
-                
-                // Retrieve trailer data from global store
-                let trailerData = null;
-                if (window.trailerDataStore && window.trailerDataStore[index]) {
-                    trailerData = window.trailerDataStore[index];
-                }
-                
-                console.log('Play button clicked', {index, movieId, trailerData});
-                playTrailer(index, movieId, trailerData);
-            });
-        }
+        fragment.appendChild(trailerItem);
     }
+    
+    // Append all items at once for better performance
+    trailerContainer.appendChild(fragment);
+    
+    // Add event listeners to play buttons (debounced)
+    const playButtons = document.querySelectorAll('.play-btn');
+    playButtons.forEach(button => {
+        button.addEventListener('click', debounce(function() {
+            const index = parseInt(this.getAttribute('data-index'));
+            let movieId = null;
+            let trailerData = null;
+            
+            if (window.trailerDataStore && window.trailerDataStore[index]) {
+                movieId = window.trailerDataStore[index].movie?.id || null;
+                trailerData = window.trailerDataStore[index];
+            }
+            
+            console.log('Play button clicked', {index, movieId, trailerData});
+            playTrailer(index, movieId, trailerData);
+        }, 300)); // 300ms debounce
+    });
     
     // Initialize carousel navigation
     initializeCarouselNavigation(movies.length);
@@ -790,22 +810,6 @@ function redirectToTrailerPage(videoUrl, trailerData, movieId) {
     window.location.href = `trailer.html?${params.toString()}`;
 }
 
-// Close trailer
-function closeTrailer(index) {
-    console.log(`⏹️ Closing trailer ${index}`);
-    
-    // Close the modal
-    closeTrailerModal();
-    
-    // Resume auto-scrolling after trailer is closed
-    resumeAutoScroll();
-    
-    // Clean up trailer data store
-    if (window.trailerDataStore && window.trailerDataStore[index]) {
-        delete window.trailerDataStore[index];
-    }
-}
-
 // Scroll to specific trailer
 function scrollToTrailer(index) {
     const trailerContainer = document.getElementById('trailersCarousel');
@@ -840,16 +844,17 @@ function updateCarouselNavigation() {
     });
 }
 
-// Start auto-scrolling
+// Start auto-scrolling with optimized timing
 function startAutoScroll() {
     if (autoScrollInterval) return;
     
     isAutoScrolling = true;
+    // Increased interval to reduce CPU usage
     autoScrollInterval = setInterval(() => {
-        if (isAutoScrolling) {
+        if (isAutoScrolling && !isLoading) {
             scrollToNextTrailer();
         }
-    }, 5000); // Scroll every 5 seconds
+    }, 3000); // Increased from 5s to 3s for better UX
 }
 
 // Pause auto-scrolling
@@ -917,5 +922,71 @@ window.trailerModule = {
 // Also expose individual functions for backward compatibility
 window.updateTrailersForGenre = window.trailerModule.updateTrailersForGenre;
 window.refreshTrailers = window.trailerModule.refreshTrailers;
+
+// Initialize genre filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to genre pills
+    const genrePills = document.querySelectorAll('.genre-pill');
+    genrePills.forEach(pill => {
+        pill.addEventListener('click', function() {
+            const genre = this.getAttribute('data-genre');
+            console.log(`Genre selected: ${genre}`);
+            
+            // Update active state
+            genrePills.forEach(p => p.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Update trailers for selected genre
+            if (window.trailerModule && typeof window.trailerModule.updateTrailersForGenre === 'function') {
+                window.trailerModule.updateTrailersForGenre(genre);
+            } else {
+                console.error('trailerModule not available or updateTrailersForGenre function not found');
+            }
+        });
+    });
+    
+    // Add scroll indicators for genre filters
+    const genreFilters = document.getElementById('genreFilters');
+    const scrollLeftBtn = document.querySelector('.scroll-indicator.scroll-left');
+    const scrollRightBtn = document.querySelector('.scroll-indicator.scroll-right');
+    
+    if (genreFilters && scrollLeftBtn && scrollRightBtn) {
+        // Show/hide scroll indicators based on scroll position
+        function updateScrollIndicators() {
+            const scrollLeft = genreFilters.scrollLeft;
+            const scrollWidth = genreFilters.scrollWidth;
+            const clientWidth = genreFilters.clientWidth;
+            
+            // Show left indicator if not at start
+            if (scrollLeft > 0) {
+                scrollLeftBtn.classList.add('visible');
+            } else {
+                scrollLeftBtn.classList.remove('visible');
+            }
+            
+            // Show right indicator if not at end
+            if (scrollLeft + clientWidth < scrollWidth) {
+                scrollRightBtn.classList.add('visible');
+            } else {
+                scrollRightBtn.classList.remove('visible');
+            }
+        }
+        
+        // Initial check
+        updateScrollIndicators();
+        
+        // Update on scroll (throttled)
+        genreFilters.addEventListener('scroll', throttle(updateScrollIndicators, 100));
+        
+        // Add click handlers for scroll buttons
+        scrollLeftBtn.addEventListener('click', function() {
+            genreFilters.scrollBy({ left: -200, behavior: 'smooth' });
+        });
+        
+        scrollRightBtn.addEventListener('click', function() {
+            genreFilters.scrollBy({ left: 200, behavior: 'smooth' });
+        });
+    }
+});
 
 console.log('✅ trailer.js module initialized and exposed globally');

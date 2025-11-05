@@ -36,6 +36,33 @@ let proxySuccessCount = Array(CORS_PROXIES.length).fill(0);
 let proxyFailCount = Array(CORS_PROXIES.length).fill(0);
 let proxyResponseTimes = Array(CORS_PROXIES.length).fill(0); // Track response times
 
+// Debounce function to limit expensive operations
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Throttle function to limit execution rate
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
 // Enhanced proxy selection with performance tracking (including response time)
 function selectBestProxy() {
     // Calculate success rate and response time for each proxy
@@ -98,7 +125,7 @@ async function fetchWithProxy(url, options = {}) {
     }
     
     // Enhanced parallel fetching implementation - try more proxies simultaneously
-    const PARALLEL_PROXY_COUNT = 10; // Increased from 6 to 10 proxies in parallel
+    const PARALLEL_PROXY_COUNT = 5; // Reduced from 10 to 5 for better performance
     const bestProxyIndex = selectBestProxy();
     
     // Create array of proxies to try in parallel (best proxy first, then others)
@@ -204,12 +231,12 @@ async function fetchWithProxy(url, options = {}) {
                 console.log(`✅ Success with proxy ${proxyIndex + 1}`);
                 proxySuccessCount[proxyIndex]++;
                 proxyResponseTimes[proxyIndex] += (endTime - startTime);
-                currentProxyIndex = proxyIndex; // Remember working proxy
                 return response;
             } else {
                 console.log(`❌ Proxy ${proxyIndex + 1} failed with status: ${response.status}`);
                 proxyFailCount[proxyIndex]++;
                 proxyResponseTimes[proxyIndex] += (endTime - startTime);
+                throw new Error(`Proxy ${proxyIndex + 1} failed with status: ${response.status}`);
             }
         } catch (error) {
             console.log(`❌ Proxy ${proxyIndex + 1} failed:`, error.message);
@@ -218,7 +245,42 @@ async function fetchWithProxy(url, options = {}) {
     }
     
     // If all proxies fail, throw an error
-    throw new Error('All proxy attempts failed');
+    throw new Error('All proxies failed');
+}
+
+// Cache for API responses to reduce redundant calls
+const apiCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Cached fetch function
+async function cachedFetch(url, options = {}) {
+    const cacheKey = url + JSON.stringify(options);
+    
+    // Check if we have a valid cached response
+    if (apiCache.has(cacheKey)) {
+        const cached = apiCache.get(cacheKey);
+        if (Date.now() - cached.timestamp < CACHE_DURATION) {
+            console.log('✅ Using cached response for:', url);
+            return cached.response;
+        } else {
+            // Remove expired cache entry
+            apiCache.delete(cacheKey);
+        }
+    }
+    
+    // Fetch fresh data
+    try {
+        const response = await fetchWithProxy(url, options);
+        // Cache the response
+        apiCache.set(cacheKey, {
+            response: response,
+            timestamp: Date.now()
+        });
+        return response;
+    } catch (error) {
+        console.error('❌ Cached fetch failed for:', url, error);
+        throw error;
+    }
 }
 
 // Track pagination for each section
