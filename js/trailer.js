@@ -473,12 +473,19 @@ async function fetchMoviesBySection(section, count) {
             // Try to get movie details from the raw item first
             const rawItem = rawItems[i];
             if (rawItem) {
-                // Try to extract ID from the raw item
+                // Try to extract ID from the raw item with more flexible patterns
                 let id = null;
                 if (rawItem.id) {
                     id = rawItem.id;
                 } else if (rawItem.url) {
-                    const idMatch = rawItem.url.match(/\/title\/(tt\d+)\//);
+                    // More flexible ID extraction
+                    const idMatch = rawItem.url.match(/\/title\/(tt\d+)/);
+                    if (idMatch) {
+                        id = idMatch[1];
+                    }
+                } else if (rawItem.link) {
+                    // Check for link property as well
+                    const idMatch = rawItem.link.match(/\/title\/(tt\d+)/);
                     if (idMatch) {
                         id = idMatch[1];
                     }
@@ -488,9 +495,9 @@ async function fetchMoviesBySection(section, count) {
                 const movieFromRaw = {
                     id: id,
                     title: titles[i],
-                    year: rawItem.year || 'N/A',
-                    image: rawItem.image || 'https://placehold.co/300x450?text=No+Image&font=opensans',
-                    rating: rawItem.rating || 'N/A',
+                    year: rawItem.year || rawItem.releaseYear || 'N/A',
+                    image: rawItem.image || rawItem.poster || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                    rating: rawItem.rating || rawItem.imdbRating || 'N/A',
                     genre: rawItem.genre || 'N/A'
                 };
                 
@@ -499,7 +506,7 @@ async function fetchMoviesBySection(section, count) {
                 // If we have an ID, try to fetch more detailed info
                 if (id) {
                     const detailedMovie = await fetchMovieDetailsByTitle(titles[i]);
-                    if (detailedMovie) {
+                    if (detailedMovie && detailedMovie.id) {
                         movies.push(detailedMovie);
                     } else {
                         movies.push(movieFromRaw);
@@ -633,12 +640,19 @@ async function fetchMoviesByGenre(genre, count) {
             // Try to get movie details from the raw item first
             const rawItem = rawItems[i];
             if (rawItem) {
-                // Try to extract ID from the raw item
+                // Try to extract ID from the raw item with more flexible patterns
                 let id = null;
                 if (rawItem.id) {
                     id = rawItem.id;
                 } else if (rawItem.url) {
-                    const idMatch = rawItem.url.match(/\/title\/(tt\d+)\//);
+                    // More flexible ID extraction
+                    const idMatch = rawItem.url.match(/\/title\/(tt\d+)/);
+                    if (idMatch) {
+                        id = idMatch[1];
+                    }
+                } else if (rawItem.link) {
+                    // Check for link property as well
+                    const idMatch = rawItem.link.match(/\/title\/(tt\d+)/);
                     if (idMatch) {
                         id = idMatch[1];
                     }
@@ -648,9 +662,9 @@ async function fetchMoviesByGenre(genre, count) {
                 const movieFromRaw = {
                     id: id,
                     title: titles[i],
-                    year: rawItem.year || 'N/A',
-                    image: rawItem.image || 'https://placehold.co/300x450?text=No+Image&font=opensans',
-                    rating: rawItem.rating || 'N/A',
+                    year: rawItem.year || rawItem.releaseYear || 'N/A',
+                    image: rawItem.image || rawItem.poster || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                    rating: rawItem.rating || rawItem.imdbRating || 'N/A',
                     genre: genre
                 };
                 
@@ -659,7 +673,7 @@ async function fetchMoviesByGenre(genre, count) {
                 // If we have an ID, try to fetch more detailed info
                 if (id) {
                     const detailedMovie = await fetchMovieDetailsByTitle(titles[i]);
-                    if (detailedMovie) {
+                    if (detailedMovie && detailedMovie.id) {
                         movies.push(detailedMovie);
                     } else {
                         movies.push(movieFromRaw);
@@ -767,10 +781,10 @@ async function fetchMovieDetailsByTitle(title) {
         console.log(`Short data for ${title}:`, short);
         console.log(`Top data for ${title}:`, top);
         
-        // Get ID from URL if not directly available
+        // Get ID from URL if not directly available with more flexible patterns
         let id = short.id || top.id;
         if (!id && short.url) {
-            const idMatch = short.url.match(/\/title\/(tt\d+)\//);
+            const idMatch = short.url.match(/\/title\/(tt\d+)/);
             if (idMatch) {
                 id = idMatch[1];
             }
@@ -778,7 +792,7 @@ async function fetchMovieDetailsByTitle(title) {
         
         // Try to extract ID from top data URL
         if (!id && top.url) {
-            const idMatch = top.url.match(/\/title\/(tt\d+)\//);
+            const idMatch = top.url.match(/\/title\/(tt\d+)/);
             if (idMatch) {
                 id = idMatch[1];
             }
@@ -786,7 +800,7 @@ async function fetchMovieDetailsByTitle(title) {
         
         // If we still don't have an ID, try to get it from the IMDb URL in short data
         if (!id && short.imdburl) {
-            const idMatch = short.imdburl.match(/\/title\/(tt\d+)\//);
+            const idMatch = short.imdburl.match(/\/title\/(tt\d+)/);
             if (idMatch) {
                 id = idMatch[1];
             }
