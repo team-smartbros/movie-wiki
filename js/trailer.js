@@ -45,6 +45,12 @@ function throttle(func, limit) {
 // Initialize trailer carousel when DOM is loaded and API constants are available
 function initTrailerCarousel() {
     console.log('🎬 Initializing trailer carousel...');
+    console.log('API constants:', {
+        API_BASE: window.API_BASE,
+        SCRAPER_API_BASE: window.SCRAPER_API_BASE,
+        FALLBACK_SCRAPER_API_BASE: window.FALLBACK_SCRAPER_API_BASE
+    });
+    
     // Check if API constants are available
     if (typeof window.API_BASE === 'undefined' || window.API_BASE === null) {
         console.warn('⚠️ API constants not available yet, waiting...');
@@ -55,6 +61,13 @@ function initTrailerCarousel() {
     // Additional check to ensure constants are properly set
     if (!window.API_BASE || window.API_BASE === '') {
         console.warn('⚠️ API constants not properly initialized, waiting...');
+        setTimeout(initTrailerCarousel, 100);
+        return;
+    }
+    
+    // Make sure all API constants are available
+    if (!window.SCRAPER_API_BASE || !window.FALLBACK_SCRAPER_API_BASE) {
+        console.warn('⚠️ Scraper API constants not available yet, waiting...');
         setTimeout(initTrailerCarousel, 100);
         return;
     }
@@ -142,7 +155,11 @@ async function loadFeaturedTrailers() {
 // Fetch trailer URL for a specific movie (following the same approach as details.html)
 // Enhanced with caching for faster loading
 async function fetchTrailerForMovie(movieId) {
-    if (!movieId) return null;
+    // If no movie ID, we can't fetch a trailer
+    if (!movieId) {
+        console.log('No movie ID provided, cannot fetch trailer');
+        return null;
+    }
     
     // Check cache first for faster loading
     if (window.trailerCache) {
@@ -158,21 +175,32 @@ async function fetchTrailerForMovie(movieId) {
         
         // Use the same API as details page
         const url = `${window.API_BASE}/search?tt=${movieId}`;
+        console.log(`Trailer search URL: ${url}`);
         
         // Try direct fetch first (same method as details page)
         let response = await fetch(url);
+        console.log(`Trailer fetch response status: ${response.status}`);
+        console.log(`Trailer fetch response headers:`, [...response.headers.entries()]);
+        
         if (!response.ok) {
             throw new Error(`Direct fetch failed with status ${response.status}`);
         }
         
         const data = await response.json();
+        console.log(`Trailer API Response for ${movieId}:`, JSON.stringify(data, null, 2));
+        
+        // Check if we have valid data
+        if (!data) {
+            console.warn(`No data received for trailer: ${movieId}`);
+            return null;
+        }
         
         // Extract trailer information (same structure as details page)
         const shortData = data.short || {};
         const topData = data.top || {};
         
-        // Log the data for debugging
-        console.log(`API Response for ${movieId}:`, {shortData, topData});
+        console.log(`Short data for trailer ${movieId}:`, shortData);
+        console.log(`Top data for trailer ${movieId}:`, topData);
         
         // Try to get trailer from top data primary videos FIRST (same approach as details.html)
         // This is the key difference - we need to get the actual playable URLs, not just the IMDb links
@@ -347,12 +375,18 @@ async function fetchMoviesBySection(section, count) {
                 apiUrl = `${window.SCRAPER_API_BASE}/popular`;
         }
         
+        console.log(`API URL for ${section}:`, apiUrl);
+        
         // Try primary API first
         let response = await fetch(apiUrl);
+        console.log(`Primary API response status for ${section}:`, response.status);
+        
+        // Log response headers for debugging
+        console.log(`Primary API response headers for ${section}:`, [...response.headers.entries()]);
         
         // If primary API fails, try fallback
         if (!response.ok) {
-            console.log(`Primary API failed for ${section}, trying fallback API`);
+            console.log(`Primary API failed for ${section} with status ${response.status}, trying fallback API`);
             
             let fallbackUrl;
             switch(section) {
@@ -367,41 +401,64 @@ async function fetchMoviesBySection(section, count) {
                     fallbackUrl = `${window.FALLBACK_SCRAPER_API_BASE}/popular`;
             }
             
+            console.log(`Fallback URL for ${section}:`, fallbackUrl);
             response = await fetch(fallbackUrl);
+            console.log(`Fallback API response status for ${section}:`, response.status);
+            console.log(`Fallback API response headers for ${section}:`, [...response.headers.entries()]);
         }
         
         if (!response.ok) {
-            console.warn(`Failed to fetch ${section} movies`);
+            console.warn(`Failed to fetch ${section} movies with status ${response.status}`);
             return [];
         }
         
         const data = await response.json();
+        console.log(`API Response for ${section}:`, JSON.stringify(data, null, 2));
+        
+        // Check if data has items
+        if (!data || !data.items || !Array.isArray(data.items)) {
+            console.warn(`Invalid data structure for ${section} movies:`, data);
+            return [];
+        }
         
         // Extract titles based on section
         let titles = [];
         if (data.items) {
             if (section === 'latest') {
                 // For latest, get items 5-10 (next 5 after popular)
-                titles = data.items.slice(5, 5 + count).map(item => 
-                    item.title.replace(/^\d+\.\s*/, '')
-                );
+                titles = data.items.slice(5, 5 + count).map(item => {
+                    // Remove numbering prefix if present
+                    const title = item.title.replace(/^\d+\.\s*/, '');
+                    console.log(`Extracted title for ${section}:`, title);
+                    return title;
+                });
             } else {
                 // For popular and coming soon, get first 'count' items
-                titles = data.items.slice(0, count).map(item => 
-                    item.title.replace(/^\d+\.\s*/, '')
-                );
+                titles = data.items.slice(0, count).map(item => {
+                    // Remove numbering prefix if present
+                    const title = item.title.replace(/^\d+\.\s*/, '');
+                    console.log(`Extracted title for ${section}:`, title);
+                    return title;
+                });
             }
         }
+        
+        console.log(`Extracted titles for ${section}:`, titles);
         
         // Fetch detailed movie information for each title
         const movies = [];
         for (let i = 0; i < Math.min(titles.length, count); i++) {
+            console.log(`Fetching details for ${section} movie ${i + 1}/${Math.min(titles.length, count)}:`, titles[i]);
             const movie = await fetchMovieDetailsByTitle(titles[i]);
             if (movie) {
+                console.log(`Successfully fetched details for ${section} movie:`, movie.title);
                 movies.push(movie);
+            } else {
+                console.log(`Failed to fetch details for ${section} movie:`, titles[i]);
             }
         }
         
+        console.log(`Fetched ${movies.length} movies for ${section}`);
         return movies;
         
     } catch (error) {
@@ -430,40 +487,66 @@ async function fetchMoviesByGenre(genre, count) {
         const apiGenre = genreMap[genre] || genre;
         const apiUrl = `${window.SCRAPER_API_BASE}/by_genre/${apiGenre}`;
         
+        console.log(`API URL for ${genre}:`, apiUrl);
+        
         // Try primary API first
         let response = await fetch(apiUrl);
+        console.log(`Primary API response status for ${genre}:`, response.status);
+        
+        // Log response headers for debugging
+        console.log(`Primary API response headers for ${genre}:`, [...response.headers.entries()]);
         
         // If primary API fails, try fallback
         if (!response.ok) {
-            console.log(`Primary API failed for ${genre}, trying fallback API`);
+            console.log(`Primary API failed for ${genre} with status ${response.status}, trying fallback API`);
             const fallbackUrl = `${window.FALLBACK_SCRAPER_API_BASE}/by_genre/${apiGenre}`;
+            console.log(`Fallback URL for ${genre}:`, fallbackUrl);
             response = await fetch(fallbackUrl);
+            console.log(`Fallback API response status for ${genre}:`, response.status);
+            console.log(`Fallback API response headers for ${genre}:`, [...response.headers.entries()]);
         }
         
         if (!response.ok) {
-            console.warn(`Failed to fetch ${genre} movies`);
+            console.warn(`Failed to fetch ${genre} movies with status ${response.status}`);
             return [];
         }
         
         const data = await response.json();
+        console.log(`API Response for ${genre}:`, JSON.stringify(data, null, 2));
+        
+        // Check if data has items
+        if (!data || !data.items || !Array.isArray(data.items)) {
+            console.warn(`Invalid data structure for ${genre} movies:`, data);
+            return [];
+        }
         
         // Extract titles
         let titles = [];
         if (data.items) {
-            titles = data.items.slice(0, count).map(item => 
-                item.title.replace(/^\d+\.\s*/, '')
-            );
+            titles = data.items.slice(0, count).map(item => {
+                // Remove numbering prefix if present
+                const title = item.title.replace(/^\d+\.\s*/, '');
+                console.log(`Extracted title for ${genre}:`, title);
+                return title;
+            });
         }
+        
+        console.log(`Extracted titles for ${genre}:`, titles);
         
         // Fetch detailed movie information for each title
         const movies = [];
         for (let i = 0; i < Math.min(titles.length, count); i++) {
+            console.log(`Fetching details for ${genre} movie ${i + 1}/${Math.min(titles.length, count)}:`, titles[i]);
             const movie = await fetchMovieDetailsByTitle(titles[i]);
             if (movie) {
+                console.log(`Successfully fetched details for ${genre} movie:`, movie.title);
                 movies.push(movie);
+            } else {
+                console.log(`Failed to fetch details for ${genre} movie:`, titles[i]);
             }
         }
         
+        console.log(`Fetched ${movies.length} movies for ${genre}`);
         return movies;
         
     } catch (error) {
@@ -479,11 +562,15 @@ async function fetchMovieDetailsByTitle(title) {
         
         // Search for the movie using the main API
         const searchUrl = `${window.API_BASE}/search?q=${encodeURIComponent(title)}`;
+        console.log(`Search URL: ${searchUrl}`);
         
         // Try direct fetch first
         let response;
         try {
             response = await fetch(searchUrl);
+            console.log(`Direct fetch response status: ${response.status}`);
+            console.log(`Direct fetch response headers:`, [...response.headers.entries()]);
+            
             if (!response.ok) {
                 throw new Error(`Direct fetch failed with status ${response.status}`);
             }
@@ -492,7 +579,10 @@ async function fetchMovieDetailsByTitle(title) {
             // Try with proxy
             const proxy = 'https://corsproxy.io/?';
             const proxiedUrl = proxy + encodeURIComponent(searchUrl);
+            console.log(`Proxy URL: ${proxiedUrl}`);
             response = await fetch(proxiedUrl);
+            console.log(`Proxy fetch response status: ${response.status}`);
+            console.log(`Proxy fetch response headers:`, [...response.headers.entries()]);
         }
         
         if (!response.ok) {
@@ -501,10 +591,20 @@ async function fetchMovieDetailsByTitle(title) {
         }
         
         const data = await response.json();
+        console.log(`Movie details response for ${title}:`, JSON.stringify(data, null, 2));
+        
+        // Check if we have valid data
+        if (!data) {
+            console.warn(`No data received for movie: ${title}`);
+            return null;
+        }
         
         // Extract movie information
         const short = data.short || {};
         const top = data.top || {};
+        
+        console.log(`Short data for ${title}:`, short);
+        console.log(`Top data for ${title}:`, top);
         
         // Get ID from URL if not directly available
         let id = short.id || top.id;
@@ -515,9 +615,35 @@ async function fetchMovieDetailsByTitle(title) {
             }
         }
         
+        // Try to extract ID from top data URL
+        if (!id && top.url) {
+            const idMatch = top.url.match(/\/title\/(tt\d+)\//);
+            if (idMatch) {
+                id = idMatch[1];
+            }
+        }
+        
+        // If we still don't have an ID, try to get it from the IMDb URL in short data
+        if (!id && short.imdburl) {
+            const idMatch = short.imdburl.match(/\/title\/(tt\d+)\//);
+            if (idMatch) {
+                id = idMatch[1];
+            }
+        }
+        
+        // If we still don't have an ID, this movie data is incomplete
         if (!id) {
             console.warn(`No ID found for movie: ${title}`);
-            return null;
+            // Even without an ID, we can still display basic movie info
+            const movie = {
+                id: null, // No ID available
+                title: short.name || top.titleText?.text || title,
+                year: short.year || top.releaseYear?.year || 'N/A',
+                image: short.image || top.primaryImage?.url || 'https://placehold.co/300x450?text=No+Image&font=opensans',
+                rating: short.rating || top.ratingsSummary?.aggregateRating || 'N/A',
+                genre: short.genre?.join(', ') || 'N/A'
+            };
+            return movie;
         }
         
         const movie = {
@@ -540,6 +666,7 @@ async function fetchMovieDetailsByTitle(title) {
 // Display trailers in carousel
 async function displayTrailers(movies) {
     console.log('📺 Displaying trailers...');
+    console.log('Movies to display:', movies);
     
     const trailerContainer = document.getElementById('trailersCarousel');
     if (!trailerContainer) {
@@ -550,19 +677,32 @@ async function displayTrailers(movies) {
     // Clear existing content
     trailerContainer.innerHTML = '';
     
+    // Check if we have movies to display
+    if (!movies || movies.length === 0) {
+        console.log('No movies to display, showing placeholders');
+        createPlaceholderTrailers();
+        return;
+    }
+    
     // Create trailer items
     const fragment = document.createDocumentFragment();
     
     for (let i = 0; i < movies.length; i++) {
         const movie = movies[i];
+        console.log(`Processing movie ${i}:`, movie);
+        
         const trailerItem = document.createElement('div');
         trailerItem.className = 'trailer-item snap-start';
         trailerItem.setAttribute('data-index', i);
         
-        // Fetch trailer data with caching
+        // Fetch trailer data with caching (only if we have a movie ID)
         let trailerInfo = null;
         if (movie.id) {
+            console.log(`Fetching trailer for movie ${i} with ID: ${movie.id}`);
             trailerInfo = await fetchTrailerForMovie(movie.id);
+            console.log(`Trailer info for movie ${i}:`, trailerInfo);
+        } else {
+            console.log(`No ID for movie ${i}, skipping trailer fetch`);
         }
         
         // Store trailer data for later use
@@ -576,6 +716,16 @@ async function displayTrailers(movies) {
             };
         }
         
+        // Create trailer item HTML
+        // If we have a trailer, show the play button, otherwise just show movie info
+        const hasTrailer = trailerInfo && trailerInfo.url;
+        const playButtonHtml = hasTrailer ? 
+            `<button class="trailer-control-btn play-btn" data-index="${i}" style="opacity: 1 !important; pointer-events: auto !important;">
+                <i class="fas fa-play"></i>
+            </button>` : '';
+        
+        console.log(`Movie ${i} has trailer: ${hasTrailer}`);
+        
         trailerItem.innerHTML = `
             <div class="bg-gray-800 w-full h-full flex items-center justify-center rounded-xl relative">
                 <div class="thumbnail-container">
@@ -587,9 +737,7 @@ async function displayTrailers(movies) {
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent rounded-xl"></div>
                 <div class="trailer-controls">
-                    <button class="trailer-control-btn play-btn" data-index="${i}" style="opacity: 1 !important; pointer-events: auto !important;">
-                        <i class="fas fa-play"></i>
-                    </button>
+                    ${playButtonHtml}
                 </div>
                 <div class="trailer-overlay">
                     <div class="trailer-info">
@@ -608,6 +756,8 @@ async function displayTrailers(movies) {
     
     // Add event listeners to play buttons (debounced)
     const playButtons = document.querySelectorAll('.play-btn');
+    console.log(`Found ${playButtons.length} play buttons`);
+    
     playButtons.forEach(button => {
         button.addEventListener('click', debounce(function() {
             const index = parseInt(this.getAttribute('data-index'));

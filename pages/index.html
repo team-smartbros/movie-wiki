@@ -1250,9 +1250,94 @@
             }
         });
     </script>
-    <script async src="../js/script.js"></script>
+    <script src="../js/script.js"></script>
     <script defer src="../js/trailer.js"></script>
     <script defer src="../js/trailer-cache.js"></script>
     <script defer src="../js/voiceSearch.js"></script>
+    
+    <!-- Firebase Authentication -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeTE5otOE58jq1-bIPNbiYdwiwX88iT00",
+            authDomain: "movie-wiki-86d4d.firebaseapp.com",
+            projectId: "movie-wiki-86d4d",
+            storageBucket: "movie-wiki-86d4d.firebasestorage.app",
+            messagingSenderId: "453451714779",
+            appId: "1:453451714779:web:e94ad0ef8df299b733fcfe",
+            measurementId: "G-91SHQF7F4P"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        
+        let currentUser = null;
+        
+        // Google Sign-In
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    console.log('✅ Signed in:', result.user.displayName);
+                })
+                .catch((error) => {
+                    console.error('Sign-in error:', error);
+                    alert('Failed to sign in. Please try again.');
+                });
+        }
+        
+        // Auth State Observer
+        auth.onAuthStateChanged((user) => {
+            currentUser = user;
+            updateAuthUI(user);
+        });
+        
+        // Update UI based on auth state
+        function updateAuthUI(user) {
+            const loginBtn = document.getElementById('loginBtn');
+            const mobileLoginBtn = document.getElementById('mobileLoginBtn');
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            const mobileUserName = document.getElementById('mobileUserName');
+            
+            if (user) {
+                const displayName = user.displayName || 'User';
+                const shortName = displayName.split(' ')[0];
+                
+                userNameDisplay.textContent = shortName;
+                mobileUserName.textContent = shortName;
+                loginBtn.innerHTML = `<i class="fas fa-user-circle"></i><span id="userNameDisplay">${shortName}</span>`;
+                mobileLoginBtn.innerHTML = `<i class="fas fa-user-circle text-xl"></i><span class="text-xs" id="mobileUserName">${shortName}</span>`;
+            } else {
+                userNameDisplay.textContent = 'Login';
+                mobileUserName.textContent = 'Login';
+                loginBtn.innerHTML = `<i class="fas fa-user"></i><span id="userNameDisplay">Login</span>`;
+                mobileLoginBtn.innerHTML = `<i class="fas fa-user text-xl"></i><span class="text-xs" id="mobileUserName">Login</span>`;
+            }
+        }
+        
+        // Login button handlers
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            if (currentUser) {
+                if (confirm(`Sign out ${currentUser.displayName}?`)) {
+                    auth.signOut();
+                }
+            } else {
+                signInWithGoogle();
+            }
+        });
+        
+        document.getElementById('mobileLoginBtn').addEventListener('click', () => {
+            if (currentUser) {
+                if (confirm(`Sign out ${currentUser.displayName}?`)) {
+                    auth.signOut();
+                }
+            } else {
+                signInWithGoogle();
+            }
+        });
+    </script>
 </body>
 </html>
