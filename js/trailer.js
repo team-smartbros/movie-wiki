@@ -1,26 +1,24 @@
 // trailer.js - Trailer functionality for Movie Wiki
 console.log('✅ trailer.js loaded');
 
-// Use the existing API_BASE from script.js instead of redeclaring it
+// Use the existing API_BASE and CORS_PROXIES from script.js instead of redeclaring them
 // const API_BASE = 'https://imdb.iamidiotareyoutoo.com'; // This line was causing the conflict
-
-// Enhanced CORS Proxy with better, faster proxies and intelligent fallback (same as details.html)
-const CORS_PROXIES = [
-    'https://corsproxy.io/?',                      // Tier 1: Fastest, high reliability
-    'https://api.allorigins.win/raw?url=',         // Tier 2: Good reliability
-    'https://api.codetabs.com/v1/proxy?quest=',    // Tier 3: Alternative
-    'https://thingproxy.freeboard.io/fetch/',      // Tier 4: Fallback
-    'https://cors-anywhere.herokuapp.com/'         // Tier 5: Last resort
-];
+// const CORS_PROXIES = [ // This line was also causing the conflict
+//     'https://corsproxy.io/?',                      // Tier 1: Fastest, high reliability
+//     'https://api.allorigins.win/raw?url=',         // Tier 2: Good reliability
+//     'https://api.codetabs.com/v1/proxy?quest=',    // Tier 3: Alternative
+//     'https://thingproxy.freeboard.io/fetch/',      // Tier 4: Fallback
+//     'https://cors-anywhere.herokuapp.com/'         // Tier 5: Last resort
+// ];
 
 let currentProxyIndex = 0;
-let proxySuccessCount = Array(CORS_PROXIES.length).fill(0);
-let proxyFailCount = Array(CORS_PROXIES.length).fill(0);
+let proxySuccessCount = Array(window.CORS_PROXIES?.length || 5).fill(0);
+let proxyFailCount = Array(window.CORS_PROXIES?.length || 5).fill(0);
 
 // Enhanced proxy selection with performance tracking (same as details.html)
 function selectBestProxy() {
     // Calculate success rate for each proxy
-    const proxyScores = CORS_PROXIES.map((_, index) => {
+    const proxyScores = (window.CORS_PROXIES || []).map((_, index) => {
         const totalAttempts = proxySuccessCount[index] + proxyFailCount[index];
         if (totalAttempts === 0) return 0.5; // Default score for untested proxies
         return proxySuccessCount[index] / totalAttempts;
@@ -70,7 +68,7 @@ async function fetchWithProxy(url, options = {}) {
     const proxyOrder = [bestProxyIndex];
     
     // Add other proxies in order
-    for (let i = 0; i < CORS_PROXIES.length; i++) {
+    for (let i = 0; i < (window.CORS_PROXIES || []).length; i++) {
         if (i !== bestProxyIndex) {
             proxyOrder.push(i);
         }
@@ -78,7 +76,7 @@ async function fetchWithProxy(url, options = {}) {
     
     // Try with CORS proxies in order of performance
     for (const proxyIndex of proxyOrder) {
-        const proxy = CORS_PROXIES[proxyIndex];
+        const proxy = (window.CORS_PROXIES || [])[proxyIndex];
         const proxiedUrl = proxy + encodeURIComponent(url);
         
         try {
