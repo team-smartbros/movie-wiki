@@ -6,18 +6,45 @@ if (window.trailerJSLoaded) {
     console.log('✅ trailer.js loaded');
     window.trailerJSLoaded = true;
 
+    // Ensure CORS_PROXIES is defined
+    if (!window.CORS_PROXIES) {
+        window.CORS_PROXIES = [
+            'https://corsproxy.io/?',
+            'https://api.allorigins.win/raw?url=',
+            'https://api.codetabs.com/v1/proxy?quest=',
+            'https://thingproxy.freeboard.io/fetch/',
+            'https://cors-anywhere.herokuapp.com/',
+            'https://crossorigin.me/',
+            'https://jsonp.afeld.me/?url=',
+            'https://yacdn.org/proxy/',
+            'https://api.proxycrawl.com/?url=',
+            'https://cors.bridged.cc/',
+            'https://api.shrtco.de/v2/info?url=',
+            'https://api.linkpreview.net/?key=12345&q='
+        ];
+    }
+
     // Use the existing API_BASE and CORS_PROXIES from script.js instead of redeclaring them
     let currentProxyIndex = 0;
-    let proxySuccessCount = Array(window.CORS_PROXIES?.length || 5).fill(0);
-    let proxyFailCount = Array(window.CORS_PROXIES?.length || 5).fill(0);
+    let proxySuccessCount = Array(window.CORS_PROXIES?.length || 12).fill(0);
+    let proxyFailCount = Array(window.CORS_PROXIES?.length || 12).fill(0);
 
     // Enhanced proxy selection with performance tracking (same as details.html)
     function selectBestProxy() {
+        // Handle case where CORS_PROXIES might not be defined yet
+        const proxies = window.CORS_PROXIES || [
+            'https://corsproxy.io/?',
+            'https://api.allorigins.win/raw?url=',
+            'https://api.codetabs.com/v1/proxy?quest=',
+            'https://thingproxy.freeboard.io/fetch/',
+            'https://cors-anywhere.herokuapp.com/'
+        ];
+        
         // Calculate success rate for each proxy
-        const proxyScores = (window.CORS_PROXIES || []).map((_, index) => {
-            const totalAttempts = proxySuccessCount[index] + proxyFailCount[index];
+        const proxyScores = proxies.map((_, index) => {
+            const totalAttempts = (proxySuccessCount[index] || 0) + (proxyFailCount[index] || 0);
             if (totalAttempts === 0) return 0.5; // Default score for untested proxies
-            return proxySuccessCount[index] / totalAttempts;
+            return (proxySuccessCount[index] || 0) / totalAttempts;
         });
         
         // Find proxy with highest success rate
@@ -118,19 +145,22 @@ if (window.trailerJSLoaded) {
         }
         
         // Check cache first for faster loading
-        if (window.trailerCache) {
+        // Add safety check for trailerCache
+        if (window.trailerCache && typeof window.trailerCache.get === 'function') {
             const cachedTrailer = window.trailerCache.get(movieId);
             if (cachedTrailer) {
                 console.log(`✅ Using cached trailer for movie: ${movieId}`);
                 return cachedTrailer;
             }
+        } else {
+            console.log('⚠️ Trailer cache not available, skipping cache check');
         }
         
         try {
             console.log(`📥 Fetching trailer for movie: ${movieId}`);
             
             // Use the same API as details page
-            const url = `${window.API_BASE}/search?tt=${movieId}`;
+            const url = `${window.API_BASE || 'https://imdb.iamidiotareyoutoo.com'}/search?tt=${movieId}`;
             console.log(`Trailer search URL: ${url}`);
             
             // Try direct fetch first (same method as details page)
@@ -258,6 +288,40 @@ if (window.trailerJSLoaded) {
             
         } catch (error) {
             console.error(`Error fetching trailer for movie ${movieId}:`, error);
+            
+            // Try to get trailer from the main movie data as a last resort
+            try {
+                console.log(`Attempting to fetch trailer from main movie API for ${movieId}`);
+                const mainUrl = `${window.API_BASE || 'https://imdb.iamidiotareyoutoo.com'}/movies/${movieId}`;
+                let mainResponse = await fetchWithProxy(mainUrl);
+                
+                if (mainResponse.ok) {
+                    const mainData = await mainResponse.json();
+                    console.log(`Main API Response for ${movieId}:`, JSON.stringify(mainData, null, 2));
+                    
+                    // Try to extract trailer from main data
+                    if (mainData.trailer && mainData.trailer.url) {
+                        console.log(`Found trailer in main data for ${movieId}:`, mainData.trailer.url);
+                        const trailerData = {
+                            url: mainData.trailer.url,
+                            title: mainData.trailer.title || mainData.title || 'Trailer',
+                            type: 'direct',
+                            thumbnail: mainData.image || 'https://placehold.co/600x900?text=No+Image&font=opensans',
+                            movieId: movieId
+                        };
+                        
+                        // Cache the trailer data for faster loading next time
+                        if (window.trailerCache) {
+                            window.trailerCache.set(movieId, trailerData);
+                        }
+                        
+                        return trailerData;
+                    }
+                }
+            } catch (mainError) {
+                console.error(`Error fetching trailer from main API for movie ${movieId}:`, mainError);
+            }
+            
             return null;
         }
     }
@@ -275,9 +339,9 @@ if (window.trailerJSLoaded) {
             if (carousel) carousel.innerHTML = '';
             
             // Wait for main content to load by checking if containers have content
-            // We'll wait up to 10 seconds for content to load
+            // We'll wait up to 15 seconds for content to load
             let attempts = 0;
-            const maxAttempts = 20; // 10 seconds with 500ms intervals
+            const maxAttempts = 30; // 15 seconds with 500ms intervals
             let hasContent = false;
             
             while (attempts < maxAttempts && !hasContent) {
@@ -286,12 +350,40 @@ if (window.trailerJSLoaded) {
                 const latestContainer = document.getElementById('latestContainer');
                 const comingSoonContainer = document.getElementById('comingSoonContainer');
                 
+                // Debug logging
+                console.log(`🔍 Checking containers - Popular: ${!!popularContainer}, Latest: ${!!latestContainer}, Coming Soon: ${!!comingSoonContainer}`);
+                
+                if (popularContainer) {
+                    console.log(`📊 Popular container children: ${popularContainer.children.length}`);
+                    console.log(`📊 Popular container innerHTML length: ${popularContainer.innerHTML.length}`);
+                }
+                
+                if (latestContainer) {
+                    console.log(`📊 Latest container children: ${latestContainer.children.length}`);
+                    console.log(`📊 Latest container innerHTML length: ${latestContainer.innerHTML.length}`);
+                }
+                
+                if (comingSoonContainer) {
+                    console.log(`📊 Coming Soon container children: ${comingSoonContainer.children.length}`);
+                    console.log(`📊 Coming Soon container innerHTML length: ${comingSoonContainer.innerHTML.length}`);
+                }
+                
                 // Check if any container has movie cards
                 const hasPopularContent = popularContainer && popularContainer.querySelectorAll('.movie-card').length > 0;
                 const hasLatestContent = latestContainer && latestContainer.querySelectorAll('.movie-card').length > 0;
                 const hasComingSoonContent = comingSoonContainer && comingSoonContainer.querySelectorAll('.movie-card').length > 0;
                 
-                hasContent = hasPopularContent || hasLatestContent || hasComingSoonContent;
+                // Also check if containers have error messages (which means loading completed)
+                const hasPopularError = popularContainer && popularContainer.querySelector('.text-red-500');
+                const hasLatestError = latestContainer && latestContainer.querySelector('.text-red-500');
+                const hasComingSoonError = comingSoonContainer && comingSoonContainer.querySelector('.text-red-500');
+                
+                hasContent = hasPopularContent || hasLatestContent || hasComingSoonContent || 
+                            hasPopularError || hasLatestError || hasComingSoonError;
+                
+                console.log(`🔄 Content check - Popular: ${hasPopularContent}, Latest: ${hasLatestContent}, Coming Soon: ${hasComingSoonContent}`);
+                console.log(`🔄 Error check - Popular: ${!!hasPopularError}, Latest: ${!!hasLatestError}, Coming Soon: ${!!hasComingSoonError}`);
+                console.log(`🔄 Has content: ${hasContent}`);
                 
                 if (!hasContent) {
                     attempts++;
@@ -309,8 +401,72 @@ if (window.trailerJSLoaded) {
             const latestMovies = Array.from(document.querySelectorAll('#latestContainer .movie-card')).slice(0, 2);
             const comingSoonMovies = Array.from(document.querySelectorAll('#comingSoonContainer .movie-card')).slice(0, 2);
             
+            console.log(`🎬 Found movie cards - Popular: ${popularMovies.length}, Latest: ${latestMovies.length}, Coming Soon: ${comingSoonMovies.length}`);
+            
             // Combine all movie elements
             const allMovieElements = [...popularMovies, ...latestMovies, ...comingSoonMovies];
+            
+            // If we still don't have movie elements, try to get them from the container content directly
+            // This handles cases where the content is loaded but not in movie-card elements
+            if (allMovieElements.length === 0) {
+                console.log('No movie cards found, trying to extract from container content...');
+                
+                // Try to extract movies from container content
+                const extractMoviesFromContainer = (containerId, maxCount) => {
+                    const container = document.getElementById(containerId);
+                    if (!container) return [];
+                    
+                    // Look for movie elements that might not have the movie-card class
+                    const movieElements = Array.from(container.querySelectorAll('[data-movie-id]')).slice(0, maxCount);
+                    console.log(`🔍 Found ${movieElements.length} elements with data-movie-id in ${containerId}`);
+                    return movieElements;
+                };
+                
+                const popularMoviesAlt = extractMoviesFromContainer('popularContainer', 2);
+                const latestMoviesAlt = extractMoviesFromContainer('latestContainer', 2);
+                const comingSoonMoviesAlt = extractMoviesFromContainer('comingSoonContainer', 2);
+                
+                const allMovieElementsAlt = [...popularMoviesAlt, ...latestMoviesAlt, ...comingSoonMoviesAlt];
+                
+                if (allMovieElementsAlt.length > 0) {
+                    console.log('Found alternative movie elements:', allMovieElementsAlt.length);
+                    // Extract movie data from alternative elements
+                    const featuredMovies = allMovieElementsAlt.map(element => {
+                        const titleElement = element.querySelector('h4') || 
+                                           element.querySelector('.font-bold') || 
+                                           element.querySelector('[class*="title"]') || 
+                                           element.querySelector('*');
+                        const title = titleElement ? titleElement.textContent.trim() : '';
+                        
+                        const yearElement = element.querySelector('p') || 
+                                          element.querySelector('[class*="year"]') || 
+                                          element.querySelector(':nth-child(2)');
+                        const year = yearElement ? yearElement.textContent.trim() : '';
+                        
+                        const ratingElement = element.querySelector('[class*="rating"]') || 
+                                            element.querySelector('[class*="text"]') || 
+                                            element.querySelector(':nth-child(3)');
+                        const rating = ratingElement ? ratingElement.textContent.trim() : '';
+                        
+                        const imageElement = element.querySelector('img');
+                        const image = imageElement ? imageElement.src : '';
+                        
+                        const movieId = element.dataset.movieId || '';
+                        
+                        console.log(`🎬 Extracted movie - Title: ${title}, Year: ${year}, Rating: ${rating}, Image: ${!!image}, ID: ${movieId}`);
+                        
+                        return { title, year, rating, image, id: movieId };
+                    }).filter(movie => movie.id && movie.title); // Filter out incomplete movies
+                    
+                    console.log('Alternative featured movies:', featuredMovies);
+                    
+                    if (featuredMovies.length > 0) {
+                        // Proceed with fetching trailers for these movies
+                        await displayTrailersForMovies(featuredMovies, loader, carousel);
+                        return;
+                    }
+                }
+            }
             
             if (allMovieElements.length === 0) {
                 console.log('No movies found for featured trailers');
@@ -331,17 +487,78 @@ if (window.trailerJSLoaded) {
             
             // Extract movie data from elements
             const featuredMovies = allMovieElements.map(element => {
-                const title = element.querySelector('.movie-title')?.textContent || '';
-                const year = element.querySelector('.movie-year')?.textContent || '';
-                const rating = element.querySelector('.movie-rating')?.textContent || '';
-                const image = element.querySelector('.movie-poster')?.src || '';
+                const titleElement = element.querySelector('.movie-title') || 
+                                   element.querySelector('h4') || 
+                                   element.querySelector('.font-bold') || 
+                                   element.querySelector('*');
+                const title = titleElement ? titleElement.textContent.trim() : '';
+                
+                const yearElement = element.querySelector('.movie-year') || 
+                                  element.querySelector('p:not([class*="text"])') || 
+                                  element.querySelector(':nth-child(2)');
+                const year = yearElement ? yearElement.textContent.trim() : '';
+                
+                const ratingElement = element.querySelector('.movie-rating') || 
+                                    element.querySelector('[class*="rating"]') || 
+                                    element.querySelector('[class*="text"]') || 
+                                    element.querySelector(':nth-child(3)');
+                const rating = ratingElement ? ratingElement.textContent.trim() : '';
+                
+                const imageElement = element.querySelector('.movie-poster') || 
+                                   element.querySelector('img');
+                const image = imageElement ? imageElement.src : '';
+                
                 const movieId = element.dataset.movieId || '';
                 
+                console.log(`🎬 Extracted movie card - Title: ${title}, Year: ${year}, Rating: ${rating}, Image: ${!!image}, ID: ${movieId}`);
+                
                 return { title, year, rating, image, id: movieId };
-            }).filter(movie => movie.id); // Filter out movies without IDs
+            }).filter(movie => movie.id && movie.title); // Filter out incomplete movies
             
             console.log('Featured movies:', featuredMovies);
             
+            if (featuredMovies.length === 0) {
+                console.log('No valid movies with IDs found for featured trailers');
+                // Hide loader and show message
+                if (loader) loader.style.display = 'none';
+                if (carousel) {
+                    carousel.innerHTML = `
+                        <div class="w-full h-full flex items-center justify-center">
+                            <div class="text-center p-8">
+                                <i class="fas fa-film text-4xl text-gray-500 mb-4"></i>
+                                <p class="text-gray-400">No featured trailers available at the moment</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            // Display trailers for the featured movies
+            await displayTrailersForMovies(featuredMovies, loader, carousel);
+        } catch (error) {
+            console.error('Error initializing featured trailers:', error);
+            // Hide loader and show error message
+            const loader = document.getElementById('trailersLoader');
+            const carousel = document.getElementById('trailersCarousel');
+            
+            if (loader) loader.style.display = 'none';
+            if (carousel) {
+                carousel.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center">
+                        <div class="text-center p-8">
+                            <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                            <p class="text-red-400">Failed to load featured trailers</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    // Helper function to display trailers for movies
+    async function displayTrailersForMovies(featuredMovies, loader, carousel) {
+        try {
             // Fetch trailers for featured movies
             const trailerPromises = featuredMovies.map(movie => 
                 fetchTrailerForMovie(movie.id)
@@ -407,6 +624,9 @@ if (window.trailerJSLoaded) {
                             window.open(`trailer.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&movieId=${movieId}&poster=${encodeURIComponent(poster)}&year=${encodeURIComponent(year)}&plot=${encodeURIComponent(plot)}&rating=${encodeURIComponent(rating)}`, '_blank');
                         });
                     });
+                    
+                    // Initialize carousel navigation
+                    initializeCarouselNavigation();
                 }
             } else {
                 // No trailers found, show message
@@ -423,11 +643,8 @@ if (window.trailerJSLoaded) {
                 }
             }
         } catch (error) {
-            console.error('Error initializing featured trailers:', error);
+            console.error('Error displaying trailers:', error);
             // Hide loader and show error message
-            const loader = document.getElementById('trailersLoader');
-            const carousel = document.getElementById('trailersCarousel');
-            
             if (loader) loader.style.display = 'none';
             if (carousel) {
                 carousel.innerHTML = `
@@ -441,6 +658,64 @@ if (window.trailerJSLoaded) {
             }
         }
     }
+    
+    // Initialize carousel navigation functionality
+    function initializeCarouselNavigation() {
+        const carousel = document.getElementById('trailersCarousel');
+        const scrollLeftBtn = document.getElementById('scrollLeftBtn');
+        const scrollRightBtn = document.getElementById('scrollRightBtn');
+        
+        if (!carousel || !scrollLeftBtn || !scrollRightBtn) {
+            console.log('Carousel navigation elements not found');
+            return;
+        }
+        
+        // Show/hide navigation buttons based on scroll position
+        function updateNavigationButtons() {
+            const scrollLeft = carousel.scrollLeft;
+            const scrollWidth = carousel.scrollWidth;
+            const clientWidth = carousel.clientWidth;
+            
+            // Show left button if we can scroll left
+            if (scrollLeft > 0) {
+                scrollLeftBtn.classList.add('pointer-events-auto');
+                scrollLeftBtn.querySelector('button').classList.remove('opacity-0');
+            } else {
+                scrollLeftBtn.classList.remove('pointer-events-auto');
+                scrollLeftBtn.querySelector('button').classList.add('opacity-0');
+            }
+            
+            // Show right button if we can scroll right
+            if (scrollLeft + clientWidth < scrollWidth) {
+                scrollRightBtn.classList.add('pointer-events-auto');
+                scrollRightBtn.querySelector('button').classList.remove('opacity-0');
+            } else {
+                scrollRightBtn.classList.remove('pointer-events-auto');
+                scrollRightBtn.querySelector('button').classList.add('opacity-0');
+            }
+        }
+        
+        // Scroll left
+        scrollLeftBtn.querySelector('button').addEventListener('click', () => {
+            carousel.scrollBy({ left: -carousel.clientWidth, behavior: 'smooth' });
+        });
+        
+        // Scroll right
+        scrollRightBtn.querySelector('button').addEventListener('click', () => {
+            carousel.scrollBy({ left: carousel.clientWidth, behavior: 'smooth' });
+        });
+        
+        // Update navigation buttons on scroll
+        carousel.addEventListener('scroll', updateNavigationButtons);
+        
+        // Initial update
+        setTimeout(updateNavigationButtons, 100);
+        
+        // Update on window resize
+        window.addEventListener('resize', updateNavigationButtons);
+        
+        console.log('✅ Carousel navigation initialized');
+    }
 
     // Expose functions globally
     window.fetchTrailerForMovie = fetchTrailerForMovie;
@@ -449,6 +724,7 @@ if (window.trailerJSLoaded) {
     console.log('✅ Trailer functionality initialized');
     
     // Initialize featured trailers when DOM is loaded and main content is ready
+    // Add safety check for DOM ready state
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             // Wait a bit more to ensure main content is loaded
@@ -458,4 +734,13 @@ if (window.trailerJSLoaded) {
         // DOM is already loaded, wait a bit more to ensure main content is loaded
         setTimeout(initializeFeaturedTrailers, 5000);
     }
+}
+
+// Add safety check for trailer cache initialization
+if (!window.trailerCache) {
+    console.warn('⚠️ Trailer cache not initialized, creating fallback cache');
+    window.trailerCache = {
+        get: function(movieId) { return null; },
+        set: function(movieId, data) { console.log('Cache not available, skipping cache set for', movieId); }
+    };
 }

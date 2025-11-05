@@ -8,11 +8,13 @@ class TrailerCache {
         this.maxSize = maxSize;
         this.expirationTime = expirationTime;
         this.accessOrder = []; // Track access order for LRU
+        console.log(`✅ TrailerCache initialized with maxSize: ${maxSize}, expirationTime: ${expirationTime}ms`);
     }
     
     // Get cached trailer data
     get(movieId) {
         if (!this.cache.has(movieId)) {
+            console.log(`🔍 Cache miss for movie: ${movieId}`);
             return null;
         }
         
@@ -20,6 +22,7 @@ class TrailerCache {
         
         // Check if expired
         if (Date.now() - cachedItem.timestamp > this.expirationTime) {
+            console.log(`⏰ Cache expired for movie: ${movieId}`);
             this.delete(movieId);
             return null;
         }
@@ -165,12 +168,15 @@ class TrailerCache {
 }
 
 // Initialize trailer cache
+console.log('🎬 Initializing trailer cache...');
 const trailerCache = new TrailerCache();
 
 // Load existing cache data
+console.log('📥 Loading trailer cache from localStorage...');
 trailerCache.loadFromLocalStorage();
 
 // Clean expired entries on startup
+console.log('🧹 Cleaning expired cache entries...');
 trailerCache.cleanExpired();
 
 // Periodically clean expired entries (every 10 minutes)
