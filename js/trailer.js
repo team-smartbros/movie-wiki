@@ -181,7 +181,8 @@ if (window.trailerJSLoaded) {
                                     url: playback.url,  // Use URL directly as in details.html
                                     title: trailerNode.name?.value || trailerNode.contentTitle?.text || 'Trailer',
                                     type: 'playback',  // Indicate this is a playback URL for embedding
-                                    thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans'
+                                    thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans',
+                                    movieId: movieId
                                 };
                                 
                                 // Cache the trailer data for faster loading next time
@@ -198,7 +199,8 @@ if (window.trailerJSLoaded) {
                             url: playbackURLs[0].url,  // Use URL directly as in details.html
                             title: trailerNode.name?.value || trailerNode.contentTitle?.text || 'Trailer',
                             type: 'playback',  // Indicate this is a playback URL for embedding
-                            thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans'
+                            thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans',
+                            movieId: movieId
                         };
                         
                         // Cache the trailer data for faster loading next time
@@ -217,7 +219,8 @@ if (window.trailerJSLoaded) {
                             url: previewURLs[0].url,
                             title: trailerNode.name?.value || trailerNode.contentTitle?.text || 'Trailer',
                             type: 'preview',  // Indicate this is a preview URL for embedding
-                            thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans'
+                            thumbnail: trailerNode.thumbnail?.url || shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans',
+                            movieId: movieId
                         };
                         
                         // Cache the trailer data for faster loading next time
@@ -238,7 +241,8 @@ if (window.trailerJSLoaded) {
                     url: shortData.trailer.url,  // Use URL directly as in details.html
                     title: shortData.trailer.title || 'Trailer',
                     type: 'direct',  // Indicate this is a direct URL to open in new tab
-                    thumbnail: shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans'
+                    thumbnail: shortData.image || topData.primaryImage?.url || 'https://placehold.co/600x900?text=No+Image&font=opensans',
+                    movieId: movieId
                 };
                 
                 // Cache the trailer data for faster loading next time
@@ -258,8 +262,168 @@ if (window.trailerJSLoaded) {
         }
     }
 
+    // Function to initialize featured trailers
+    async function initializeFeaturedTrailers() {
+        console.log('🎬 Initializing featured trailers...');
+        
+        try {
+            // Show loader
+            const loader = document.getElementById('trailersLoader');
+            const carousel = document.getElementById('trailersCarousel');
+            
+            if (loader) loader.style.display = 'flex';
+            if (carousel) carousel.innerHTML = '';
+            
+            // Wait for popular, latest, and coming soon content to load
+            // We'll use a timeout to give the main content time to load
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Get movies from the existing containers
+            const popularMovies = Array.from(document.querySelectorAll('#popularContainer .movie-card')).slice(0, 2);
+            const latestMovies = Array.from(document.querySelectorAll('#latestContainer .movie-card')).slice(0, 2);
+            const comingSoonMovies = Array.from(document.querySelectorAll('#comingSoonContainer .movie-card')).slice(0, 2);
+            
+            // Combine all movie elements
+            const allMovieElements = [...popularMovies, ...latestMovies, ...comingSoonMovies];
+            
+            if (allMovieElements.length === 0) {
+                console.log('No movies found for featured trailers');
+                // Hide loader and show message
+                if (loader) loader.style.display = 'none';
+                if (carousel) {
+                    carousel.innerHTML = `
+                        <div class="w-full h-full flex items-center justify-center">
+                            <div class="text-center p-8">
+                                <i class="fas fa-film text-4xl text-gray-500 mb-4"></i>
+                                <p class="text-gray-400">No featured trailers available at the moment</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            // Extract movie data from elements
+            const featuredMovies = allMovieElements.map(element => {
+                const title = element.querySelector('.movie-title')?.textContent || '';
+                const year = element.querySelector('.movie-year')?.textContent || '';
+                const rating = element.querySelector('.movie-rating')?.textContent || '';
+                const image = element.querySelector('.movie-poster')?.src || '';
+                const movieId = element.dataset.movieId || '';
+                
+                return { title, year, rating, image, id: movieId };
+            });
+            
+            console.log('Featured movies:', featuredMovies);
+            
+            // Fetch trailers for featured movies
+            const trailerPromises = featuredMovies.map(movie => 
+                movie.id ? fetchTrailerForMovie(movie.id) : Promise.resolve(null)
+            );
+            
+            const trailers = await Promise.all(trailerPromises);
+            console.log('Fetched trailers:', trailers);
+            
+            // Filter out null trailers
+            const validTrailers = trailers.filter(trailer => trailer && trailer.url);
+            console.log('Valid trailers:', validTrailers);
+            
+            if (validTrailers.length > 0) {
+                // Hide loader and populate carousel
+                if (loader) loader.style.display = 'none';
+                
+                // Populate carousel with trailer items
+                if (carousel) {
+                    carousel.innerHTML = validTrailers.map((trailer, index) => {
+                        const movie = featuredMovies.find(m => m.id === trailer.movieId) || {};
+                        return `
+                            <div class="trailer-item snap-start relative flex-shrink-0 w-full">
+                                <div class="thumbnail-container">
+                                    <img src="${trailer.thumbnail || movie.image || 'https://placehold.co/600x900?text=No+Image&font=opensans'}" 
+                                         alt="${trailer.title || movie.title || 'Trailer'}" 
+                                         class="w-full h-full object-cover"
+                                         onerror="this.src='https://placehold.co/600x900?text=No+Image&font=opensans'">
+                                    <div class="trailer-overlay">
+                                        <div class="trailer-info">
+                                            <h3>${trailer.title || movie.title || 'Trailer'}</h3>
+                                            <p>${movie.year ? movie.year : ''} ${movie.rating ? `• ${movie.rating}` : ''}</p>
+                                        </div>
+                                    </div>
+                                    <div class="trailer-controls">
+                                        <button class="trailer-control-btn play-trailer" 
+                                                data-url="${encodeURIComponent(trailer.url)}" 
+                                                data-title="${encodeURIComponent(trailer.title || movie.title || 'Trailer')}" 
+                                                data-movie-id="${movie.id || ''}"
+                                                data-poster="${encodeURIComponent(trailer.thumbnail || movie.image || 'https://placehold.co/600x900?text=No+Image&font=opensans')}">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    // Add event listeners to play buttons
+                    document.querySelectorAll('.play-trailer').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const url = decodeURIComponent(this.dataset.url);
+                            const title = decodeURIComponent(this.dataset.title);
+                            const movieId = this.dataset.movieId;
+                            const poster = decodeURIComponent(this.dataset.poster);
+                            const year = ''; // We don't have year data here
+                            const plot = ''; // We don't have plot data here
+                            const rating = ''; // We don't have rating data here
+                            
+                            // Open trailer in new window/tab
+                            window.open(`trailer.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&movieId=${movieId}&poster=${encodeURIComponent(poster)}&year=${encodeURIComponent(year)}&plot=${encodeURIComponent(plot)}&rating=${encodeURIComponent(rating)}`, '_blank');
+                        });
+                    });
+                }
+            } else {
+                // No trailers found, show message
+                if (loader) loader.style.display = 'none';
+                if (carousel) {
+                    carousel.innerHTML = `
+                        <div class="w-full h-full flex items-center justify-center">
+                            <div class="text-center p-8">
+                                <i class="fas fa-film text-4xl text-gray-500 mb-4"></i>
+                                <p class="text-gray-400">No featured trailers available at the moment</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } catch (error) {
+            console.error('Error initializing featured trailers:', error);
+            // Hide loader and show error message
+            const loader = document.getElementById('trailersLoader');
+            const carousel = document.getElementById('trailersCarousel');
+            
+            if (loader) loader.style.display = 'none';
+            if (carousel) {
+                carousel.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center">
+                        <div class="text-center p-8">
+                            <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                            <p class="text-red-400">Failed to load featured trailers</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    }
+
     // Expose functions globally
     window.fetchTrailerForMovie = fetchTrailerForMovie;
+    window.initializeFeaturedTrailers = initializeFeaturedTrailers;
 
     console.log('✅ Trailer functionality initialized');
+    
+    // Initialize featured trailers when DOM is loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeFeaturedTrailers);
+    } else {
+        // DOM is already loaded
+        initializeFeaturedTrailers();
+    }
 }
