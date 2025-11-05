@@ -1,8 +1,8 @@
 // trailer.js - Trailer functionality for Movie Wiki
 console.log('✅ trailer.js loaded');
 
-// API Base URLs (same as details.html)
-const API_BASE = 'https://imdb.iamidiotareyoutoo.com';
+// Use the existing API_BASE from script.js instead of redeclaring it
+// const API_BASE = 'https://imdb.iamidiotareyoutoo.com'; // This line was causing the conflict
 
 // Enhanced CORS Proxy with better, faster proxies and intelligent fallback (same as details.html)
 const CORS_PROXIES = [
@@ -136,7 +136,7 @@ async function fetchTrailerForMovie(movieId) {
         console.log(`📥 Fetching trailer for movie: ${movieId}`);
         
         // Use the same API as details page
-        const url = `${API_BASE}/search?tt=${movieId}`;
+        const url = `${window.API_BASE}/search?tt=${movieId}`;
         console.log(`Trailer search URL: ${url}`);
         
         // Try direct fetch first (same method as details page)
