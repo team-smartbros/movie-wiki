@@ -935,7 +935,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Small delay to ensure genre pills are rendered
     setTimeout(function() {
         // Add event listeners to genre pills
-        const genrePills = document.querySelectorAll('.genre-pill-container .genre-pill');
+        const genrePills = document.querySelectorAll('.genre-pill');
         console.log('Found genre pills:', genrePills.length);
         
         if (genrePills.length > 0) {
