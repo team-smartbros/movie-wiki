@@ -274,11 +274,10 @@ if (window.trailerJSLoaded) {
             if (loader) loader.style.display = 'flex';
             if (carousel) carousel.innerHTML = '';
             
-            // Wait for popular, latest, and coming soon content to load
-            // We'll use a timeout to give the main content time to load
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Wait a bit for the main content to load
+            await new Promise(resolve => setTimeout(resolve, 3000));
             
-            // Get movies from the existing containers
+            // Get movie IDs from the existing containers
             const popularMovies = Array.from(document.querySelectorAll('#popularContainer .movie-card')).slice(0, 2);
             const latestMovies = Array.from(document.querySelectorAll('#latestContainer .movie-card')).slice(0, 2);
             const comingSoonMovies = Array.from(document.querySelectorAll('#comingSoonContainer .movie-card')).slice(0, 2);
@@ -312,13 +311,13 @@ if (window.trailerJSLoaded) {
                 const movieId = element.dataset.movieId || '';
                 
                 return { title, year, rating, image, id: movieId };
-            });
+            }).filter(movie => movie.id); // Filter out movies without IDs
             
             console.log('Featured movies:', featuredMovies);
             
             // Fetch trailers for featured movies
             const trailerPromises = featuredMovies.map(movie => 
-                movie.id ? fetchTrailerForMovie(movie.id) : Promise.resolve(null)
+                fetchTrailerForMovie(movie.id)
             );
             
             const trailers = await Promise.all(trailerPromises);
@@ -353,8 +352,11 @@ if (window.trailerJSLoaded) {
                                         <button class="trailer-control-btn play-trailer" 
                                                 data-url="${encodeURIComponent(trailer.url)}" 
                                                 data-title="${encodeURIComponent(trailer.title || movie.title || 'Trailer')}" 
-                                                data-movie-id="${movie.id || ''}"
-                                                data-poster="${encodeURIComponent(trailer.thumbnail || movie.image || 'https://placehold.co/600x900?text=No+Image&font=opensans')}">
+                                                data-movie-id="${trailer.movieId || ''}"
+                                                data-poster="${encodeURIComponent(trailer.thumbnail || movie.image || 'https://placehold.co/600x900?text=No+Image&font=opensans')}"
+                                                data-year="${encodeURIComponent(movie.year || '')}"
+                                                data-rating="${encodeURIComponent(movie.rating || '')}"
+                                                data-plot="${encodeURIComponent('')}">
                                             <i class="fas fa-play"></i>
                                         </button>
                                     </div>
@@ -370,11 +372,11 @@ if (window.trailerJSLoaded) {
                             const title = decodeURIComponent(this.dataset.title);
                             const movieId = this.dataset.movieId;
                             const poster = decodeURIComponent(this.dataset.poster);
-                            const year = ''; // We don't have year data here
-                            const plot = ''; // We don't have plot data here
-                            const rating = ''; // We don't have rating data here
+                            const year = decodeURIComponent(this.dataset.year);
+                            const plot = decodeURIComponent(this.dataset.plot);
+                            const rating = decodeURIComponent(this.dataset.rating);
                             
-                            // Open trailer in new window/tab
+                            // Open trailer in trailer.html page
                             window.open(`trailer.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&movieId=${movieId}&poster=${encodeURIComponent(poster)}&year=${encodeURIComponent(year)}&plot=${encodeURIComponent(plot)}&rating=${encodeURIComponent(rating)}`, '_blank');
                         });
                     });
@@ -421,9 +423,12 @@ if (window.trailerJSLoaded) {
     
     // Initialize featured trailers when DOM is loaded
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeFeaturedTrailers);
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait for the main content to load first
+            setTimeout(initializeFeaturedTrailers, 5000);
+        });
     } else {
         // DOM is already loaded
-        initializeFeaturedTrailers();
+        setTimeout(initializeFeaturedTrailers, 5000);
     }
 }
