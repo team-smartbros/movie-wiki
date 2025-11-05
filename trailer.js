@@ -721,6 +721,7 @@ function playTrailer(index, movieId, trailerData) {
     
     // Pause auto-scrolling when trailer is played
     pauseAutoScroll();
+    console.log('Auto-scroll paused');
     
     if (trailerData && trailerData.url) {
         const trailerUrl = trailerData.url;
@@ -733,6 +734,7 @@ function playTrailer(index, movieId, trailerData) {
         }
         
         // Show trailer in modal with enhanced proxy support
+        console.log('Calling showTrailerInModal');
         showTrailerInModal(trailerUrl, trailerData);
     } else {
         // Fallback if no trailer URL
@@ -783,7 +785,11 @@ function showTrailerInModal(videoUrl, trailerData) {
     
     // Show modal immediately
     modal.classList.remove('hidden');
-    console.log('Modal shown');
+    console.log('Modal shown - class removed');
+    
+    // Force reflow to ensure the modal is visible
+    modal.offsetHeight;
+    console.log('Modal reflow forced');
     
     // Create video element after a short delay to ensure DOM is updated
     setTimeout(() => {
@@ -800,6 +806,7 @@ function showTrailerInModal(videoUrl, trailerData) {
             e.stopPropagation();
             console.log('Close button clicked');
             closeTrailerModal();
+            return false;
         };
     } else {
         console.warn('Close button not found');
@@ -830,6 +837,9 @@ function showTrailerInModal(videoUrl, trailerData) {
     // Store reference to the handler so we can remove it later
     modal.handleEscKey = handleEscKey;
     console.log('ESC key listener added');
+    
+    // Prevent auto-scroll from restarting
+    console.log('Modal opening complete');
 }
 
 // Create video element for modal with enhanced proxy support
@@ -1004,6 +1014,7 @@ function createModalVideoElement(videoUrl, trailerData) {
     };
     
     container.appendChild(videoElement);
+    console.log('Video element appended to container');
 }
 
 // Function to handle HLS streams with HLS.js
@@ -1138,9 +1149,12 @@ function closeTrailerModal() {
             modalContent.innerHTML = '';
         }
         
-        // Resume auto-scrolling
-        console.log('Resuming auto-scroll');
-        resumeAutoScroll();
+        // Resume auto-scrolling with a delay to prevent immediate restart
+        console.log('Setting timeout to resume auto-scroll');
+        setTimeout(() => {
+            console.log('Resuming auto-scroll after delay');
+            resumeAutoScroll();
+        }, 300); // Small delay to ensure modal is fully closed
     } else {
         console.warn('Modal not found when trying to close');
     }
