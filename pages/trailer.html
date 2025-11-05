@@ -128,9 +128,9 @@
                 <a id="detailsButton" href="#" class="flex-1 bg-accent hover:bg-cyan-400 text-primary font-bold py-3 px-4 rounded-lg transition duration-300 text-center">
                     <i class="fas fa-info-circle mr-2"></i>Go to Details
                 </a>
-                <button id="watchNowButton" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition duration-300">
+                <a id="streamButton" href="#" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition duration-300 text-center">
                     <i class="fas fa-play mr-2"></i>Watch Now
-                </button>
+                </a>
             </div>
             
             <!-- Error Message Container -->
@@ -206,6 +206,13 @@
                 document.getElementById('detailsButton').href = 'index.html';
             }
             
+            // Set up stream button
+            if (params.movieId) {
+                document.getElementById('streamButton').href = `stream.html?id=${params.movieId}&title=${encodeURIComponent(params.title || '')}`;
+            } else {
+                document.getElementById('streamButton').href = 'stream.html';
+            }
+            
             // Load trailer if URL is provided
             if (params.url) {
                 loadTrailer(params.url);
@@ -223,12 +230,6 @@
             document.getElementById('searchButton').addEventListener('click', function() {
                 const searchQuery = params.title ? `${params.title} trailer` : 'movie trailer';
                 window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`, '_blank');
-            });
-            
-            document.getElementById('watchNowButton').addEventListener('click', function() {
-                if (params.url) {
-                    loadTrailer(params.url);
-                }
             });
         });
         
