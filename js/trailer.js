@@ -2,15 +2,6 @@
 console.log('✅ trailer.js loaded');
 
 // Use the existing API_BASE and CORS_PROXIES from script.js instead of redeclaring them
-// const API_BASE = 'https://imdb.iamidiotareyoutoo.com'; // This line was causing the conflict
-// const CORS_PROXIES = [ // This line was also causing the conflict
-//     'https://corsproxy.io/?',                      // Tier 1: Fastest, high reliability
-//     'https://api.allorigins.win/raw?url=',         // Tier 2: Good reliability
-//     'https://api.codetabs.com/v1/proxy?quest=',    // Tier 3: Alternative
-//     'https://thingproxy.freeboard.io/fetch/',      // Tier 4: Fallback
-//     'https://cors-anywhere.herokuapp.com/'         // Tier 5: Last resort
-// ];
-
 let currentProxyIndex = 0;
 let proxySuccessCount = Array(window.CORS_PROXIES?.length || 5).fill(0);
 let proxyFailCount = Array(window.CORS_PROXIES?.length || 5).fill(0);
