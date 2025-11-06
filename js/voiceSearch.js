@@ -74,6 +74,11 @@ function initVoiceSearch(searchInputId, searchButtonId, voiceButtonId) {
                     recognition.onstart = function () {
                         if (btnListen) {
                             btnListen.classList.add("active");
+                            // Add visual feedback that voice search is active
+                            const micIcon = btnListen.querySelector('i');
+                            const micAnimation = btnListen.querySelector('svg');
+                            if (micIcon) micIcon.classList.add('hidden');
+                            if (micAnimation) micAnimation.classList.remove('hidden');
                         }
                         listening = true;
                     };
@@ -82,6 +87,11 @@ function initVoiceSearch(searchInputId, searchButtonId, voiceButtonId) {
                         recognition.stop();
                         if (btnListen) {
                             btnListen.classList.remove("active");
+                            // Remove visual feedback
+                            const micIcon = btnListen.querySelector('i');
+                            const micAnimation = btnListen.querySelector('svg');
+                            if (micIcon) micIcon.classList.remove('hidden');
+                            if (micAnimation) micAnimation.classList.add('hidden');
                         }
                         listening = false;
                     };
@@ -90,6 +100,11 @@ function initVoiceSearch(searchInputId, searchButtonId, voiceButtonId) {
                         console.error('Speech recognition error:', event.error);
                         if (btnListen) {
                             btnListen.classList.remove("active");
+                            // Remove visual feedback
+                            const micIcon = btnListen.querySelector('i');
+                            const micAnimation = btnListen.querySelector('svg');
+                            if (micIcon) micIcon.classList.remove('hidden');
+                            if (micAnimation) micAnimation.classList.add('hidden');
                         }
                         listening = false;
                         
@@ -153,7 +168,24 @@ function initVoiceSearch(searchInputId, searchButtonId, voiceButtonId) {
 function performSearch(query) {
     if (query && query.trim() !== '') {
         // Redirect to search results page with the query
-        window.location.href = `../search.html?q=${encodeURIComponent(query)}`;
+        // Fix the path to use the correct relative path
+        window.location.href = `./search.html?q=${encodeURIComponent(query)}`;
+    }
+}
+
+// Export functions for use in other modules (if needed)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { initVoiceSearch, performSearch };
+}       });
+    }
+}
+
+// Perform search function
+function performSearch(query) {
+    if (query && query.trim() !== '') {
+        // Redirect to search results page with the query
+        // Fix the path to use the correct relative path
+        window.location.href = `./search.html?q=${encodeURIComponent(query)}`;
     }
 }
 

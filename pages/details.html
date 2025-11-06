@@ -419,8 +419,8 @@
                             </ul>
                         </div>
                         
-                        <div>
-                            <h3 class="text-lg font-semibold text-accent mb-2 font-sans">Cast & Crew</h3>
+                        <div class="px-6 pb-6">
+                            <h3 class="text-lg font-semibold text-accent mb-4 font-sans">Cast & Crew</h3>
                             <div class="space-y-3">
                                 <div>
                                     <h4 class="font-semibold text-gray-300 mb-1">Cast</h4>
@@ -1051,8 +1051,10 @@
                 castMembers.forEach(castMember => {
                     const actorName = castMember.name?.nameText?.text || 'Unknown Actor';
                     const characters = castMember.creditedRoles?.edges?.[0]?.node?.characters?.edges?.map(e => e.node.name).join(', ') || 'Unknown Role';
+                    // Encode the actor name for URL safety
+                    const encodedActorName = encodeURIComponent(actorName);
                     
-                    castHTML += `<p class="text-sm text-gray-300">${actorName} <span class="text-gray-500">as ${characters}</span></p>`;
+                    castHTML += `<p class="text-sm text-gray-300 cursor-pointer hover:text-accent transition-colors" onclick="window.location.href='actors_detail.html?name=${encodedActorName}'">${actorName} <span class="text-gray-500">as ${characters}</span></p>`;
                 });
                 document.getElementById('movieCast').innerHTML = castHTML;
                 
@@ -1220,9 +1222,11 @@
                 const actorName = castMember.name?.nameText?.text || 'Unknown Actor';
                 const actorImage = castMember.name?.primaryImage?.url || 'https://placehold.co/200x300?text=No+Image&font=opensans';
                 const characters = castMember.creditedRoles?.edges?.[0]?.node?.characters?.edges?.map(e => e.node.name).join(', ') || 'Unknown Role';
+                // Encode the actor name for URL safety
+                const encodedActorName = encodeURIComponent(actorName);
                 
                 photosHTML += `
-                    <div class="flex-shrink-0 w-48 bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition-transform cursor-pointer cast-image">
+                    <div class="flex-shrink-0 w-48 bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition-transform cursor-pointer cast-image" onclick="window.location.href='actors_detail.html?name=${encodedActorName}'">
                         <img src="${actorImage}" alt="${actorName}" class="w-full h-64 object-cover">
                         <div class="p-3">
                             <p class="font-semibold text-sm text-white truncate">${actorName}</p>

@@ -1151,18 +1151,49 @@ function displayMovieDetails(movie, movieId, fullData) {
     const movieCast = document.getElementById('movieCast');
     if (movieCast && fullData.cast) {
         let castHTML = '';
+        const actorContainers = [];
+        
         if (fullData.cast.star) {
-            fullData.cast.star.slice(0, 5).forEach(actor => {
-                castHTML += `<div class="flex items-center mb-2">
-                    <img src="${actor['#IMG'] || 'https://via.placeholder.com/50x75?text=No+Image'}" alt="${actor['#NAME'] || 'Unknown Actor'}" class="w-10 h-12 object-cover rounded mr-2">
-                    <div>
-                        <p class="font-medium">${actor['#NAME'] || 'Unknown Actor'}</p>
-                        <p class="text-sm text-gray-400">${actor['#CHARACTER'] || 'Unknown Role'}</p>
+            fullData.cast.star.slice(0, 5).forEach((actor, index) => {
+                // Create a URL-safe name for the actor
+                const actorName = actor['#NAME'] || 'Unknown Actor';
+                const encodedActorName = encodeURIComponent(actorName);
+                
+                // Store container info for later event attachment
+                actorContainers.push({
+                    index: index,
+                    actorName: encodedActorName
+                });
+                
+                castHTML += `<div class="flex items-center mb-2 cursor-pointer hover:bg-gray-700 p-2 rounded transition-colors actor-container-${index}">
+                    <img src="${actor['#IMG'] || 'https://via.placeholder.com/50x75?text=No+Image'}" 
+                         alt="${actorName}" 
+                         class="w-10 h-12 object-cover rounded mr-2 actor-image-${index}">
+                    <div class="actor-info-${index}">
+                        <p class="font-medium text-accent actor-name-${index}">${actorName}</p>
+                        <p class="text-sm text-gray-400 actor-character-${index}">${actor['#CHARACTER'] || 'Unknown Role'}</p>
                     </div>
                 </div>`;
             });
         }
         movieCast.innerHTML = castHTML;
+        
+        // Attach event listeners to each actor container after DOM update
+        setTimeout(() => {
+            actorContainers.forEach(container => {
+                const actorElement = document.querySelector(`.actor-container-${container.index}`);
+                if (actorElement) {
+                    actorElement.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Actor clicked:', container.actorName);
+                        if (container.actorName) {
+                            window.location.href = `actors_detail.html?name=${container.actorName}`;
+                        }
+                    });
+                }
+            });
+        }, 0);
     }
     
     // Update crew information
@@ -1623,29 +1654,58 @@ function showWelcomeSection() {
 
 // Apply ad-blocking enhancements
 function applyAdBlockingEnhancements() {
-    // Remove common ad containers
+    console.log('Applying ad-blocking enhancements...');
+    
+    // Remove common ad containers but preserve our banner ad and marquee
     const adSelectors = [
-        'iframe[src*="ads"]',
-        'div[class*="ad"]',
-        'div[id*="ad"]',
-        '.advertisement',
-        '.sponsor',
-        '[class*="popup"]',
-        '[id*="popup"]'
+        'iframe[src*="ads"]:not(.tf6d2171a86)',
+        'div[class*="ad"]:not(.banner-ad-container):not(.animate-marquee)',
+        'div[id*="ad"]:not(.banner-ad-container):not(.animate-marquee)',
+        '.advertisement:not(.banner-ad-container):not(.animate-marquee)',
+        '.sponsor:not(.banner-ad-container):not(.animate-marquee)',
+        '[class*="popup"]:not(.banner-ad-container):not(.animate-marquee)',
+        '[id*="popup"]:not(.banner-ad-container):not(.animate-marquee)'
     ];
     
     adSelectors.forEach(selector => {
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
-            element.style.display = 'none';
+            // Don't hide our own banner ad container or marquee
+            if (!element.classList.contains('banner-ad-container') && 
+                !element.classList.contains('animate-marquee') &&
+                !element.querySelector('.banner-ad-container') &&
+                !element.querySelector('.animate-marquee')) {
+                console.log('Hiding ad element:', element);
+                element.style.display = 'none';
+            }
         });
     });
     
-    // Block common ad scripts
-    const adScripts = document.querySelectorAll('script[src*="ads"], script[src*="doubleclick"], script[src*="googlesyndication"]');
+    // Block common ad scripts but preserve our ad script
+    const adScripts = document.querySelectorAll(
+        'script[src*="ads"], script[src*="doubleclick"], script[src*="googlesyndication"]'
+    );
     adScripts.forEach(script => {
-        script.remove();
+        // Don't remove our own ad script
+        if (!script.src.includes('data527.click')) {
+            console.log('Removing ad script:', script.src);
+            script.remove();
+        }
     });
+    
+    // Ensure our important elements remain visible and centered
+    const marquee = document.querySelector('.animate-marquee');
+    const adBanner = document.querySelector('.banner-ad-container');
+    
+    if (marquee) {
+        marquee.style.display = 'block';
+    }
+    
+    if (adBanner) {
+        adBanner.style.display = 'flex';
+        adBanner.style.justifyContent = 'center';
+        adBanner.style.alignItems = 'center';
+    }
 }
 
 // Web scraper for fetching movie and TV show data
@@ -2148,13 +2208,19 @@ function displayPopularContent(contentList, containerId) {
             const contentCard = document.createElement('div');
             contentCard.className = 'bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1';
             
-            // Build the HTML with additional information
+            // Build the HTML with improved tag design
             let additionalInfo = '';
             if (item.type) {
-                additionalInfo += `<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.type}</span>`;
+                additionalInfo += `<span class="inline-block bg-gradient-to-r from-accent to-cyan-400 text-primary text-xs font-bold px-2 py-1 rounded-full mr-1 mt-1 shadow-sm">${item.type}</span>`;
             }
             if (item.rating && item.rating !== 'N/A') {
-                additionalInfo += `<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.rating}</span>`;
+                // Color code ratings
+                let ratingClass = 'bg-gray-700';
+                if (parseFloat(item.rating) >= 8) ratingClass = 'bg-gradient-to-r from-green-500 to-emerald-500';
+                else if (parseFloat(item.rating) >= 7) ratingClass = 'bg-gradient-to-r from-yellow-500 to-amber-500';
+                else if (parseFloat(item.rating) >= 6) ratingClass = 'bg-gradient-to-r from-orange-500 to-red-500';
+                
+                additionalInfo += `<span class="inline-block ${ratingClass} text-white text-xs font-bold px-2 py-1 rounded-full mr-1 mt-1 shadow-sm">${item.rating}</span>`;
             }
             
             // Add actors if available
@@ -2174,7 +2240,9 @@ function displayPopularContent(contentList, containerId) {
                 <div class="p-3">
                     <h4 class="font-bold text-sm mb-1 truncate">${item.title || 'Unknown Title'}</h4>
                     <p class="text-gray-400 text-xs">${item.year || 'N/A'}</p>
-                    ${additionalInfo}
+                    <div class="flex flex-wrap gap-1 mt-2">
+                        ${additionalInfo}
+                    </div>
                     ${actorsInfo}
                 </div>
             `;
@@ -2231,13 +2299,19 @@ function displayGenreContent(contentList, containerId) {
             const contentCard = document.createElement('div');
             contentCard.className = 'bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1';
             
-            // Build the HTML with additional information
+            // Build the HTML with improved tag design
             let additionalInfo = '';
             if (item.type) {
-                additionalInfo += `<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.type}</span>`;
+                additionalInfo += `<span class="inline-block bg-gradient-to-r from-accent to-cyan-400 text-primary text-xs font-bold px-2 py-1 rounded-full mr-1 mt-1 shadow-sm">${item.type}</span>`;
             }
             if (item.rating && item.rating !== 'N/A') {
-                additionalInfo += `<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.rating}</span>`;
+                // Color code ratings
+                let ratingClass = 'bg-gray-700';
+                if (parseFloat(item.rating) >= 8) ratingClass = 'bg-gradient-to-r from-green-500 to-emerald-500';
+                else if (parseFloat(item.rating) >= 7) ratingClass = 'bg-gradient-to-r from-yellow-500 to-amber-500';
+                else if (parseFloat(item.rating) >= 6) ratingClass = 'bg-gradient-to-r from-orange-500 to-red-500';
+                
+                additionalInfo += `<span class="inline-block ${ratingClass} text-white text-xs font-bold px-2 py-1 rounded-full mr-1 mt-1 shadow-sm">${item.rating}</span>`;
             }
             
             // Add actors if available
@@ -2254,7 +2328,9 @@ function displayGenreContent(contentList, containerId) {
                 <div class="p-3">
                     <h4 class="font-bold text-sm mb-1 truncate">${item.title || 'Unknown Title'}</h4>
                     <p class="text-gray-400 text-xs">${item.year || 'N/A'}</p>
-                    ${additionalInfo}
+                    <div class="flex flex-wrap gap-1 mt-2">
+                        ${additionalInfo}
+                    </div>
                     ${actorsInfo}
                 </div>
             `;
@@ -2309,13 +2385,19 @@ function loadMoreItems(containerId) {
         const contentCard = document.createElement('div');
         contentCard.className = 'bg-secondary rounded-lg overflow-hidden hover:shadow-xl transition duration-300 cursor-pointer transform hover:-translate-y-1';
         
-        // Build the HTML with additional information
+        // Build the HTML with improved tag design
         let additionalInfo = '';
         if (item.type) {
-            additionalInfo += `<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.type}</span>`;
+            additionalInfo += `<span class="inline-block bg-gradient-to-r from-accent to-cyan-400 text-primary text-xs font-bold px-2 py-1 rounded-full mr-1 mt-1 shadow-sm">${item.type}</span>`;
         }
         if (item.rating && item.rating !== 'N/A') {
-            additionalInfo += `<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">${item.rating}</span>`;
+            // Color code ratings
+            let ratingClass = 'bg-gray-700';
+            if (parseFloat(item.rating) >= 8) ratingClass = 'bg-gradient-to-r from-green-500 to-emerald-500';
+            else if (parseFloat(item.rating) >= 7) ratingClass = 'bg-gradient-to-r from-yellow-500 to-amber-500';
+            else if (parseFloat(item.rating) >= 6) ratingClass = 'bg-gradient-to-r from-orange-500 to-red-500';
+            
+            additionalInfo += `<span class="inline-block ${ratingClass} text-white text-xs font-bold px-2 py-1 rounded-full mr-1 mt-1 shadow-sm">${item.rating}</span>`;
         }
         
         // Add actors if available
@@ -2335,7 +2417,9 @@ function loadMoreItems(containerId) {
             <div class="p-3">
                 <h4 class="font-bold text-sm mb-1 truncate">${item.title || 'Unknown Title'}</h4>
                 <p class="text-gray-400 text-xs">${item.year || 'N/A'}</p>
-                ${additionalInfo}
+                <div class="flex flex-wrap gap-1 mt-2">
+                    ${additionalInfo}
+                </div>
                 ${actorsInfo}
             </div>
         `;

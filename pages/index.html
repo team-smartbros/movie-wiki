@@ -205,6 +205,10 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            /* Ensure banner stays centered */
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         .banner-ad-container ins {
@@ -213,6 +217,17 @@
             height: 90px !important;
             min-height: 90px;
             max-width: 728px;
+        }
+        
+        /* Center genre pills on desktop */
+        @media (min-width: 768px) {
+            #genreFilters {
+                justify-content: center;
+            }
+            
+            .genre-pill-container {
+                justify-content: center;
+            }
         }
 
         /* Featured Trailers Section */
@@ -763,45 +778,47 @@
         <!-- Search Bar -->
         <div class="search max-w-2xl mx-auto mb-8">
             <div class="search-container relative">
-                <input 
-                    type="search" 
-                    id="searchInput" 
-                    name="search" 
-                    autocomplete="off"
-                    class="w-full py-3 pl-4 pr-12 rounded-lg bg-secondary border border-gray-600 text-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50"
-                >
-                <label for="searchInput" id="searchLabel" class="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-400 pointer-events-none transition-all duration-200">
-                    Type <span>or dictate</span> to search
-                </label>
-                <button 
-                    id="voiceSearchButton" 
-                    title="Dictate"
-                    class="absolute right-10 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-accent transition-colors"
-                >
-                    <i class="fas fa-microphone"></i>
-                    <svg width="1.25rem" height="1.25rem" viewBox="0 0 100 100" class="hidden">
-                        <g stroke="#fff" stroke-width="15">
-                            <path d="M20,20 20,80">
-                                <animate attributeName="d" values="M20,40 20,60;M20,20 20,80;M20,40 20,60" dur="1s" repeatCount="indefinite" />
-                            </path>
-                            <path d="M50,10 50,90">
-                                <animate attributeName="d" values="M50,10 50,90;M50,40 50,60;M50,10 50,90" dur="1s" repeatCount="indefinite" />
-                            </path>
-                            <path d="M80,20 80,80">
-                                <animate attributeName="d" values="M80,40 80,60;M80,20 80,80;M80,40 80,60" dur="1s" repeatCount="indefinite" />
-                            </path>
-                        </g>
-                    </svg>
-                    <span class="a11y-hidden"></span>
-                </button>
-                <button 
-                    id="searchButton" 
-                    title="Search"
-                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-accent transition-colors"
-                >
-                    <i class="fas fa-search"></i>
-                    <span class="a11y-hidden"></span>
-                </button>
+                <form id="searchForm" action="./search.html" method="GET">
+                    <input 
+                        type="search" 
+                        id="searchInput" 
+                        name="q"
+                        autocomplete="off"
+                        class="w-full py-3 pl-4 pr-12 rounded-lg bg-secondary border border-gray-600 text-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50"
+                        placeholder="Type or dictate to search"
+                    >
+                    <button 
+                        id="voiceSearchButton" 
+                        title="Dictate"
+                        type="button"
+                        class="absolute right-10 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-accent transition-colors"
+                    >
+                        <i class="fas fa-microphone"></i>
+                        <svg width="1.25rem" height="1.25rem" viewBox="0 0 100 100" class="hidden">
+                            <g stroke="#fff" stroke-width="15">
+                                <path d="M20,20 20,80">
+                                    <animate attributeName="d" values="M20,40 20,60;M20,20 20,80;M20,40 20,60" dur="1s" repeatCount="indefinite" />
+                                </path>
+                                <path d="M50,10 50,90">
+                                    <animate attributeName="d" values="M50,10 50,90;M50,40 50,60;M50,10 50,90" dur="1s" repeatCount="indefinite" />
+                                </path>
+                                <path d="M80,20 80,80">
+                                    <animate attributeName="d" values="M80,40 80,60;M80,20 80,80;M80,40 80,60" dur="1s" repeatCount="indefinite" />
+                                </path>
+                            </g>
+                        </svg>
+                        <span class="a11y-hidden"></span>
+                    </button>
+                    <button 
+                        id="searchButton" 
+                        title="Search"
+                        type="submit"
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-accent transition-colors"
+                    >
+                        <i class="fas fa-search"></i>
+                        <span class="a11y-hidden"></span>
+                    </button>
+                </form>
             </div>
         </div>
 
@@ -1283,19 +1300,16 @@
             }
         });
     </script>
-    <script src="../js/script.js"></script>
-    <script defer src="../js/trailer-cache.js"></script>
-    <script defer src="../js/trailer.js"></script>
-    <script defer src="../js/voiceSearch.js"></script>
-    
-    <!-- Firebase Authentication -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
     <script>
-        // Firebase Configuration
+        // Firebase configuration with correct credentials
         const firebaseConfig = {
             apiKey: "AIzaSyDeTE5otOE58jq1-bIPNbiYdwiwX88iT00",
             authDomain: "movie-wiki-86d4d.firebaseapp.com",
+            databaseURL: "https://movie-wiki-86d4d-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "movie-wiki-86d4d",
             storageBucket: "movie-wiki-86d4d.firebasestorage.app",
             messagingSenderId: "453451714779",
@@ -1303,74 +1317,154 @@
             measurementId: "G-91SHQF7F4P"
         };
         
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+        // Initialize Firebase with error handling
+        let firebaseApp = null;
+        let firebaseAuth = null;
         
-        let currentUser = null;
-        
-        // Google Sign-In
-        function signInWithGoogle() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider)
-                .then((result) => {
-                    console.log('✅ Signed in:', result.user.displayName);
-                })
-                .catch((error) => {
-                    console.error('Sign-in error:', error);
-                    alert('Failed to sign in. Please try again.');
-                });
+        try {
+            firebaseApp = firebase.initializeApp(firebaseConfig);
+            firebaseAuth = firebase.auth();
+            console.log('Firebase initialized successfully');
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
         }
         
-        // Auth State Observer
-        auth.onAuthStateChanged((user) => {
-            currentUser = user;
-            updateAuthUI(user);
+        // Initialize login functionality after Firebase is ready
+        window.addEventListener('load', function() {
+            if (firebaseApp && firebaseAuth) {
+                initializeLogin();
+            } else {
+                console.log('Firebase not available, disabling login functionality');
+                // Hide login buttons if Firebase is not available
+                const loginBtn = document.getElementById('loginBtn');
+                const mobileLoginBtn = document.getElementById('mobileLoginBtn');
+                if (loginBtn) loginBtn.style.display = 'none';
+                if (mobileLoginBtn) mobileLoginBtn.style.display = 'none';
+            }
+        });
+    </script>
+    <script src="../js/script.js"></script>
+    <script defer src="../js/trailer-cache.js"></script>
+    <script defer src="../js/trailer.js"></script>
+    <script defer src="../js/voiceSearch.js"></script>
+    <script>
+        // Initialize voice search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize voice search with correct element IDs
+            initVoiceSearch('searchInput', 'searchButton', 'voiceSearchButton');
+            
+            // Handle form submission
+            const searchForm = document.getElementById('searchForm');
+            const searchInput = document.getElementById('searchInput');
+            
+            if (searchForm && searchInput) {
+                searchForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const query = searchInput.value.trim();
+                    if (query) {
+                        window.location.href = `./search.html?q=${encodeURIComponent(query)}`;
+                    }
+                });
+            }
+            
+            // Ensure marquee and ad banner remain visible
+            // These elements should not be affected by script.js DOM manipulation
+            const marquee = document.querySelector('.animate-marquee');
+            const adBanner = document.querySelector('.banner-ad-container');
+            
+            if (marquee) {
+                // Ensure marquee animation is always running
+                marquee.style.animation = 'marquee 15s linear infinite';
+                marquee.style.display = 'block'; // Ensure it's visible
+                // Add important flag to prevent script.js from hiding it
+                marquee.style.setProperty('display', 'block', 'important');
+            }
+            
+            if (adBanner) {
+                // Ensure ad banner is always visible
+                adBanner.style.display = 'block';
+                // Add important flag to prevent script.js from hiding it
+                adBanner.style.setProperty('display', 'block', 'important');
+            }
         });
         
-        // Update UI based on auth state
-        function updateAuthUI(user) {
+        // Initialize login functionality
+        function initializeLogin() {
             const loginBtn = document.getElementById('loginBtn');
             const mobileLoginBtn = document.getElementById('mobileLoginBtn');
             const userNameDisplay = document.getElementById('userNameDisplay');
             const mobileUserName = document.getElementById('mobileUserName');
             
-            if (user) {
-                const displayName = user.displayName || 'User';
-                const shortName = displayName.split(' ')[0];
+            if (loginBtn && mobileLoginBtn && userNameDisplay && mobileUserName && firebaseAuth) {
+                // Check if user is already logged in
+                firebaseAuth.onAuthStateChanged(function(user) {
+                    if (user) {
+                        // User is signed in
+                        const displayName = user.displayName || 'User';
+                        userNameDisplay.textContent = displayName;
+                        mobileUserName.textContent = displayName;
+                        loginBtn.innerHTML = '<i class="fas fa-user"></i><span>' + displayName + '</span>';
+                        mobileLoginBtn.innerHTML = '<i class="fas fa-user text-xl"></i><span class="text-xs">' + displayName + '</span>';
+                    } else {
+                        // User is signed out
+                        userNameDisplay.textContent = 'Login';
+                        mobileUserName.textContent = 'Login';
+                        loginBtn.innerHTML = '<i class="fas fa-user"></i><span>Login</span>';
+                        mobileLoginBtn.innerHTML = '<i class="fas fa-user text-xl"></i><span class="text-xs">Login</span>';
+                    }
+                });
                 
-                userNameDisplay.textContent = shortName;
-                mobileUserName.textContent = shortName;
-                loginBtn.innerHTML = `<i class="fas fa-user-circle"></i><span id="userNameDisplay">${shortName}</span>`;
-                mobileLoginBtn.innerHTML = `<i class="fas fa-user-circle text-xl"></i><span class="text-xs" id="mobileUserName">${shortName}</span>`;
-            } else {
-                userNameDisplay.textContent = 'Login';
-                mobileUserName.textContent = 'Login';
-                loginBtn.innerHTML = `<i class="fas fa-user"></i><span id="userNameDisplay">Login</span>`;
-                mobileLoginBtn.innerHTML = `<i class="fas fa-user text-xl"></i><span class="text-xs" id="mobileUserName">Login</span>`;
+                // Add event listeners to login buttons
+                loginBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    handleLogin();
+                });
+                
+                mobileLoginBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    handleLogin();
+                });
             }
         }
         
-        // Login button handlers
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            if (currentUser) {
-                if (confirm(`Sign out ${currentUser.displayName}?`)) {
-                    auth.signOut();
+        // Handle login functionality
+        function handleLogin() {
+            // Check if Firebase is available
+            if (!firebaseApp || !firebaseAuth) {
+                alert('Login functionality is not available at the moment. Please try again later.');
+                return;
+            }
+            
+            const user = firebaseAuth.currentUser;
+            
+            if (user) {
+                // User is logged in, show logout option
+                if (confirm('Do you want to logout?')) {
+                    firebaseAuth.signOut().then(function() {
+                        console.log('User logged out successfully');
+                    }).catch(function(error) {
+                        console.error('Error logging out:', error);
+                        alert('Error logging out: ' + error.message);
+                    });
                 }
             } else {
-                signInWithGoogle();
+                // User is not logged in, show login options
+                const provider = new firebase.auth.GoogleAuthProvider();
+                firebaseAuth.signInWithPopup(provider).then(function(result) {
+                    // User signed in successfully
+                    console.log('User logged in successfully:', result.user);
+                }).catch(function(error) {
+                    // Handle errors
+                    console.error('Error logging in:', error);
+                    // Provide a more user-friendly error message
+                    if (error.code === 'auth/api-key-not-valid') {
+                        alert('Login is temporarily unavailable. Please try again later.');
+                    } else {
+                        alert('Error logging in: ' + error.message);
+                    }
+                });
             }
-        });
-        
-        document.getElementById('mobileLoginBtn').addEventListener('click', () => {
-            if (currentUser) {
-                if (confirm(`Sign out ${currentUser.displayName}?`)) {
-                    auth.signOut();
-                }
-            } else {
-                signInWithGoogle();
-            }
-        });
+        }
     </script>
 </body>
 </html>
