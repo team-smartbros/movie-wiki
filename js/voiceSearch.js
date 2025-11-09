@@ -176,8 +176,6 @@ function performSearch(query) {
 // Export functions for use in other modules (if needed)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { initVoiceSearch, performSearch };
-}       });
-    }
 }
 
 // Perform search function

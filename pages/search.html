@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Movies - Movie Wiki</title>
+    <title>Movie Wiki - Search Results</title>
     <link rel="icon" href="../assets/favicon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="../css/style.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
         :root {
             --primary: #0f172a;
@@ -16,11 +16,18 @@
             --dark: #020617;
         }
         
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             background-color: var(--primary);
             color: white;
             font-family: 'Inter', sans-serif;
-            padding-bottom: 70px; /* Space for mobile nav */
+            min-height: 100vh;
+            padding-bottom: 70px;
         }
         
         @media (min-width: 768px) {
@@ -41,12 +48,8 @@
             color: var(--accent);
         }
         
-        .bg-accent {
-            background-color: var(--accent);
-        }
-        
-        .text-primary {
-            color: var(--primary);
+        .border-accent {
+            border-color: var(--accent);
         }
         
         .glass-card {
@@ -55,6 +58,40 @@
             border: 1px solid rgba(34, 211, 238, 0.1);
         }
         
+        .mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(34, 211, 238, 0.2);
+            z-index: 1000;
+        }
+        
+        @media (min-width: 768px) {
+            .mobile-nav {
+                display: none;
+            }
+        }
+        
+        /* Profile image styling */
+        #loginBtn img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 8px;
+        }
+        
+        #mobileLoginBtn img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        /* Movie card styling */
         .movie-card {
             background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
             border-radius: 12px;
@@ -76,24 +113,9 @@
             transform: scale(1.05);
         }
         
-        .mobile-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(34, 211, 238, 0.2);
-            z-index: 1000;
-        }
-        
-        @media (min-width: 768px) {
-            .mobile-nav {
-                display: none;
-            }
-            body {
-                padding-bottom: 0;
-            }
+        /* Media carousel */
+        #mediaCarouselSection {
+            background: rgba(2, 6, 23, 0.95);
         }
         
         /* Responsive banner ads */
@@ -105,6 +127,10 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            /* Ensure banner stays centered */
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         .banner-ad-container ins {
@@ -192,6 +218,10 @@
                         <i class="fas fa-comments"></i>
                         <span>Forum</span>
                     </a>
+                    <a href="./watchlist.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-bookmark"></i>
+                        <span>Watchlist</span>
+                    </a>
                     <button id="loginBtn" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
                         <i class="fas fa-user"></i>
                         <span id="userNameDisplay">Login</span>
@@ -206,19 +236,23 @@
         <div class="flex justify-around items-center py-3">
             <a href="../index.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
                 <i class="fas fa-home text-xl"></i>
-                <span class="text-xs">Home</span>
+                <!-- <span class="text-xs">Home</span> -->
             </a>
             <a href="#" class="flex flex-col items-center gap-1 text-accent">
                 <i class="fas fa-search text-xl"></i>
-                <span class="text-xs">Search</span>
+                <!-- <span class="text-xs">Search</span> -->
             </a>
             <a href="../forum.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
                 <i class="fas fa-comments text-xl"></i>
-                <span class="text-xs">Forum</span>
+                <!-- <span class="text-xs">Forum</span> -->
+            </a>
+            <a href="../watchlist.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-bookmark text-xl"></i>
+                <!-- <span class="text-xs">Watchlist</span> -->
             </a>
             <button id="mobileLoginBtn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
                 <i class="fas fa-user text-xl"></i>
-                <span class="text-xs" id="mobileUserName">Login</span>
+                <!-- <span class="text-xs" id="mobileUserName">Login</span> -->
             </button>
         </div>
     </div>
@@ -330,15 +364,30 @@
             
             if (user) {
                 const displayName = user.displayName || 'User';
+                const userPhoto = user.photoURL || '';
                 const shortName = displayName.split(' ')[0];
                 
                 userNameDisplay.textContent = shortName;
                 mobileUserName.textContent = shortName;
-                loginBtn.innerHTML = `<i class="fas fa-user-circle"></i><span id="userNameDisplay">${shortName}</span>`;
+                
+                // For desktop: show profile image with name
+                if (userPhoto) {
+                    loginBtn.innerHTML = '<img src="' + userPhoto + '" alt="Profile" class="w-8 h-8 rounded-full object-cover"><span>' + displayName + '</span>';
+                } else {
+                    loginBtn.innerHTML = '<i class="fas fa-user"></i><span>' + displayName + '</span>';
+                }
+                
+                // For mobile: show only profile image
+                if (userPhoto) {
+                    mobileLoginBtn.innerHTML = '<img src="' + userPhoto + '" alt="Profile" class="w-6 h-6 rounded-full object-cover">';
+                } else {
+                    mobileLoginBtn.innerHTML = '<i class="fas fa-user text-xl"></i>';
+                }
             } else {
                 userNameDisplay.textContent = 'Login';
                 mobileUserName.textContent = 'Login';
-                loginBtn.innerHTML = `<i class="fas fa-user"></i><span id="userNameDisplay">Login</span>`;
+                loginBtn.innerHTML = '<i class="fas fa-user"></i><span>Login</span>';
+                mobileLoginBtn.innerHTML = '<i class="fas fa-user text-xl"></i>';
             }
         }
         

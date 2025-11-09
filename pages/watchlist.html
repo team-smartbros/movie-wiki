@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Watchlist - Movie Wiki</title>
+    <link rel="icon" href="../assets/favicon.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#22d3ee'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        body: ['Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .animate-marquee {
+            display: inline-block;
+            animation: marquee 15s linear infinite;
+        }
+        
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        .section-divider {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Scrollbar styling */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Responsive banner ads */
+        .banner-ad-container {
+            width: 100%;
+            max-width: 728px;
+            margin: 0 auto;
+            min-height: 90px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            /* Ensure banner stays centered */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .banner-ad-container ins {
+            display: block;
+            width: 100% !important;
+            height: 90px !important;
+            min-height: 90px;
+            max-width: 728px;
+        }
+        
+        /* Mobile ad adjustments */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+                min-height: 60px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100%;
+                width: 100% !important;
+                height: 60px !important;
+                min-height: 60px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-ad-container {
+                min-height: 50px;
+            }
+            
+            .banner-ad-container ins {
+                height: 50px !important;
+                min-height: 50px;
+            }
+        }
+        
+        /* Enhanced watchlist card styles */
+        .watchlist-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .watchlist-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .watchlist-card-img {
+            height: 300px;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .watchlist-card:hover .watchlist-card-img {
+            transform: scale(1.05);
+        }
+        
+        .remove-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .remove-btn:hover {
+            transform: scale(1.1);
+            background-color: #ef4444 !important;
+        }
+        
+        /* Rating badge */
+        .rating-badge {
+            background: linear-gradient(135deg, #22d3ee, #3b82f6);
+        }
+    </style>
+</head>
+<body class="bg-primary text-white min-h-screen font-body">
+    <!-- Navigation Bar -->
+    <nav class="glass-card sticky top-0 z-50 border-b border-gray-700">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-film text-accent text-2xl"></i>
+                    <h1 class="text-2xl font-bold text-accent font-sans">Movie Wiki</h1>
+                </div>
+                <div class="hidden md:flex items-center gap-4">
+                    <a href="./index.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="./forum.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-comments"></i>
+                        <span>Forum</span>
+                    </a>
+                    <button id="loginBtn" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-user"></i>
+                        <span id="userNameDisplay">Login</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Banner Ad -->
+    <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container">
+        <ins style="width: 728px;height:90px" data-width="728" data-height="90" class="tf6d2171a86" data-domain="//data527.click" data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"><script src="//data527.click/js/responsive.js" async></script></ins>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8 pb-20">
+        <!-- Page Header -->
+        <div class="max-w-5xl mx-auto mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold mb-2 text-accent font-sans flex items-center gap-3">
+                <i class="fas fa-bookmark"></i>
+                <span>My Watchlist</span>
+            </h1>
+            <p class="text-gray-400">All the movies and shows you've saved for later</p>
+        </div>
+        
+        <!-- Watchlist Content -->
+        <div class="max-w-5xl mx-auto">
+            <div id="watchlistContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Watchlist items will be populated here -->
+                <div id="emptyWatchlist" class="col-span-full text-center py-12 glass-card rounded-xl hidden">
+                    <i class="fas fa-bookmark text-gray-500 text-5xl mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Your watchlist is empty</h3>
+                    <p class="text-gray-400 mb-4">Start adding movies and shows to your watchlist</p>
+                    <a href="./index.html" class="inline-block bg-accent hover:bg-cyan-400 text-primary font-bold py-2 px-6 rounded-lg transition duration-300">
+                        Browse Movies
+                    </a>
+                </div>
+                
+                <!-- Loading indicator -->
+                <div id="loadingIndicator" class="col-span-full text-center py-12">
+                    <i class="fas fa-spinner fa-spin text-accent text-3xl mb-4"></i>
+                    <p class="text-gray-400">Loading your watchlist...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-nav md:hidden fixed bottom-0 left-0 right-0">
+        <div class="flex justify-around items-center py-3 bg-secondary border-t border-gray-700">
+            <a href="./index.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-home text-xl"></i>
+            </a>
+            <a href="./forum.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-comments text-xl"></i>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 text-accent">
+                <i class="fas fa-bookmark text-xl"></i>
+            </a>
+            <button id="mobileLoginBtn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <img id="mobileUserPhotoDisplay" src="" alt="User" class="w-6 h-6 rounded-full object-cover hidden mx-auto">
+                <i id="mobileUserIconDisplay" class="fas fa-user text-xl"></i>
+            </button>
+        </div>
+    </div>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="../js/watchlist.js"></script>
+</body>
+</html>

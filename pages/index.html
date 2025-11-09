@@ -97,6 +97,22 @@
             }
         }
         
+        /* Profile image styling */
+        #loginBtn img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 8px;
+        }
+        
+        #mobileLoginBtn img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
         /* Marquee animation */
         @keyframes marquee {
             0% { transform: translateX(100%); }
@@ -726,6 +742,10 @@
                         <i class="fas fa-comments"></i>
                         <span>Forum</span>
                     </a>
+                    <a href="./watchlist.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-bookmark"></i>
+                        <span>Watchlist</span>
+                    </a>
                     <button id="loginBtn" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
                         <i class="fas fa-user"></i>
                         <span id="userNameDisplay">Login</span>
@@ -740,15 +760,19 @@
         <div class="flex justify-around items-center py-3">
             <a href="./index.html" class="flex flex-col items-center gap-1 text-accent">
                 <i class="fas fa-home text-xl"></i>
-                <span class="text-xs">Home</span>
+                <!-- <span class="text-xs">Home</span> -->
             </a>
             <a href="#genreFilters" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
                 <i class="fas fa-filter text-xl"></i>
-                <span class="text-xs">Filter</span>
+                <!-- <span class="text-xs">Filter</span> -->
             </a>
             <a href="./forum.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
                 <i class="fas fa-comments text-xl"></i>
-                <span class="text-xs">Forum</span>
+                <!-- <span class="text-xs">Forum</span> -->
+            </a>
+            <a href="./watchlist.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-bookmark text-xl"></i>
+                <!-- <span class="text-xs">Watchlist</span> -->
             </a>
             <button id="mobileLoginBtn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
                 <i class="fas fa-user text-xl"></i>
@@ -1317,30 +1341,98 @@
             measurementId: "G-91SHQF7F4P"
         };
         
-        // Initialize Firebase with error handling
-        let firebaseApp = null;
-        let firebaseAuth = null;
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const firebaseAuth = firebase.auth();
         
-        try {
-            firebaseApp = firebase.initializeApp(firebaseConfig);
-            firebaseAuth = firebase.auth();
-            console.log('Firebase initialized successfully');
-        } catch (error) {
-            console.error('Firebase initialization error:', error);
+        console.log('Firebase initialized successfully');
+        
+        // Initialize login functionality
+        function initializeLogin() {
+            const loginBtn = document.getElementById('loginBtn');
+            const mobileLoginBtn = document.getElementById('mobileLoginBtn');
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            
+            if (loginBtn && mobileLoginBtn && userNameDisplay) {
+                // Check if user is already logged in
+                firebaseAuth.onAuthStateChanged(function(user) {
+                    if (user) {
+                        // User is signed in
+                        const displayName = user.displayName || 'User';
+                        const userPhoto = user.photoURL || '';
+                        
+                        userNameDisplay.textContent = displayName;
+                        
+                        // For desktop: show profile image with name
+                        if (userPhoto) {
+                            loginBtn.innerHTML = '<img src="' + userPhoto + '" alt="Profile" class="w-8 h-8 rounded-full object-cover"><span>' + displayName + '</span>';
+                        } else {
+                            loginBtn.innerHTML = '<i class="fas fa-user"></i><span>' + displayName + '</span>';
+                        }
+                        
+                        // For mobile: show only profile image
+                        if (userPhoto) {
+                            mobileLoginBtn.innerHTML = '<img src="' + userPhoto + '" alt="Profile" class="w-6 h-6 rounded-full object-cover">';
+                        } else {
+                            mobileLoginBtn.innerHTML = '<i class="fas fa-user text-xl"></i>';
+                        }
+                    } else {
+                        // User is signed out
+                        userNameDisplay.textContent = 'Login';
+                        loginBtn.innerHTML = '<i class="fas fa-user"></i><span>Login</span>';
+                        mobileLoginBtn.innerHTML = '<i class="fas fa-user text-xl"></i>';
+                    }
+                });
+                
+                // Add event listeners to login buttons
+                loginBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    handleLogin();
+                });
+                
+                mobileLoginBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    handleLogin();
+                });
+            }
         }
         
-        // Initialize login functionality after Firebase is ready
-        window.addEventListener('load', function() {
-            if (firebaseApp && firebaseAuth) {
-                initializeLogin();
+        // Handle login functionality
+        function handleLogin() {
+            const user = firebaseAuth.currentUser;
+            
+            if (user) {
+                // User is logged in, show logout option
+                if (confirm('Do you want to logout?')) {
+                    firebaseAuth.signOut().then(function() {
+                        console.log('User logged out successfully');
+                    }).catch(function(error) {
+                        console.error('Error logging out:', error);
+                        alert('Error logging out: ' + error.message);
+                    });
+                }
             } else {
-                console.log('Firebase not available, disabling login functionality');
-                // Hide login buttons if Firebase is not available
-                const loginBtn = document.getElementById('loginBtn');
-                const mobileLoginBtn = document.getElementById('mobileLoginBtn');
-                if (loginBtn) loginBtn.style.display = 'none';
-                if (mobileLoginBtn) mobileLoginBtn.style.display = 'none';
+                // User is not logged in, show login options
+                const provider = new firebase.auth.GoogleAuthProvider();
+                firebaseAuth.signInWithPopup(provider).then(function(result) {
+                    // User signed in successfully
+                    console.log('User logged in successfully:', result.user);
+                }).catch(function(error) {
+                    // Handle errors
+                    console.error('Error logging in:', error);
+                    // Provide a more user-friendly error message
+                    if (error.code === 'auth/api-key-not-valid') {
+                        alert('Login is temporarily unavailable. Please try again later.');
+                    } else {
+                        alert('Error logging in: ' + error.message);
+                    }
+                });
             }
+        }
+        
+        // Initialize login when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeLogin();
         });
     </script>
     <script src="../js/script.js"></script>
@@ -1387,84 +1479,6 @@
                 adBanner.style.setProperty('display', 'block', 'important');
             }
         });
-        
-        // Initialize login functionality
-        function initializeLogin() {
-            const loginBtn = document.getElementById('loginBtn');
-            const mobileLoginBtn = document.getElementById('mobileLoginBtn');
-            const userNameDisplay = document.getElementById('userNameDisplay');
-            const mobileUserName = document.getElementById('mobileUserName');
-            
-            if (loginBtn && mobileLoginBtn && userNameDisplay && mobileUserName && firebaseAuth) {
-                // Check if user is already logged in
-                firebaseAuth.onAuthStateChanged(function(user) {
-                    if (user) {
-                        // User is signed in
-                        const displayName = user.displayName || 'User';
-                        userNameDisplay.textContent = displayName;
-                        mobileUserName.textContent = displayName;
-                        loginBtn.innerHTML = '<i class="fas fa-user"></i><span>' + displayName + '</span>';
-                        mobileLoginBtn.innerHTML = '<i class="fas fa-user text-xl"></i><span class="text-xs">' + displayName + '</span>';
-                    } else {
-                        // User is signed out
-                        userNameDisplay.textContent = 'Login';
-                        mobileUserName.textContent = 'Login';
-                        loginBtn.innerHTML = '<i class="fas fa-user"></i><span>Login</span>';
-                        mobileLoginBtn.innerHTML = '<i class="fas fa-user text-xl"></i><span class="text-xs">Login</span>';
-                    }
-                });
-                
-                // Add event listeners to login buttons
-                loginBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    handleLogin();
-                });
-                
-                mobileLoginBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    handleLogin();
-                });
-            }
-        }
-        
-        // Handle login functionality
-        function handleLogin() {
-            // Check if Firebase is available
-            if (!firebaseApp || !firebaseAuth) {
-                alert('Login functionality is not available at the moment. Please try again later.');
-                return;
-            }
-            
-            const user = firebaseAuth.currentUser;
-            
-            if (user) {
-                // User is logged in, show logout option
-                if (confirm('Do you want to logout?')) {
-                    firebaseAuth.signOut().then(function() {
-                        console.log('User logged out successfully');
-                    }).catch(function(error) {
-                        console.error('Error logging out:', error);
-                        alert('Error logging out: ' + error.message);
-                    });
-                }
-            } else {
-                // User is not logged in, show login options
-                const provider = new firebase.auth.GoogleAuthProvider();
-                firebaseAuth.signInWithPopup(provider).then(function(result) {
-                    // User signed in successfully
-                    console.log('User logged in successfully:', result.user);
-                }).catch(function(error) {
-                    // Handle errors
-                    console.error('Error logging in:', error);
-                    // Provide a more user-friendly error message
-                    if (error.code === 'auth/api-key-not-valid') {
-                        alert('Login is temporarily unavailable. Please try again later.');
-                    } else {
-                        alert('Error logging in: ' + error.message);
-                    }
-                });
-            }
-        }
     </script>
 </body>
 </html>

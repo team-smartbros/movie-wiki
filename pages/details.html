@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -33,7 +33,6 @@
         body {
             background: linear-gradient(135deg, #0c1221 0%, #1a1f3a 100%);
             background-attachment: fixed;
-            padding-bottom: 70px; /* Space for mobile nav */
         }
         
         /* Glassmorphism */
@@ -58,9 +57,6 @@
         @media (min-width: 768px) {
             .mobile-nav {
                 display: none;
-            }
-            body {
-                padding-bottom: 0;
             }
         }
         
@@ -298,10 +294,26 @@
                 right: 10px;
             }
         }
+        
+        /* Flexbox layout for footer positioning */
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .content-wrapper {
+            flex: 1;
+        }
+        
+        .footer {
+            flex-shrink: 0;
+            margin-top: auto;
+        }
     </style>
 </head>
-<body class="bg-primary text-white min-h-screen font-body">
-    <!-- Top Navigation Bar -->
+<body class="bg-primary text-white font-body page-wrapper">
+    <!-- Navigation Bar -->
     <nav class="glass-card sticky top-0 z-50 border-b border-gray-700">
         <div class="container mx-auto px-4 py-4">
             <div class="flex justify-between items-center">
@@ -310,16 +322,21 @@
                     <h1 class="text-xl md:text-2xl font-bold text-accent font-sans">Movie Wiki</h1>
                 </div>
                 <div class="hidden md:flex items-center gap-6">
-                    <a href="index.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                    <a href="../index.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
                         <i class="fas fa-home"></i>
                         <span>Home</span>
                     </a>
-                    <a href="forum.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                    <a href="../forum.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
                         <i class="fas fa-comments"></i>
                         <span>Forum</span>
                     </a>
+                    <a href="../watchlist.html" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
+                        <i class="fas fa-bookmark"></i>
+                        <span>Watchlist</span>
+                    </a>
                     <button id="loginBtn" class="text-gray-300 hover:text-accent transition-colors flex items-center gap-2">
-                        <i class="fas fa-user"></i>
+                        <img id="userPhotoDisplay" src="" alt="User" class="w-8 h-8 rounded-full object-cover hidden">
+                        <i id="userIconDisplay" class="fas fa-user"></i>
                         <span id="userNameDisplay">Login</span>
                     </button>
                 </div>
@@ -332,19 +349,24 @@
         <div class="flex justify-around items-center py-3">
             <a href="../index.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
                 <i class="fas fa-home text-xl"></i>
-                <span class="text-xs">Home</span>
+                <!-- <span class="text-xs">Home</span> -->
             </a>
             <a href="#" class="flex flex-col items-center gap-1 text-accent">
                 <i class="fas fa-film text-xl"></i>
-                <span class="text-xs">Details</span>
+                <!-- <span class="text-xs">Details</span> -->
             </a>
-            <a href="../forum.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+            <a href="forum.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
                 <i class="fas fa-comments text-xl"></i>
-                <span class="text-xs">Forum</span>
+                <!-- <span class="text-xs">Forum</span> -->
+            </a>
+            <a href="watchlist.html" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
+                <i class="fas fa-bookmark text-xl"></i>
+                <!-- <span class="text-xs">Watchlist</span> -->
             </a>
             <button id="mobileLoginBtn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-accent transition-colors">
-                <i class="fas fa-user text-xl"></i>
-                <span class="text-xs" id="mobileUserName">Login</span>
+                <img id="mobileUserPhotoDisplay" src="" alt="User" class="w-6 h-6 rounded-full object-cover hidden mx-auto">
+                <i id="mobileUserIconDisplay" class="fas fa-user text-xl"></i>
+                <!-- <span class="text-xs" id="mobileUserName">Login</span> -->
             </button>
         </div>
     </div>
@@ -447,6 +469,9 @@
                         </button>
                         <button id="streamButton" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-film mr-2"></i>Stream Movie
+                        </button>
+                        <button id="watchlistButton" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-plus-circle mr-2"></i>Add to Watchlist
                         </button>
                         <button id="shareButton" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-share-alt mr-2"></i>Share
@@ -1833,6 +1858,23 @@
             if (document.getElementById('nextMediaButton')) {
                 document.getElementById('nextMediaButton').onclick = showNextMedia;
             }
+            
+            // Watchlist button event listener will be attached after page load
+        });
+        
+        // Attach watchlist button event listener after page load
+        window.addEventListener('load', function() {
+            const watchlistButton = document.getElementById('watchlistButton');
+            if (watchlistButton) {
+                watchlistButton.addEventListener('click', function() {
+                    if (typeof window.addToWatchlist === 'function') {
+                        window.addToWatchlist();
+                    } else {
+                        console.error('addToWatchlist function is not available');
+                        alert('Watchlist functionality is not available. Please refresh the page and try again.');
+                    }
+                });
+            }
         });
         
         // ===== FIREBASE & AUTH INTEGRATION =====
@@ -1854,8 +1896,10 @@
         const auth = firebase.auth();
         const database = firebase.database();
         
-        let currentUser = null;
-        let currentMovieId = null;
+        // Make currentUser and database globally accessible
+        window.currentUser = null;
+        window.database = database;
+        window.currentMovieId = null;
         
         // Google Sign-In
         function signInWithGoogle() {
@@ -1886,30 +1930,80 @@
             const mobileLoginBtn = document.getElementById('mobileLoginBtn');
             const userNameDisplay = document.getElementById('userNameDisplay');
             const mobileUserName = document.getElementById('mobileUserName');
+            const userPhotoDisplay = document.getElementById('userPhotoDisplay');
+            const userIconDisplay = document.getElementById('userIconDisplay');
+            const mobileUserPhotoDisplay = document.getElementById('mobileUserPhotoDisplay');
+            const mobileUserIconDisplay = document.getElementById('mobileUserIconDisplay');
             const commentFormAuth = document.getElementById('commentFormAuth');
             const commentFormGuest = document.getElementById('commentFormGuest');
             
             if (user) {
                 // User is signed in
                 const displayName = user.displayName || 'User';
+                const userPhoto = user.photoURL || '';
                 const shortName = displayName.split(' ')[0]; // First name only
                 
-                userNameDisplay.textContent = shortName;
-                mobileUserName.textContent = shortName;
-                loginBtn.innerHTML = `<i class="fas fa-user-circle"></i><span>${shortName}</span>`;
-                mobileLoginBtn.innerHTML = `<i class="fas fa-user-circle text-xl"></i><span class="text-xs">${shortName}</span>`;
+                // Update desktop view
+                if (userNameDisplay) userNameDisplay.textContent = displayName;
+                if (userPhotoDisplay) userPhotoDisplay.classList.add('hidden');
+                if (userIconDisplay) userIconDisplay.classList.remove('hidden');
                 
-                commentFormAuth.classList.remove('hidden');
-                commentFormGuest.classList.add('hidden');
+                // Update mobile view - only show photo and first name
+                if (mobileUserName) mobileUserName.textContent = shortName;
+                if (mobileUserPhotoDisplay) mobileUserPhotoDisplay.classList.add('hidden');
+                if (mobileUserIconDisplay) mobileUserIconDisplay.classList.remove('hidden');
+                
+                // For desktop: show profile image with name
+                if (loginBtn) {
+                    if (userPhoto) {
+                        loginBtn.innerHTML = '<img src="' + userPhoto + '" alt="Profile" class="w-8 h-8 rounded-full object-cover"><span>' + displayName + '</span>';
+                        if (userPhotoDisplay) {
+                            userPhotoDisplay.src = userPhoto;
+                            userPhotoDisplay.classList.remove('hidden');
+                        }
+                        if (userIconDisplay) userIconDisplay.classList.add('hidden');
+                    } else {
+                        loginBtn.innerHTML = '<i class="fas fa-user"></i><span>' + displayName + '</span>';
+                    }
+                }
+                
+                // For mobile: show only profile image
+                if (mobileLoginBtn) {
+                    if (userPhoto) {
+                        mobileLoginBtn.innerHTML = '<img src="' + userPhoto + '" alt="Profile" class="w-6 h-6 rounded-full object-cover">';
+                        if (mobileUserPhotoDisplay) {
+                            mobileUserPhotoDisplay.src = userPhoto;
+                            mobileUserPhotoDisplay.classList.remove('hidden');
+                        }
+                        if (mobileUserIconDisplay) mobileUserIconDisplay.classList.add('hidden');
+                    } else {
+                        mobileLoginBtn.innerHTML = '<i class="fas fa-user text-xl"></i>';
+                    }
+                }
+                
+                if (commentFormAuth) commentFormAuth.classList.remove('hidden');
+                if (commentFormGuest) commentFormGuest.classList.add('hidden');
             } else {
                 // User is signed out
-                userNameDisplay.textContent = 'Login';
-                mobileUserName.textContent = 'Login';
-                loginBtn.innerHTML = `<i class="fas fa-user"></i><span>Login</span>`;
-                mobileLoginBtn.innerHTML = `<i class="fas fa-user text-xl"></i><span class="text-xs">Login</span>`;
+                if (userNameDisplay) userNameDisplay.textContent = 'Login';
+                if (mobileUserName) mobileUserName.textContent = 'Login';
                 
-                commentFormAuth.classList.add('hidden');
-                commentFormGuest.classList.remove('hidden');
+                // Hide photos and show icons
+                if (userPhotoDisplay) userPhotoDisplay.classList.add('hidden');
+                if (userIconDisplay) userIconDisplay.classList.remove('hidden');
+                if (mobileUserPhotoDisplay) mobileUserPhotoDisplay.classList.add('hidden');
+                if (mobileUserIconDisplay) mobileUserIconDisplay.classList.remove('hidden');
+                
+                if (loginBtn) {
+                    loginBtn.innerHTML = '<i class="fas fa-user"></i><span>Login</span>';
+                }
+                
+                if (mobileLoginBtn) {
+                    mobileLoginBtn.innerHTML = '<i class="fas fa-user text-xl"></i>';
+                }
+                
+                if (commentFormAuth) commentFormAuth.classList.add('hidden');
+                if (commentFormGuest) commentFormGuest.classList.remove('hidden');
             }
         }
         
@@ -2355,11 +2449,23 @@
             });
         }
         
+        // Auth State Observer
+        auth.onAuthStateChanged((user) => {
+            window.currentUser = user;
+            updateAuthUI(user);
+            
+            if (user && window.currentMovieId) {
+                loadComments(window.currentMovieId);
+                // Check if movie is in watchlist
+                window.checkWatchlistStatus();
+            }
+        });
+
         // Set movie ID when details load
         const urlParams = new URLSearchParams(window.location.search);
-        currentMovieId = urlParams.get('id');
-        if (currentMovieId) {
-            loadComments(currentMovieId);
+        window.currentMovieId = urlParams.get('id');
+        if (window.currentMovieId) {
+            loadComments(window.currentMovieId);
         }
     </script>
     
@@ -2401,5 +2507,73 @@
             }
         });
     </script>
+    <script>
+        // Add to watchlist function
+        window.addToWatchlist = function() {
+            // Check if user is logged in using the global currentUser variable
+            if (!window.currentUser) {
+                alert('Please log in to add movies to your watchlist.');
+                return;
+            }
+            
+            // Get movie data from the page
+            const movieData = {
+                id: window.currentMovieId,
+                title: document.getElementById('movieTitle').textContent,
+                poster: document.getElementById('moviePoster').src,
+                year: document.getElementById('movieYear').textContent,
+                rating: document.getElementById('movieRating').textContent,
+                timestamp: Date.now()
+            };
+            
+            // Save to Firebase
+            const watchlistRef = window.database.ref(`watchlist/${window.currentUser.uid}/${window.currentMovieId}`);
+            watchlistRef.set(movieData)
+                .then(() => {
+                    // Update button UI
+                    const watchlistButton = document.getElementById('watchlistButton');
+                    if (watchlistButton) {
+                        watchlistButton.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Added to Watchlist';
+                        watchlistButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+                        watchlistButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                        
+                        // Don't reset the button - keep it in the "Added" state permanently
+                    }
+                    
+                    console.log('Movie added to watchlist');
+                })
+                .catch((error) => {
+                    console.error('Error adding to watchlist:', error);
+                    alert('Error adding to watchlist. Please try again.');
+                });
+        };
+
+        // Function to check if movie is in watchlist and update button state
+        window.checkWatchlistStatus = function() {
+            if (!window.currentUser || !window.currentMovieId) return;
+            
+            const watchlistRef = window.database.ref(`watchlist/${window.currentUser.uid}/${window.currentMovieId}`);
+            watchlistRef.once('value').then(snapshot => {
+                const watchlistButton = document.getElementById('watchlistButton');
+                if (watchlistButton) {
+                    if (snapshot.exists()) {
+                        // Movie is in watchlist
+                        watchlistButton.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Added to Watchlist';
+                        watchlistButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+                        watchlistButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                    } else {
+                        // Movie is not in watchlist
+                        watchlistButton.innerHTML = '<i class="fas fa-plus-circle mr-2"></i>Add to Watchlist';
+                        watchlistButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                        watchlistButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
+                    }
+                }
+            }).catch(error => {
+                console.error('Error checking watchlist status:', error);
+            });
+        };
+
+    </script>
+    <script src="../js/watchlist.js"></script>
 </body>
 </html>
