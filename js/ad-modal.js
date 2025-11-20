@@ -37,12 +37,14 @@
             position: relative;
             border: 1px solid #22d3ee;
             box-shadow: 0 0 30px rgba(34, 211, 238, 0.3);
+            display: flex;
+            flex-direction: column;
         `;
         
-        // Create close button
+        // Create close button with improved styling
         const closeBtn = document.createElement('button');
         closeBtn.id = 'closeAdModal';
-        closeBtn.innerHTML = 'Close Ad ×';
+        closeBtn.innerHTML = '&times;';
         closeBtn.style.cssText = `
             position: absolute;
             top: 10px;
@@ -59,11 +61,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 24px;
+            line-height: 1;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
         `;
         
         // Create ad container
         const adContainer = document.createElement('div');
+        adContainer.id = 'adContainer';
         adContainer.style.cssText = `
             margin-top: 30px;
             min-width: 300px;
@@ -71,7 +78,31 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            background: #0f172a;
+            border-radius: 8px;
+            position: relative;
         `;
+        
+        // Add loading indicator
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.id = 'adLoadingIndicator';
+        loadingIndicator.innerHTML = 'Loading advertisement...';
+        loadingIndicator.style.cssText = `
+            color: #94a3b8;
+            font-size: 14px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        `;
+        adContainer.appendChild(loadingIndicator);
+        
+        // Assemble the modal
+        content.appendChild(closeBtn);
+        content.appendChild(adContainer);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
         
         // Add ad script
         const adScript = document.createElement('script');
@@ -90,13 +121,25 @@
         adScript2.type = 'text/javascript';
         adScript2.src = '//www.highperformanceformat.com/e65cc55a1c5f4c4ff04d43a949ba5eea/invoke.js';
         
-        // Assemble the modal
+        // Add onload handler to hide loading indicator when ad is loaded
+        adScript2.onload = function() {
+            const loadingIndicator = document.getElementById('adLoadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+        };
+        
+        // Add onerror handler to hide loading indicator even if ad fails to load
+        adScript2.onerror = function() {
+            const loadingIndicator = document.getElementById('adLoadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+        };
+        
+        // Append scripts to ad container
         adContainer.appendChild(adScript);
         adContainer.appendChild(adScript2);
-        content.appendChild(closeBtn);
-        content.appendChild(adContainer);
-        modal.appendChild(content);
-        document.body.appendChild(modal);
         
         // Add event listener to close button
         closeBtn.addEventListener('click', function() {
@@ -130,7 +173,7 @@
         navigationCount++;
         // Show ad modal every 3 navigations
         if (navigationCount % 3 === 0) {
-            setTimeout(showAdModal, 500);
+            setTimeout(showAdModal, 100); // Show quickly after navigation
         }
     };
 
@@ -140,7 +183,7 @@
         navigationCount++;
         // Show ad modal every 3 navigations
         if (navigationCount % 3 === 0) {
-            setTimeout(showAdModal, 500);
+            setTimeout(showAdModal, 100); // Show quickly after navigation
         }
     };
 
@@ -149,7 +192,7 @@
         navigationCount++;
         // Show ad modal every 3 navigations
         if (navigationCount % 3 === 0) {
-            setTimeout(showAdModal, 500);
+            setTimeout(showAdModal, 100); // Show quickly after navigation
         }
     });
 
@@ -159,7 +202,7 @@
         if (sessionStorage.getItem('hasVisitedBefore')) {
             navigationCount = 1; // Start counting from 1
             // Show ad modal after a short delay
-            setTimeout(showAdModal, 2000);
+            setTimeout(showAdModal, 1000);
         } else {
             // Mark that the user has visited before
             sessionStorage.setItem('hasVisitedBefore', 'true');

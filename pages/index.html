@@ -231,8 +231,8 @@
             display: block;
             width: 100% !important;
             height: 90px !important;
-            min-height: 90px;
-            max-width: 728px;
+            min-height: 1px;
+            max-width: 1px;
         }
         
         /* Center genre pills on desktop */
@@ -483,14 +483,15 @@
             .banner-ad-container {
                 max-width: 100%;
                 padding: 0 10px;
-                min-height: 60px;
+                min-height: 1px; /* Set a very minimal height */
             }
             
             .banner-ad-container ins {
                 max-width: 100%;
                 width: 100% !important;
-                height: 60px !important;
-                min-height: 60px;
+                /* Remove fixed height to allow ad script to define the height */
+                display: block;
+                min-height: 1px; /* Set a very minimal height */
             }
             
             .trailer-card img {
@@ -523,12 +524,12 @@
         
         @media (max-width: 480px) {
             .banner-ad-container {
-                min-height: 50px;
+                min-height: 1px; /* Set a very minimal height */
             }
             
             .banner-ad-container ins {
-                height: 50px !important;
-                min-height: 50px;
+                /* Remove fixed height to allow ad script to define the height */
+                min-height: 1px; /* Set a very minimal height */
             }
             
             .trailer-card img {
@@ -1450,7 +1451,7 @@
     <script defer src="../js/trailer-cache.js"></script>
     <script defer src="../js/trailer.js"></script>
     <script defer src="../js/voiceSearch.js"></script>
-    <script defer src="../js/ad-modal.js"></script>
+    <script async src="../js/ad-modal.js"></script>
     <script>
         // Initialize voice search functionality
         document.addEventListener('DOMContentLoaded', function() {

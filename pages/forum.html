@@ -169,25 +169,26 @@
             .banner-ad-container {
                 max-width: 100%;
                 padding: 0 10px;
-                min-height: 60px;
+                min-height: 1px; /* Set a very minimal height */
             }
             
             .banner-ad-container ins {
                 max-width: 100%;
                 width: 100% !important;
-                height: 60px !important;
-                min-height: 60px;
+                /* Remove fixed height to allow ad script to define the height */
+                display: block;
+                min-height: 1px; /* Set a very minimal height */
             }
         }
         
         @media (max-width: 480px) {
             .banner-ad-container {
-                min-height: 50px;
+                min-height: 1px; /* Set a very minimal height */
             }
             
             .banner-ad-container ins {
-                height: 50px !important;
-                min-height: 50px;
+                /* Remove fixed height to allow ad script to define the height */
+                min-height: 1px; /* Set a very minimal height */
             }
         }
     </style>
@@ -913,7 +914,7 @@
         }
     </script>
     <script async src="../js/script.js"></script>
-    <script defer src="../js/ad-modal.js"></script>
+    <script async src="../js/ad-modal.js"></script>
     
 <!-- Footer -->
 <footer class="glass-card border-t border-gray-700 py-6 mt-12">
