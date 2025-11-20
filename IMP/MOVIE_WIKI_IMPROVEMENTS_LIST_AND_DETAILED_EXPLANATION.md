@@ -98,26 +98,20 @@ Let’s fix this in a bulletproof way.
 html
 <!-- Responsive Banner Ad -->
 <div class="banner-ad-container">
-  <ins
-    class="tf6d2171a86"
-    data-domain="//data527.click"
-    data-affquery="/95ce2b2f40c68f0bd440/f6d2171a86/?placementName=ad1"
-    data-width="728"
-    data-height="90"
-    style="
-      display: block;
-      width: 100%;
-      max-width: 728px;
-      height: auto;
-      margin: 0 auto;
-      text-align: center;
-      box-sizing: border-box;
-    "
-  ></ins>
+  <script type="text/javascript">
+
+	atOptions = {
+		'key' : '1f6ffd348b19de8ff0903dba0ad2a8ea',
+		'format' : 'iframe',
+		'height' : 90,
+		'width' : 728,
+		'params' : {}
+	};
+
+</script>
+
+<script type="text/javascript" src="//www.highperformanceformat.com/1f6ffd348b19de8ff0903dba0ad2a8ea/invoke.js"></script>
 </div>
-
-<script src="//data527.click/js/responsive.js" async></script>
-
 
 ### ✅ CSS (use this exact code)
 

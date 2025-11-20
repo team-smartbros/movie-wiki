@@ -2,7 +2,7 @@ const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
-const port = 3001;
+const port = 9999;
 
 // Proxy middleware for IMDb videos
 app.use('/proxy', createProxyMiddleware({

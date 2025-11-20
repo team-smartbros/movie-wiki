@@ -1687,7 +1687,7 @@ function applyAdBlockingEnhancements() {
     );
     adScripts.forEach(script => {
         // Don't remove our own ad script
-        if (!script.src.includes('data527.click')) {
+        if (!script.src.includes('highperformanceformat.com')) {
             console.log('Removing ad script:', script.src);
             script.remove();
         }
