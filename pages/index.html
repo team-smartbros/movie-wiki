@@ -223,11 +223,10 @@
         .banner-ad-container {
             width: 100%;
             max-width: 728px;
-            min-height: 90px;
+            height: 90px;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            /* Ensure banner stays centered */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -237,10 +236,8 @@
         
         .banner-ad-container ins {
             display: block;
-            width: 100% !important;
+            width: 728px !important;
             height: 90px !important;
-            min-height: 90px;
-            max-width: 728px;
         }
         
         /* Adsterra Responsive Fix */
@@ -280,14 +277,28 @@
             height: auto !important;
         }
         
-        /* Center genre pills on desktop */
-        @media (min-width: 768px) {
-            #genreFilters {
-                justify-content: center;
+        /* Mobile ad adjustments */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+                height: auto;
             }
             
-            .genre-pill-container {
-                justify-content: center;
+            .banner-ad-container ins {
+                max-width: 100%;
+                width: 100% !important;
+                display: block;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-ad-container {
+                height: auto;
+            }
+            
+            .banner-ad-container ins {
+                height: auto;
             }
         }
         
@@ -307,12 +318,12 @@
             
             .banner-ad-container {
                 max-width: 320px;
-                min-height: 50px;
+                height: 50px;
             }
             
             .banner-ad-container ins {
+                width: 320px !important;
                 height: 50px !important;
-                min-height: 50px;
             }
         }
         
@@ -341,6 +352,17 @@
         
         .ad-mobile .banner-ad-container ins {
             aspect-ratio: 320/50 !important;
+        }
+        
+        /* Center genre pills on desktop */
+        @media (min-width: 768px) {
+            #genreFilters {
+                justify-content: center;
+            }
+            
+            .genre-pill-container {
+                justify-content: center;
+            }
         }
         
         /* Featured Trailers Section */

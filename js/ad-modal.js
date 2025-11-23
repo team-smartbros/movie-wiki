@@ -45,8 +45,8 @@
             background: #1e293b;
             border-radius: 16px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-            max-width: 90vw;
-            max-height: 90vh;
+            max-width: 330px;
+            width: 90vw;
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -86,8 +86,8 @@
         adContainer.id = 'adContainer';
         adContainer.style.cssText = `
             margin-top: 30px;
-            min-width: 300px;
-            min-height: 250px;
+            width: 300px;
+            height: 250px;
             display: flex;
             align-items: center;
             justify-content: center;

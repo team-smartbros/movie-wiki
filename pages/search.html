@@ -129,11 +129,10 @@
         .banner-ad-container {
             width: 100%;
             max-width: 728px;
-            min-height: 90px;
+            height: 90px;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            /* Ensure banner stays centered */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -143,10 +142,8 @@
         
         .banner-ad-container ins {
             display: block;
-            width: 100% !important;
+            width: 728px !important;
             height: 90px !important;
-            min-height: 90px;
-            max-width: 728px;
         }
         
         /* Adsterra Responsive Fix */
@@ -191,26 +188,23 @@
             .banner-ad-container {
                 max-width: 100%;
                 padding: 0 10px;
-                min-height: 1px; /* Set a very minimal height */
+                height: auto;
             }
             
             .banner-ad-container ins {
                 max-width: 100%;
                 width: 100% !important;
-                /* Remove fixed height to allow ad script to define the height */
                 display: block;
-                min-height: 1px; /* Set a very minimal height */
             }
         }
         
         @media (max-width: 480px) {
             .banner-ad-container {
-                min-height: 1px; /* Set a very minimal height */
+                height: auto;
             }
             
             .banner-ad-container ins {
-                /* Remove fixed height to allow ad script to define the height */
-                min-height: 1px; /* Set a very minimal height */
+                height: auto;
             }
         }
         
@@ -230,12 +224,12 @@
             
             .banner-ad-container {
                 max-width: 320px;
-                min-height: 50px;
+                height: 50px;
             }
             
             .banner-ad-container ins {
+                width: 320px !important;
                 height: 50px !important;
-                min-height: 50px;
             }
         }
         

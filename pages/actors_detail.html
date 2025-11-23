@@ -141,11 +141,10 @@
         .banner-ad-container {
             width: 100%;
             max-width: 728px;
-            min-height: 90px;
+            height: 90px;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            /* Ensure banner stays centered */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -155,10 +154,8 @@
         
         .banner-ad-container ins {
             display: block;
-            width: 100% !important;
+            width: 728px !important;
             height: 90px !important;
-            min-height: 90px;
-            max-width: 728px;
         }
         
         /* Adsterra Responsive Fix */
@@ -196,6 +193,83 @@
         
         *[style*="height"] {
             height: auto !important;
+        }
+        
+        /* Mobile ad adjustments */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+                height: auto;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100%;
+                width: 100% !important;
+                display: block;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .banner-ad-container {
+                height: auto;
+            }
+            
+            .banner-ad-container ins {
+                height: auto;
+            }
+        }
+        
+        /* Switch between desktop and mobile ads */
+        @media (max-width: 600px) {
+            .ad-desktop {
+                display: none;
+            }
+            .ad-mobile {
+                display: block;
+            }
+            
+            .banner-ad-wrapper {
+                max-width: 320px;
+                padding: 8px 0;
+            }
+            
+            .banner-ad-container {
+                max-width: 320px;
+                height: 50px;
+            }
+            
+            .banner-ad-container ins {
+                width: 320px !important;
+                height: 50px !important;
+            }
+        }
+        
+        /* Additional responsive fixes for ad containers */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+        }
+        
+        /* Ensure ads maintain aspect ratio */
+        .ad-container iframe,
+        .ad-container ins {
+            aspect-ratio: auto !important;
+        }
+        
+        .ad-desktop .banner-ad-container ins {
+            aspect-ratio: 728/90 !important;
+        }
+        
+        .ad-mobile .banner-ad-container ins {
+            aspect-ratio: 320/50 !important;
         }
         
         /* Loader styling */
@@ -290,44 +364,6 @@
             
             #actorContent .p-6 {
                 padding: 1rem;
-            }
-        }
-        
-        /* Switch between desktop and mobile ads */
-        @media (max-width: 600px) {
-            .ad-desktop {
-                display: none;
-            }
-            .ad-mobile {
-                display: block;
-            }
-            
-            .banner-ad-wrapper {
-                max-width: 320px;
-                padding: 8px 0;
-            }
-            
-            .banner-ad-container {
-                max-width: 320px;
-                min-height: 50px;
-            }
-            
-            .banner-ad-container ins {
-                height: 50px !important;
-                min-height: 50px;
-            }
-        }
-        
-        /* Additional responsive fixes for ad containers */
-        @media (max-width: 768px) {
-            .banner-ad-container {
-                max-width: 100%;
-                padding: 0 10px;
-            }
-            
-            .banner-ad-container ins {
-                max-width: 100% !important;
-                width: 100% !important;
             }
         }
         
