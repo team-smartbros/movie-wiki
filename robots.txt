@@ -1,0 +1,12 @@
+User-agent: *
+Disallow: /js/
+Disallow: /css/
+Disallow: /assets/
+Allow: /
+
+Sitemap: https://moviewiki.qzz.io/sitemap.xml
+
+# PWA Support
+User-agent: Googlebot
+Allow: /manifest.json
+Allow: /sw.js

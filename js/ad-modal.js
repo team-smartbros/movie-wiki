@@ -4,6 +4,12 @@
 (function() {
     // Function to create and show ad modal
     function showAdModal() {
+        // Check if we're on the homepage - don't show modal ads there
+        if (window.location.pathname === '/' || window.location.pathname === '/index.html' || 
+            window.location.pathname.endsWith('/index.html')) {
+            return;
+        }
+        
         // Check if ad modal already exists to prevent duplicates
         if (document.getElementById('adModal')) {
             return;
@@ -173,7 +179,7 @@
         navigationCount++;
         // Show ad modal every 3 navigations
         if (navigationCount % 3 === 0) {
-            setTimeout(showAdModal, 100); // Show quickly after navigation
+            setTimeout(showAdModal, 50); // Show faster after navigation
         }
     };
 
@@ -183,7 +189,7 @@
         navigationCount++;
         // Show ad modal every 3 navigations
         if (navigationCount % 3 === 0) {
-            setTimeout(showAdModal, 100); // Show quickly after navigation
+            setTimeout(showAdModal, 50); // Show faster after navigation
         }
     };
 
@@ -192,7 +198,7 @@
         navigationCount++;
         // Show ad modal every 3 navigations
         if (navigationCount % 3 === 0) {
-            setTimeout(showAdModal, 100); // Show quickly after navigation
+            setTimeout(showAdModal, 50); // Show faster after navigation
         }
     });
 
@@ -202,7 +208,7 @@
         if (sessionStorage.getItem('hasVisitedBefore')) {
             navigationCount = 1; // Start counting from 1
             // Show ad modal after a short delay
-            setTimeout(showAdModal, 1000);
+            setTimeout(showAdModal, 500); // Show faster on initial load
         } else {
             // Mark that the user has visited before
             sessionStorage.setItem('hasVisitedBefore', 'true');

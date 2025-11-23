@@ -57,10 +57,16 @@
         }
         
         /* Responsive banner ads */
-        .banner-ad-container {
+        .banner-ad-wrapper {
             width: 100%;
             max-width: 728px;
             margin: 0 auto;
+            padding: 10px 0;
+        }
+        
+        .banner-ad-container {
+            width: 100%;
+            max-width: 728px;
             min-height: 90px;
             border-radius: 12px;
             overflow: hidden;
@@ -69,6 +75,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
+            margin: 0 auto;
         }
         
         .banner-ad-container ins {
@@ -77,6 +85,43 @@
             height: 90px !important;
             min-height: 90px;
             max-width: 728px;
+        }
+        
+        /* Adsterra Responsive Fix */
+        .ad-container {
+            width: 100%;
+            overflow: hidden;
+            text-align: center;
+        }
+        
+        .ad-container iframe,
+        .ad-container img {
+            width: 100% !important;
+            height: auto !important;
+            display: block;
+            margin: 0 auto;
+            max-width: 100% !important;
+        }
+        
+        /* Desktop and mobile ad variants */
+        .ad-desktop {
+            display: block;
+            width: 100%;
+        }
+        
+        .ad-mobile {
+            display: none;
+            width: 100%;
+        }
+        
+        /* Force override for fixed-size ads */
+        *[style*="width"] {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        *[style*="height"] {
+            height: auto !important;
         }
         
         /* Mobile ad adjustments */
@@ -105,6 +150,58 @@
                 /* Remove fixed height to allow ad script to define the height */
                 min-height: 1px; /* Set a very minimal height */
             }
+        }
+        
+        /* Switch between desktop and mobile ads */
+        @media (max-width: 600px) {
+            .ad-desktop {
+                display: none;
+            }
+            .ad-mobile {
+                display: block;
+            }
+            
+            .banner-ad-wrapper {
+                max-width: 320px;
+                padding: 8px 0;
+            }
+            
+            .banner-ad-container {
+                max-width: 320px;
+                min-height: 50px;
+            }
+            
+            .banner-ad-container ins {
+                height: 50px !important;
+                min-height: 50px;
+            }
+        }
+        
+        /* Additional responsive fixes for ad containers */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+        }
+        
+        /* Ensure ads maintain aspect ratio */
+        .ad-container iframe,
+        .ad-container ins {
+            aspect-ratio: auto !important;
+        }
+        
+        .ad-desktop .banner-ad-container ins {
+            aspect-ratio: 728/90 !important;
+        }
+        
+        .ad-mobile .banner-ad-container ins {
+            aspect-ratio: 320/50 !important;
         }
         
         /* Enhanced watchlist card styles */
@@ -144,6 +241,21 @@
             background: linear-gradient(135deg, #22d3ee, #3b82f6);
         }
     </style>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#22d3ee">
+    <meta name="description" content="Discover movies, actors, and trailers with Movie Wiki. Your ultimate destination for movie information.">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Movie Wiki">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
 </head>
 <body class="bg-primary text-white min-h-screen font-body">
     <!-- Navigation Bar -->
@@ -173,20 +285,46 @@
     </nav>
     
     <!-- Banner Ad -->
-    <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container">
-        <script type="text/javascript">
+    <!-- Desktop Ad -->
+    <div class="ad-container ad-desktop">
+        <div class="banner-ad-wrapper">
+            <div class="banner-ad-container">
+                <script type="text/javascript">
+                    
+        atOptions = {
+            'key' : '1f6ffd348b19de8ff0903dba0ad2a8ea',
+            'format' : 'iframe',
+            'height' : 90,
+            'width' : 728,
+            'params' : {}
+        };
+        
+    </script>
+    
+    <script type="text/javascript" src="//www.highperformanceformat.com/1f6ffd348b19de8ff0903dba0ad2a8ea/invoke.js"></script>
+            </div>
+        </div>
+    </div>
 
-	atOptions = {
-		'key' : '1f6ffd348b19de8ff0903dba0ad2a8ea',
-		'format' : 'iframe',
-		'height' : 90,
-		'width' : 728,
-		'params' : {}
-	};
-
-</script>
-
-<script type="text/javascript" src="//www.highperformanceformat.com/1f6ffd348b19de8ff0903dba0ad2a8ea/invoke.js"></script>
+    <!-- Mobile Ad -->
+    <div class="ad-container ad-mobile">
+        <div class="banner-ad-wrapper">
+            <div class="banner-ad-container">
+                <script type="text/javascript">
+                    
+        atOptions = {
+            'key' : 'addbf8d4e3c749085da72c0be2e609ed',
+            'format' : 'iframe',
+            'height' : 50,
+            'width' : 320,
+            'params' : {}
+        };
+        
+    </script>
+    
+    <script type="text/javascript" src="//www.highperformanceformat.com/addbf8d4e3c749085da72c0be2e609ed/invoke.js"></script>
+            </div>
+        </div>
     </div>
 
     <!-- Main Content -->

@@ -5,7 +5,9 @@
   "main": "proxy-server.js",
   "scripts": {
     "start": "node proxy-server.js",
-    "dev": "nodemon proxy-server.js"
+    "dev": "nodemon proxy-server.js",
+    "build-pwa": "node scripts/build-pwa.js",
+    "generate-icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -18,7 +20,8 @@
     "proxy",
     "movie",
     "imdb",
-    "video"
+    "video",
+    "pwa"
   ],
   "author": "Movie Wiki Team",
   "license": "MIT"
