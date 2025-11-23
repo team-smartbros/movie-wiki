@@ -24,113 +24,100 @@
         const modalOverlay = document.createElement('div');
         modalOverlay.id = 'adModalOverlay';
         modalOverlay.style.cssText = `
-            all: unset !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            background-color: rgba(0, 0, 0, 0.85) !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            z-index: 10000 !important;
-            backdrop-filter: blur(3px) !important;
-            border-radius: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            outline: none !important;
-            box-shadow: none !important;
-            transform: none !important;
-            transition: none !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(3px);
         `;
 
-        // Create modal container - sized specifically for 300x250 ad
+        // Create modal container
         const modalContainer = document.createElement('div');
         modalContainer.id = 'adModalContainer';
         modalContainer.style.cssText = `
-            all: unset !important;
-            position: relative !important;
-            background: #1e293b !important;
-            border-radius: 16px !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
-            width: 330px !important;
-            height: 280px !important;
-            min-width: 330px !important;
-            min-height: 280px !important;
-            max-width: 330px !important;
-            max-height: 280px !important;
-            overflow: hidden !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            outline: none !important;
-            transform: none !important;
-            transition: none !important;
+            position: relative;
+            background: #1e293b;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            max-width: 330px;
+            width: 90vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         `;
 
-        // Create close button with appropriate styling
+        // Create close button with improved styling
         const closeBtn = document.createElement('button');
         closeBtn.id = 'closeAdModal';
         closeBtn.innerHTML = '&times;';
         closeBtn.style.cssText = `
-            all: unset !important;
-            position: absolute !important;
-            top: 8px !important;
-            right: 8px !important;
-            background: #22d3ee !important;
-            color: #0f172a !important;
-            border: none !important;
-            border-radius: 50% !important;
-            width: 24px !important;
-            height: 24px !important;
-            font-weight: bold !important;
-            cursor: pointer !important;
-            z-index: 10001 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-size: 18px !important;
-            line-height: 1 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            box-sizing: border-box !important;
-            outline: none !important;
-            transform: none !important;
-            transition: none !important;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #22d3ee;
+            color: #0f172a;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            line-height: 1;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
         `;
 
-        // Create ad container - exactly 300x250
+        // Create ad container
         const adContainer = document.createElement('div');
         adContainer.id = 'adContainer';
         adContainer.style.cssText = `
-            all: unset !important;
-            margin-top: 20px !important;
-            width: 300px !important;
-            height: 250px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            background: #0f172a !important;
-            border-radius: 8px !important;
-            position: relative !important;
-            overflow: hidden !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            outline: none !important;
-            color-scheme: normal !important;
-            animation: none !important;
-            animation-duration: 0s !important;
-            animation-fill-mode: none !important;
+            margin-top: 30px;
+            width: 300px;
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f172a;
+            border-radius: 8px;
+            position: relative;
         `;
 
-        // Add ad script directly without loading indicator
+        // Add loading indicator
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.id = 'adLoadingIndicator';
+        loadingIndicator.innerHTML = 'Loading advertisement...';
+        loadingIndicator.style.cssText = `
+            color: #94a3b8;
+            font-size: 14px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        `;
+        adContainer.appendChild(loadingIndicator);
+
+        // Assemble the modal
+        modalContainer.appendChild(closeBtn);
+        modalContainer.appendChild(adContainer);
+        modalOverlay.appendChild(modalContainer);
+        document.body.appendChild(modalOverlay);
+
+        // Add ad script
         const adScript = document.createElement('script');
         adScript.type = 'text/javascript';
         adScript.text = `
@@ -147,15 +134,25 @@
         adScript2.type = 'text/javascript';
         adScript2.src = '//www.highperformanceformat.com/e65cc55a1c5f4c4ff04d43a949ba5eea/invoke.js';
 
+        // Add onload handler to hide loading indicator when ad is loaded
+        adScript2.onload = function() {
+            const loadingIndicator = document.getElementById('adLoadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+        };
+
+        // Add onerror handler to hide loading indicator even if ad fails to load
+        adScript2.onerror = function() {
+            const loadingIndicator = document.getElementById('adLoadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+        };
+
         // Append scripts to ad container
         adContainer.appendChild(adScript);
         adContainer.appendChild(adScript2);
-
-        // Assemble the modal
-        modalContainer.appendChild(closeBtn);
-        modalContainer.appendChild(adContainer);
-        modalOverlay.appendChild(modalContainer);
-        document.body.appendChild(modalOverlay);
 
         // Add event listener to close button
         closeBtn.addEventListener('click', function() {

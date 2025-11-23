@@ -199,72 +199,22 @@
             }
         }
                 /* Responsive banner ads */
-        .banner-ad-wrapper {
-            width: 100%;
-            max-width: 728px;
-            margin: 0 auto;
-            padding: 10px 0;
-        }
-        
         .banner-ad-container {
             width: 100%;
             max-width: 728px;
-            height: 90px;
+            margin: 0 auto;
+            min-height: 90px;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            margin: 0 auto;
-            /* Fix for ad shifting up */
-            line-height: 0;
         }
         
         .banner-ad-container ins {
             display: block;
-            width: 728px !important;
+            width: 100% !important;
             height: 90px !important;
-            /* Remove object-fit to prevent shifting */
-        }
-        
-        /* Adsterra Responsive Fix */
-        .ad-container {
-            width: 100%;
-            overflow: hidden;
-            text-align: center;
-        }
-        
-        .ad-container iframe,
-        .ad-container img {
-            width: 100% !important;
-            height: 100% !important;
-            display: block;
-            margin: 0 auto;
-            max-width: 100% !important;
-            /* Remove object-fit to prevent shifting */
-        }
-        
-        /* Desktop and mobile ad variants */
-        .ad-desktop {
-            display: block;
-            width: 100%;
-        }
-        
-        .ad-mobile {
-            display: none;
-            width: 100%;
-        }
-        
-        /* Force override for fixed-size ads */
-        *[style*="width"] {
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-        
-        *[style*="height"] {
-            height: 100% !important;
+            min-height: 90px;
+            max-width: 728px;
         }
         
         /* Mobile ad adjustments */
@@ -272,83 +222,27 @@
             .banner-ad-container {
                 max-width: 100%;
                 padding: 0 10px;
-                height: auto;
+                min-height: 1px; /* Set a very minimal height */
             }
             
             .banner-ad-container ins {
                 max-width: 100%;
                 width: 100% !important;
+                /* Remove fixed height to allow ad script to define the height */
                 display: block;
-                /* Remove object-fit to prevent shifting */
+                min-height: 1px; /* Set a very minimal height */
             }
         }
         
         @media (max-width: 480px) {
             .banner-ad-container {
-                height: auto;
+                min-height: 1px; /* Set a very minimal height */
             }
             
             .banner-ad-container ins {
-                height: auto;
-                /* Remove object-fit to prevent shifting */
+                /* Remove fixed height to allow ad script to define the height */
+                min-height: 1px; /* Set a very minimal height */
             }
-        }
-        
-        /* Switch between desktop and mobile ads */
-        @media (max-width: 600px) {
-            .ad-desktop {
-                display: none;
-            }
-            .ad-mobile {
-                display: block;
-            }
-            
-            .banner-ad-wrapper {
-                max-width: 320px;
-                padding: 8px 0;
-            }
-            
-            .banner-ad-container {
-                max-width: 320px;
-                height: 50px;
-                /* Fix for ad shifting up */
-                line-height: 0;
-            }
-            
-            .banner-ad-container ins {
-                width: 320px !important;
-                height: 50px !important;
-                /* Remove object-fit to prevent shifting */
-            }
-        }
-        
-        /* Additional responsive fixes for ad containers */
-        @media (max-width: 768px) {
-            .banner-ad-container {
-                max-width: 100%;
-                padding: 0 10px;
-            }
-            
-            .banner-ad-container ins {
-                max-width: 100% !important;
-                width: 100% !important;
-                /* Remove object-fit to prevent shifting */
-            }
-        }
-        
-        /* Ensure ads maintain aspect ratio */
-        .ad-container iframe,
-        .ad-container ins {
-            aspect-ratio: auto !important;
-            /* Remove object-fit to prevent shifting */
-        }
-        
-        .ad-desktop .banner-ad-container ins {
-            aspect-ratio: 728/90 !important;
-        }
-        
-        .ad-mobile .banner-ad-container ins {
-            aspect-ratio: 320/50 !important;
         }
         
         /* Media carousel improvements */
@@ -366,170 +260,6 @@
             justify-content: center;
             padding: 20px;
             box-sizing: border-box;
-        }
-        
-        /* Fix for ad modal styling issues - override any global styles */
-        #adModalOverlay {
-            all: unset !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            background: rgba(0,0,0,.85) !important;
-            backdrop-filter: blur(3px) !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            z-index: 10000 !important;
-            border-radius: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            outline: none !important;
-            box-shadow: none !important;
-            transform: none !important;
-            transition: none !important;
-            color-scheme: normal !important;
-            animation: none !important;
-            animation-duration: 0s !important;
-            animation-fill-mode: none !important;
-        }
-        
-        #adModalContainer {
-            all: unset !important;
-            position: relative !important;
-            background: #1e293b !important;
-            border-radius: 16px !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
-            width: 330px !important;
-            height: 280px !important;
-            min-width: 330px !important;
-            min-height: 280px !important;
-            max-width: 330px !important;
-            max-height: 280px !important;
-            overflow: hidden !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            outline: none !important;
-            transform: none !important;
-            transition: none !important;
-            color-scheme: normal !important;
-            animation: none !important;
-            animation-duration: 0s !important;
-            animation-fill-mode: none !important;
-        }
-        
-        /* Ensure ad modal elements are not affected by any page scripts */
-        #adModalOverlay *,
-        #adModalContainer *,
-        #closeAdModal *,
-        #adContainer * {
-            all: unset !important;
-            animation: none !important;
-            transition: none !important;
-            transform: none !important;
-            color-scheme: normal !important;
-        }
-        
-        /* Larger video player on mobile */
-        @media (max-width: 767px) {
-            #mediaCarousel {
-                padding: 10px;
-            }
-        }
-        
-        #closeAdModal {
-            all: unset !important;
-            position: absolute !important;
-            top: 8px !important;
-            right: 8px !important;
-            background: #22d3ee !important;
-            color: #0f172a !important;
-            border: none !important;
-            border-radius: 50% !important;
-            width: 24px !important;
-            height: 24px !important;
-            font-weight: bold !important;
-            cursor: pointer !important;
-            z-index: 10001 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-size: 18px !important;
-            line-height: 1 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            box-sizing: border-box !important;
-            outline: none !important;
-            transform: none !important;
-            transition: none !important;
-            color-scheme: normal !important;
-            animation: none !important;
-            animation-duration: 0s !important;
-            animation-fill-mode: none !important;
-        }
-        
-        #adContainer {
-            all: unset !important;
-            margin-top: 20px !important;
-            width: 300px !important;
-            height: 250px !important;
-            min-width: 300px !important;
-            min-height: 250px !important;
-            max-width: 300px !important;
-            max-height: 250px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            background: #0f172a !important;
-            border-radius: 8px !important;
-            position: relative !important;
-            overflow: hidden !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            outline: none !important;
-            color-scheme: normal !important;
-            animation: none !important;
-            animation-duration: 0s !important;
-            animation-fill-mode: none !important;
-            animation-name: none !important;
-            transform: matrix(1, 0, 0, 1, 0, 0) !important;
-        }
-        
-        /* Ensure ad modal elements are not affected by any page scripts */
-        #adModalOverlay *,
-        #adModalContainer *,
-        #closeAdModal *,
-        #adContainer * {
-            all: unset !important;
-            animation: none !important;
-            transition: none !important;
-            transform: none !important;
-            color-scheme: normal !important;
-        }
-        
-        #adLoadingIndicator {
-            all: unset !important;
-            color: #94a3b8 !important;
-            font-size: 14px !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            z-index: 1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            color-scheme: normal !important;
-            animation: none !important;
-            animation-duration: 0s !important;
-            animation-fill-mode: none !important;
         }
         
         /* Larger video player on mobile */
@@ -580,20 +310,6 @@
         .footer {
             flex-shrink: 0;
             margin-top: auto;
-        }
-    </style>
-        #adLoadingIndicator {
-            all: unset !important;
-            color: #94a3b8 !important;
-            font-size: 14px !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            z-index: 1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            color-scheme: normal !important;
         }
     </style>
 
@@ -671,40 +387,20 @@
         </div>
     </div>
        <!-- Banner Ad -->
-    <!-- Desktop Ad -->
-    <div class="ad-container ad-desktop">
-        <div class="banner-ad-wrapper">
-            <div class="banner-ad-container">
-                <script type="text/javascript">
-                    atOptions = {
-                        'key' : '1f6ffd348b19de8ff0903dba0ad2a8ea',
-                        'format' : 'iframe',
-                        'height' : 90,
-                        'width' : 728,
-                        'params' : {}
-                    };
-                </script>
-                <script type="text/javascript" src="//www.highperformanceformat.com/1f6ffd348b19de8ff0903dba0ad2a8ea/invoke.js"></script>
-            </div>
-        </div>
-    </div>
+    <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container">
+        <script type="text/javascript">
 
-    <!-- Mobile Ad -->
-    <div class="ad-container ad-mobile">
-        <div class="banner-ad-wrapper">
-            <div class="banner-ad-container">
-                <script type="text/javascript">
-                    atOptions = {
-                        'key' : 'addbf8d4e3c749085da72c0be2e609ed',
-                        'format' : 'iframe',
-                        'height' : 50,
-                        'width' : 320,
-                        'params' : {}
-                    };
-                </script>
-                <script type="text/javascript" src="//www.highperformanceformat.com/addbf8d4e3c749085da72c0be2e609ed/invoke.js"></script>
-            </div>
-        </div>
+	atOptions = {
+		'key' : '1f6ffd348b19de8ff0903dba0ad2a8ea',
+		'format' : 'iframe',
+		'height' : 90,
+		'width' : 728,
+		'params' : {}
+	};
+
+</script>
+
+<script type="text/javascript" src="//www.highperformanceformat.com/1f6ffd348b19de8ff0903dba0ad2a8ea/invoke.js"></script>
     </div>
     <!-- Loading Indicator -->
     <div id="loadingIndicator" class="container mx-auto px-4 py-16 text-center hidden">
@@ -2837,30 +2533,6 @@
                     }, 500);
                 }, 500);
             }
-        });
-        
-        // Ensure mobile ads are displayed correctly
-        document.addEventListener('DOMContentLoaded', function() {
-            // Force display of correct ad type based on screen size
-            function adjustAdDisplay() {
-                const isMobile = window.innerWidth <= 600;
-                const desktopAds = document.querySelectorAll('.ad-desktop');
-                const mobileAds = document.querySelectorAll('.ad-mobile');
-                
-                desktopAds.forEach(ad => {
-                    ad.style.display = isMobile ? 'none' : 'block';
-                });
-                
-                mobileAds.forEach(ad => {
-                    ad.style.display = isMobile ? 'block' : 'none';
-                });
-            }
-            
-            // Adjust on load
-            adjustAdDisplay();
-            
-            // Adjust on resize
-            window.addEventListener('resize', adjustAdDisplay);
         });
     </script>
     <script>
