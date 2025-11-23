@@ -171,21 +171,27 @@
         adScript2.type = 'text/javascript';
         adScript2.src = '//www.highperformanceformat.com/e65cc55a1c5f4c4ff04d43a949ba5eea/invoke.js';
 
-        // Add onload handler to hide loading indicator when ad is loaded
+        // Add multiple event listeners to ensure loading indicator is hidden
         adScript2.onload = function() {
-            const loadingIndicator = document.getElementById('adLoadingIndicator');
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
-            }
+            hideLoadingIndicator();
         };
 
-        // Add onerror handler to hide loading indicator even if ad fails to load
         adScript2.onerror = function() {
+            hideLoadingIndicator();
+        };
+
+        // Also hide loading indicator after a timeout as fallback
+        setTimeout(function() {
+            hideLoadingIndicator();
+        }, 3000);
+
+        // Function to hide loading indicator
+        function hideLoadingIndicator() {
             const loadingIndicator = document.getElementById('adLoadingIndicator');
             if (loadingIndicator) {
                 loadingIndicator.style.display = 'none';
             }
-        };
+        }
 
         // Append scripts to ad container
         adContainer.appendChild(adScript);
