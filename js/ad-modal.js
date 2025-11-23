@@ -24,6 +24,7 @@
         const modalOverlay = document.createElement('div');
         modalOverlay.id = 'adModalOverlay';
         modalOverlay.style.cssText = `
+            all: unset !important;
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
@@ -36,24 +37,41 @@
             z-index: 10000 !important;
             backdrop-filter: blur(3px) !important;
             border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            transform: none !important;
+            transition: none !important;
         `;
 
         // Create modal container - sized specifically for 300x250 ad
         const modalContainer = document.createElement('div');
         modalContainer.id = 'adModalContainer';
         modalContainer.style.cssText = `
+            all: unset !important;
             position: relative !important;
             background: #1e293b !important;
             border-radius: 16px !important;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
-            width: 330px !important;  /* Slightly larger than ad to accommodate padding */
-            height: 280px !important; /* Slightly larger than ad to accommodate close button */
+            width: 330px !important;
+            height: 280px !important;
+            min-width: 330px !important;
+            min-height: 280px !important;
+            max-width: 330px !important;
+            max-height: 280px !important;
             overflow: hidden !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
-            border-radius: 16px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            outline: none !important;
+            transform: none !important;
+            transition: none !important;
         `;
 
         // Create close button with appropriate styling
@@ -61,6 +79,7 @@
         closeBtn.id = 'closeAdModal';
         closeBtn.innerHTML = '&times;';
         closeBtn.style.cssText = `
+            all: unset !important;
             position: absolute !important;
             top: 8px !important;
             right: 8px !important;
@@ -81,15 +100,23 @@
             padding: 0 !important;
             margin: 0 !important;
             box-sizing: border-box !important;
+            outline: none !important;
+            transform: none !important;
+            transition: none !important;
         `;
 
         // Create ad container - exactly 300x250
         const adContainer = document.createElement('div');
         adContainer.id = 'adContainer';
         adContainer.style.cssText = `
+            all: unset !important;
             margin-top: 20px !important;
             width: 300px !important;
             height: 250px !important;
+            min-width: 300px !important;
+            min-height: 250px !important;
+            max-width: 300px !important;
+            max-height: 250px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -97,6 +124,10 @@
             border-radius: 8px !important;
             position: relative !important;
             overflow: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            outline: none !important;
         `;
 
         // Add loading indicator
@@ -104,6 +135,7 @@
         loadingIndicator.id = 'adLoadingIndicator';
         loadingIndicator.innerHTML = 'Loading advertisement...';
         loadingIndicator.style.cssText = `
+            all: unset !important;
             color: #94a3b8 !important;
             font-size: 14px !important;
             position: absolute !important;
@@ -111,6 +143,8 @@
             left: 50% !important;
             transform: translate(-50%, -50%) !important;
             z-index: 1 !important;
+            margin: 0 !important;
+            padding: 0 !important;
         `;
         adContainer.appendChild(loadingIndicator);
 
