@@ -577,12 +577,10 @@
                 // Show loading indicator
                 const resultsContainer = document.getElementById('resultsContainer');
                 if (resultsContainer) {
-                    resultsContainer.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-12 col-span-full">
-                            <i class="fas fa-spinner fa-spin text-3xl text-accent mb-4"></i>
-                            <p class="text-gray-400">Searching for "${query}"...</p>
-                        </div>
-                    `;
+                    resultsContainer.innerHTML = '<div class="flex flex-col items-center justify-center py-12 col-span-full">' +
+                        '<i class="fas fa-spinner fa-spin text-3xl text-accent mb-4"></i>' +
+                        '<p class="text-gray-400">Searching for "' + query + '"...</p>' +
+                        '</div>';
                 }
                 
                 const response = await fetch(`https://imdb.iamidiotareyoutoo.com/search?q=${encodeURIComponent(query)}`);
@@ -593,24 +591,20 @@
                 } else {
                     const resultsContainer = document.getElementById('resultsContainer');
                     if (resultsContainer) {
-                        resultsContainer.innerHTML = `
-                            <div class="flex flex-col items-center justify-center py-12 col-span-full">
-                                <i class="fas fa-search text-3xl text-gray-500 mb-4"></i>
-                                <p class="text-gray-500">No movies found for "${query}"</p>
-                            </div>
-                        `;
+                        resultsContainer.innerHTML = '<div class="flex flex-col items-center justify-center py-12 col-span-full">' +
+                            '<i class="fas fa-search text-3xl text-gray-500 mb-4"></i>' +
+                            '<p class="text-gray-500">No movies found for "' + query + '"</p>' +
+                            '</div>';
                     }
                 }
             } catch (error) {
                 console.error('Search error:', error);
                 const resultsContainer = document.getElementById('resultsContainer');
                 if (resultsContainer) {
-                    resultsContainer.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-12 col-span-full">
-                            <i class="fas fa-exclamation-triangle text-3xl text-red-500 mb-4"></i>
-                            <p class="text-red-500">Search failed. Please try again.</p>
-                        </div>
-                    `;
+                    resultsContainer.innerHTML = '<div class="flex flex-col items-center justify-center py-12 col-span-full">' +
+                        '<i class="fas fa-exclamation-triangle text-3xl text-red-500 mb-4"></i>' +
+                        '<p class="text-red-500">Search failed. Please try again.</p>' +
+                        '</div>';
                 }
             }
         }
@@ -621,16 +615,15 @@
             if (!resultsContainer) return;
             
             if (!movies || movies.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-12 col-span-full">
-                        <i class="fas fa-search text-3xl text-gray-500 mb-4"></i>
-                        <p class="text-gray-500">No movies found</p>
-                    </div>
-                `;
+                resultsContainer.innerHTML = '<div class="flex flex-col items-center justify-center py-12 col-span-full">' +
+                    '<i class="fas fa-search text-3xl text-gray-500 mb-4"></i>' +
+                    '<p class="text-gray-500">No movies found</p>' +
+                    '</div>';
                 return;
             }
             
-            resultsContainer.innerHTML = movies.map(movie => {
+            let html = '';
+            movies.forEach(movie => {
                 // Provide fallback values for all fields
                 const title = movie['#TITLE'] || 'Unknown Title';
                 const year = movie['#YEAR'] || 'N/A';
@@ -643,31 +636,32 @@
                 // Build additional info tags
                 let additionalInfo = '';
                 if (rating !== 'N/A') {
-                    additionalInfo += `<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">${rating}</span>`;
+                    additionalInfo += '<span class="inline-block bg-gray-700 text-white text-xs px-1 py-0.5 rounded mr-1 mt-1">' + rating + '</span>';
                 }
                 if (genres !== 'N/A') {
-                    additionalInfo += `<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">${genres.split(', ')[0]}</span>`;
+                    additionalInfo += '<span class="inline-block bg-accent text-primary text-xs px-1 py-0.5 rounded mr-1 mt-1">' + genres.split(', ')[0] + '</span>';
                 }
                 
                 // Add actors if available
                 let actorsInfo = '';
                 if (actors) {
                     const actorsList = actors.split(', ').slice(0, 3).join(', ');
-                    actorsInfo = `<p class="text-gray-300 text-xs mt-1 truncate">${actorsList}</p>`;
+                    actorsInfo = '<p class="text-gray-300 text-xs mt-1 truncate">' + actorsList + '</p>';
                 }
                 
-                return `
-                <div class="movie-card" 
-                     onclick="window.location.href='details.html?id=${imdbId}&title=${encodeURIComponent(title)}'">
-                    <img src="${poster}" alt="${title}" class="w-full h-72 object-cover" loading="lazy" style="aspect-ratio: 2/3;">
-                    <div class="p-3">
-                        <h3 class="font-bold text-sm mb-1 truncate">${title}</h3>
-                        <p class="text-gray-400 text-xs">${year}</p>
-                        ${additionalInfo}
-                        ${actorsInfo}
-                    </div>
-                </div>
-            `}).join('');
+                html += '<div class="movie-card" ' +
+                     'onclick="window.location.href=\'details.html?id=' + imdbId + '&title=' + encodeURIComponent(title) + '\'">' +
+                    '<img src="' + poster + '" alt="' + title + '" class="w-full h-72 object-cover" loading="lazy" style="aspect-ratio: 2/3;">' +
+                    '<div class="p-3">' +
+                        '<h3 class="font-bold text-sm mb-1 truncate">' + title + '</h3>' +
+                        '<p class="text-gray-400 text-xs">' + year + '</p>' +
+                        additionalInfo +
+                        actorsInfo +
+                    '</div>' +
+                '</div>';
+            });
+            
+            resultsContainer.innerHTML = html;
         }
         
         // Initialize search on page load
@@ -675,14 +669,14 @@
             const query = getSearchQueryFromUrl();
             if (query) {
                 // Fetch and display search results directly
-                fetch(`https://imdb.iamidiotareyoutoo.com/search?q=${encodeURIComponent(query)}`)
+                fetch('https://imdb.iamidiotareyoutoo.com/search?q=' + encodeURIComponent(query))
                     .then(response => response.json())
                     .then(data => {
                         displaySearchResults(data.description);
                     })
                     .catch(error => {
                         console.error('Search error:', error);
-                        document.getElementById('searchResults').innerHTML = `<p class="text-red-500">Search failed. Please try again.</p>`;
+                        document.getElementById('searchResults').innerHTML = '<p class="text-red-500">Search failed. Please try again.</p>';
                     });
             }
         });
@@ -731,8 +725,10 @@
             }
         });
     </script>
-    <script async src="../js/script.js"></script>
+    <script defer src="../js/trailer.js"></script>
+    <script defer src="../js/voiceSearch.js"></script>
     <script async src="../js/ad-modal.js"></script>
+    <script defer src="../js/router.js"></script>
 </body>
 
 </html>

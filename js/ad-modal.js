@@ -1,52 +1,59 @@
 // Ad Modal Functionality
-// This script handles the display of an ad modal when navigating between pages
-
 (function() {
+    // Check if we're on the homepage - don't show modal ads there
+    const pathname = window.location.pathname;
+    const isHomepage = (
+        pathname === '/' || 
+        pathname === '/index.html' || 
+        pathname.endsWith('/index.html') || 
+        pathname === '/pages/' ||
+        pathname === '/pages' ||
+        pathname.endsWith('/pages/') ||
+        pathname.endsWith('/pages/index.html') ||
+        pathname === '/pages/index.html'
+    );
+    
+    if (isHomepage) {
+        console.log('Homepage detected, skipping ad modal');
+        return;
+    }
+
     // Function to create and show ad modal
     function showAdModal() {
-        // Check if we're on the homepage - don't show modal ads there
-        if (window.location.pathname === '/' || window.location.pathname === '/index.html' || 
-            window.location.pathname.endsWith('/index.html')) {
-            return;
-        }
-        
-        // Check if ad modal already exists to prevent duplicates
-        if (document.getElementById('adModal')) {
-            return;
-        }
-        
-        // Create modal container
-        const modal = document.createElement('div');
-        modal.id = 'adModal';
-        modal.style.cssText = `
+        // Create modal overlay
+        const modalOverlay = document.createElement('div');
+        modalOverlay.id = 'adModalOverlay';
+        modalOverlay.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background-color: rgba(0, 0, 0, 0.85);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 10000;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(3px);
         `;
-        
-        // Create modal content
-        const content = document.createElement('div');
-        content.style.cssText = `
-            background: #1e293b;
-            border-radius: 12px;
-            padding: 20px;
-            max-width: 90%;
-            max-height: 90%;
+
+        // Create modal container
+        const modalContainer = document.createElement('div');
+        modalContainer.id = 'adModalContainer';
+        modalContainer.style.cssText = `
             position: relative;
-            border: 1px solid #22d3ee;
-            box-shadow: 0 0 30px rgba(34, 211, 238, 0.3);
+            background: #1e293b;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
         `;
-        
+
         // Create close button with improved styling
         const closeBtn = document.createElement('button');
         closeBtn.id = 'closeAdModal';
@@ -73,7 +80,7 @@
             margin: 0;
             box-sizing: border-box;
         `;
-        
+
         // Create ad container
         const adContainer = document.createElement('div');
         adContainer.id = 'adContainer';
@@ -88,7 +95,7 @@
             border-radius: 8px;
             position: relative;
         `;
-        
+
         // Add loading indicator
         const loadingIndicator = document.createElement('div');
         loadingIndicator.id = 'adLoadingIndicator';
@@ -103,13 +110,13 @@
             z-index: 1;
         `;
         adContainer.appendChild(loadingIndicator);
-        
+
         // Assemble the modal
-        content.appendChild(closeBtn);
-        content.appendChild(adContainer);
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-        
+        modalContainer.appendChild(closeBtn);
+        modalContainer.appendChild(adContainer);
+        modalOverlay.appendChild(modalContainer);
+        document.body.appendChild(modalOverlay);
+
         // Add ad script
         const adScript = document.createElement('script');
         adScript.type = 'text/javascript';
@@ -122,11 +129,11 @@
                 'params' : {}
             };
         `;
-        
+
         const adScript2 = document.createElement('script');
         adScript2.type = 'text/javascript';
         adScript2.src = '//www.highperformanceformat.com/e65cc55a1c5f4c4ff04d43a949ba5eea/invoke.js';
-        
+
         // Add onload handler to hide loading indicator when ad is loaded
         adScript2.onload = function() {
             const loadingIndicator = document.getElementById('adLoadingIndicator');
@@ -134,7 +141,7 @@
                 loadingIndicator.style.display = 'none';
             }
         };
-        
+
         // Add onerror handler to hide loading indicator even if ad fails to load
         adScript2.onerror = function() {
             const loadingIndicator = document.getElementById('adLoadingIndicator');
@@ -142,27 +149,27 @@
                 loadingIndicator.style.display = 'none';
             }
         };
-        
+
         // Append scripts to ad container
         adContainer.appendChild(adScript);
         adContainer.appendChild(adScript2);
-        
+
         // Add event listener to close button
         closeBtn.addEventListener('click', function() {
-            document.body.removeChild(modal);
+            document.body.removeChild(modalOverlay);
         });
-        
+
         // Close modal when clicking outside the content
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                document.body.removeChild(modal);
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === modalOverlay) {
+                document.body.removeChild(modalOverlay);
             }
         });
-        
+
         // Close modal with ESC key
         document.addEventListener('keydown', function closeOnEsc(e) {
-            if (e.key === 'Escape' && document.getElementById('adModal')) {
-                document.body.removeChild(modal);
+            if (e.key === 'Escape' && document.getElementById('adModalOverlay')) {
+                document.body.removeChild(modalOverlay);
                 document.removeEventListener('keydown', closeOnEsc);
             }
         });
