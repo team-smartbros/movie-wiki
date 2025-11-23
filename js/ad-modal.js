@@ -113,10 +113,6 @@
             margin-top: 20px !important;
             width: 300px !important;
             height: 250px !important;
-            min-width: 300px !important;
-            min-height: 250px !important;
-            max-width: 300px !important;
-            max-height: 250px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -128,33 +124,13 @@
             padding: 0 !important;
             border: none !important;
             outline: none !important;
+            color-scheme: normal !important;
+            animation: none !important;
+            animation-duration: 0s !important;
+            animation-fill-mode: none !important;
         `;
 
-        // Add loading indicator
-        const loadingIndicator = document.createElement('div');
-        loadingIndicator.id = 'adLoadingIndicator';
-        loadingIndicator.innerHTML = 'Loading advertisement...';
-        loadingIndicator.style.cssText = `
-            all: unset !important;
-            color: #94a3b8 !important;
-            font-size: 14px !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            z-index: 1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        `;
-        adContainer.appendChild(loadingIndicator);
-
-        // Assemble the modal
-        modalContainer.appendChild(closeBtn);
-        modalContainer.appendChild(adContainer);
-        modalOverlay.appendChild(modalContainer);
-        document.body.appendChild(modalOverlay);
-
-        // Add ad script
+        // Add ad script directly without loading indicator
         const adScript = document.createElement('script');
         adScript.type = 'text/javascript';
         adScript.text = `
@@ -171,46 +147,15 @@
         adScript2.type = 'text/javascript';
         adScript2.src = '//www.highperformanceformat.com/e65cc55a1c5f4c4ff04d43a949ba5eea/invoke.js';
 
-        // Add multiple event listeners to ensure loading indicator is hidden
-        adScript2.onload = function() {
-            hideLoadingIndicator();
-        };
-
-        adScript2.onerror = function() {
-            hideLoadingIndicator();
-        };
-
-        // Also hide loading indicator after a shorter timeout as fallback
-        setTimeout(function() {
-            hideLoadingIndicator();
-        }, 1000);
-
-        // Additional check for when the iframe content is loaded
-        const checkAdLoaded = setInterval(function() {
-            const adContainer = document.getElementById('adContainer');
-            const iframe = adContainer.querySelector('iframe');
-            if (iframe && iframe.contentDocument && iframe.contentDocument.body && iframe.contentDocument.body.children.length > 0) {
-                hideLoadingIndicator();
-                clearInterval(checkAdLoaded);
-            }
-        }, 500);
-
-        // Stop checking after 5 seconds
-        setTimeout(function() {
-            clearInterval(checkAdLoaded);
-        }, 5000);
-
-        // Function to hide loading indicator
-        function hideLoadingIndicator() {
-            const loadingIndicator = document.getElementById('adLoadingIndicator');
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
-            }
-        }
-
         // Append scripts to ad container
         adContainer.appendChild(adScript);
         adContainer.appendChild(adScript2);
+
+        // Assemble the modal
+        modalContainer.appendChild(closeBtn);
+        modalContainer.appendChild(adContainer);
+        modalOverlay.appendChild(modalContainer);
+        document.body.appendChild(modalOverlay);
 
         // Add event listener to close button
         closeBtn.addEventListener('click', function() {
