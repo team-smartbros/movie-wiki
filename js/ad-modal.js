@@ -45,8 +45,8 @@
             background: #1e293b;
             border-radius: 16px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-            max-width: 330px;
-            width: 90vw;
+            width: 330px;
+            height: 310px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -94,6 +94,7 @@
             background: #0f172a;
             border-radius: 8px;
             position: relative;
+            overflow: hidden;
         `;
 
         // Add loading indicator

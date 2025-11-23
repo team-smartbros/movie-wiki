@@ -134,12 +134,15 @@
             align-items: center;
             position: relative;
             margin: 0 auto;
+            /* Fix for ad shifting up */
+            line-height: 0;
         }
         
         .banner-ad-container ins {
             display: block;
             width: 728px !important;
             height: 90px !important;
+            /* Remove object-fit to prevent shifting */
         }
         
         /* Adsterra Responsive Fix */
@@ -152,10 +155,11 @@
         .ad-container iframe,
         .ad-container img {
             width: 100% !important;
-            height: auto !important;
+            height: 100% !important;
             display: block;
             margin: 0 auto;
             max-width: 100% !important;
+            /* Remove object-fit to prevent shifting */
         }
         
         /* Desktop and mobile ad variants */
@@ -176,7 +180,7 @@
         }
         
         *[style*="height"] {
-            height: auto !important;
+            height: 100% !important;
         }
         
         /* Mobile ad adjustments */
@@ -191,6 +195,7 @@
                 max-width: 100%;
                 width: 100% !important;
                 display: block;
+                /* Remove object-fit to prevent shifting */
             }
         }
         
@@ -201,6 +206,7 @@
             
             .banner-ad-container ins {
                 height: auto;
+                /* Remove object-fit to prevent shifting */
             }
         }
         
@@ -221,11 +227,14 @@
             .banner-ad-container {
                 max-width: 320px;
                 height: 50px;
+                /* Fix for ad shifting up */
+                line-height: 0;
             }
             
             .banner-ad-container ins {
                 width: 320px !important;
                 height: 50px !important;
+                /* Remove object-fit to prevent shifting */
             }
         }
         
@@ -239,6 +248,7 @@
             .banner-ad-container ins {
                 max-width: 100% !important;
                 width: 100% !important;
+                /* Remove object-fit to prevent shifting */
             }
         }
         
@@ -246,6 +256,7 @@
         .ad-container iframe,
         .ad-container ins {
             aspect-ratio: auto !important;
+            /* Remove object-fit to prevent shifting */
         }
         
         .ad-desktop .banner-ad-container ins {
@@ -254,6 +265,22 @@
         
         .ad-mobile .banner-ad-container ins {
             aspect-ratio: 320/50 !important;
+        }
+        
+        /* Flexbox layout for footer positioning */
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .content-wrapper {
+            flex: 1;
+        }
+        
+        .footer {
+            flex-shrink: 0;
+            margin-top: auto;
         }
         
         /* YouTube-style info cards */
@@ -557,7 +584,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
 </head>
-<body class="bg-primary text-white min-h-screen font-body" style="padding-bottom: 70px;">
+<body class="bg-primary text-white font-body page-wrapper" style="padding-bottom: 70px;">
     <!-- Global Loader -->
     <div id="globalLoader" class="global-loader">
         <div class="text-5xl text-accent mb-4 animate-pulse">
@@ -1124,13 +1151,36 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
     <script>
+        // Ensure mobile ads are displayed correctly
+        document.addEventListener('DOMContentLoaded', function() {
+            // Force display of correct ad type based on screen size
+            function adjustAdDisplay() {
+                const isMobile = window.innerWidth <= 600;
+                const desktopAds = document.querySelectorAll('.ad-desktop');
+                const mobileAds = document.querySelectorAll('.ad-mobile');
+                
+                desktopAds.forEach(ad => {
+                    ad.style.display = isMobile ? 'none' : 'block';
+                });
+                
+                mobileAds.forEach(ad => {
+                    ad.style.display = isMobile ? 'block' : 'none';
+                });
+            }
+            
+            // Adjust on load
+            adjustAdDisplay();
+            
+            // Adjust on resize
+            window.addEventListener('resize', adjustAdDisplay);
+        });
+        
         // Register service worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                navigator.serviceWorker.register('../js/sw.js')
                     .then(registration => {
                         console.log('✅ Service Worker registered with scope:', registration.scope);
                     })

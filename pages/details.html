@@ -199,22 +199,72 @@
             }
         }
                 /* Responsive banner ads */
-        .banner-ad-container {
+        .banner-ad-wrapper {
             width: 100%;
             max-width: 728px;
             margin: 0 auto;
-            min-height: 90px;
+            padding: 10px 0;
+        }
+        
+        .banner-ad-container {
+            width: 100%;
+            max-width: 728px;
+            height: 90px;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin: 0 auto;
+            /* Fix for ad shifting up */
+            line-height: 0;
         }
         
         .banner-ad-container ins {
             display: block;
-            width: 100% !important;
+            width: 728px !important;
             height: 90px !important;
-            min-height: 90px;
-            max-width: 728px;
+            /* Remove object-fit to prevent shifting */
+        }
+        
+        /* Adsterra Responsive Fix */
+        .ad-container {
+            width: 100%;
+            overflow: hidden;
+            text-align: center;
+        }
+        
+        .ad-container iframe,
+        .ad-container img {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+            margin: 0 auto;
+            max-width: 100% !important;
+            /* Remove object-fit to prevent shifting */
+        }
+        
+        /* Desktop and mobile ad variants */
+        .ad-desktop {
+            display: block;
+            width: 100%;
+        }
+        
+        .ad-mobile {
+            display: none;
+            width: 100%;
+        }
+        
+        /* Force override for fixed-size ads */
+        *[style*="width"] {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        *[style*="height"] {
+            height: 100% !important;
         }
         
         /* Mobile ad adjustments */
@@ -222,27 +272,83 @@
             .banner-ad-container {
                 max-width: 100%;
                 padding: 0 10px;
-                min-height: 1px; /* Set a very minimal height */
+                height: auto;
             }
             
             .banner-ad-container ins {
                 max-width: 100%;
                 width: 100% !important;
-                /* Remove fixed height to allow ad script to define the height */
                 display: block;
-                min-height: 1px; /* Set a very minimal height */
+                /* Remove object-fit to prevent shifting */
             }
         }
         
         @media (max-width: 480px) {
             .banner-ad-container {
-                min-height: 1px; /* Set a very minimal height */
+                height: auto;
             }
             
             .banner-ad-container ins {
-                /* Remove fixed height to allow ad script to define the height */
-                min-height: 1px; /* Set a very minimal height */
+                height: auto;
+                /* Remove object-fit to prevent shifting */
             }
+        }
+        
+        /* Switch between desktop and mobile ads */
+        @media (max-width: 600px) {
+            .ad-desktop {
+                display: none;
+            }
+            .ad-mobile {
+                display: block;
+            }
+            
+            .banner-ad-wrapper {
+                max-width: 320px;
+                padding: 8px 0;
+            }
+            
+            .banner-ad-container {
+                max-width: 320px;
+                height: 50px;
+                /* Fix for ad shifting up */
+                line-height: 0;
+            }
+            
+            .banner-ad-container ins {
+                width: 320px !important;
+                height: 50px !important;
+                /* Remove object-fit to prevent shifting */
+            }
+        }
+        
+        /* Additional responsive fixes for ad containers */
+        @media (max-width: 768px) {
+            .banner-ad-container {
+                max-width: 100%;
+                padding: 0 10px;
+            }
+            
+            .banner-ad-container ins {
+                max-width: 100% !important;
+                width: 100% !important;
+                /* Remove object-fit to prevent shifting */
+            }
+        }
+        
+        /* Ensure ads maintain aspect ratio */
+        .ad-container iframe,
+        .ad-container ins {
+            aspect-ratio: auto !important;
+            /* Remove object-fit to prevent shifting */
+        }
+        
+        .ad-desktop .banner-ad-container ins {
+            aspect-ratio: 728/90 !important;
+        }
+        
+        .ad-mobile .banner-ad-container ins {
+            aspect-ratio: 320/50 !important;
         }
         
         /* Media carousel improvements */
@@ -387,20 +493,40 @@
         </div>
     </div>
        <!-- Banner Ad -->
-    <div class="container mx-auto px-4 py-4 flex justify-center banner-ad-container">
-        <script type="text/javascript">
+    <!-- Desktop Ad -->
+    <div class="ad-container ad-desktop">
+        <div class="banner-ad-wrapper">
+            <div class="banner-ad-container">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : '1f6ffd348b19de8ff0903dba0ad2a8ea',
+                        'format' : 'iframe',
+                        'height' : 90,
+                        'width' : 728,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="//www.highperformanceformat.com/1f6ffd348b19de8ff0903dba0ad2a8ea/invoke.js"></script>
+            </div>
+        </div>
+    </div>
 
-	atOptions = {
-		'key' : '1f6ffd348b19de8ff0903dba0ad2a8ea',
-		'format' : 'iframe',
-		'height' : 90,
-		'width' : 728,
-		'params' : {}
-	};
-
-</script>
-
-<script type="text/javascript" src="//www.highperformanceformat.com/1f6ffd348b19de8ff0903dba0ad2a8ea/invoke.js"></script>
+    <!-- Mobile Ad -->
+    <div class="ad-container ad-mobile">
+        <div class="banner-ad-wrapper">
+            <div class="banner-ad-container">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : 'addbf8d4e3c749085da72c0be2e609ed',
+                        'format' : 'iframe',
+                        'height' : 50,
+                        'width' : 320,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="//www.highperformanceformat.com/addbf8d4e3c749085da72c0be2e609ed/invoke.js"></script>
+            </div>
+        </div>
     </div>
     <!-- Loading Indicator -->
     <div id="loadingIndicator" class="container mx-auto px-4 py-16 text-center hidden">
@@ -2533,6 +2659,30 @@
                     }, 500);
                 }, 500);
             }
+        });
+        
+        // Ensure mobile ads are displayed correctly
+        document.addEventListener('DOMContentLoaded', function() {
+            // Force display of correct ad type based on screen size
+            function adjustAdDisplay() {
+                const isMobile = window.innerWidth <= 600;
+                const desktopAds = document.querySelectorAll('.ad-desktop');
+                const mobileAds = document.querySelectorAll('.ad-mobile');
+                
+                desktopAds.forEach(ad => {
+                    ad.style.display = isMobile ? 'none' : 'block';
+                });
+                
+                mobileAds.forEach(ad => {
+                    ad.style.display = isMobile ? 'block' : 'none';
+                });
+            }
+            
+            // Adjust on load
+            adjustAdDisplay();
+            
+            // Adjust on resize
+            window.addEventListener('resize', adjustAdDisplay);
         });
     </script>
     <script>

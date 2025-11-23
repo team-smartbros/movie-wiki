@@ -7,9 +7,47 @@
     <link rel="icon" href="../assets/favicon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+    <script>
+        // Ensure mobile ads are displayed correctly
+        document.addEventListener('DOMContentLoaded', function() {
+            // Force display of correct ad type based on screen size
+            function adjustAdDisplay() {
+                const isMobile = window.innerWidth <= 600;
+                const desktopAds = document.querySelectorAll('.ad-desktop');
+                const mobileAds = document.querySelectorAll('.ad-mobile');
+                
+                desktopAds.forEach(ad => {
+                    ad.style.display = isMobile ? 'none' : 'block';
+                });
+                
+                mobileAds.forEach(ad => {
+                    ad.style.display = isMobile ? 'block' : 'none';
+                });
+            }
+            
+            // Adjust on load
+            adjustAdDisplay();
+            
+            // Adjust on resize
+            window.addEventListener('resize', adjustAdDisplay);
+        });
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../js/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
     
     <style>
         :root {
@@ -161,12 +199,15 @@
             align-items: center;
             position: relative;
             margin: 0 auto;
+            /* Fix for ad shifting up */
+            line-height: 0;
         }
         
         .banner-ad-container ins {
             display: block;
             width: 728px !important;
             height: 90px !important;
+            /* Remove object-fit to prevent shifting */
         }
         
         /* Adsterra Responsive Fix */
@@ -179,10 +220,11 @@
         .ad-container iframe,
         .ad-container img {
             width: 100% !important;
-            height: auto !important;
+            height: 100% !important;
             display: block;
             margin: 0 auto;
             max-width: 100% !important;
+            /* Remove object-fit to prevent shifting */
         }
         
         /* Desktop and mobile ad variants */
@@ -203,7 +245,7 @@
         }
         
         *[style*="height"] {
-            height: auto !important;
+            height: 100% !important;
         }
         
         /* Mobile ad adjustments */
@@ -218,6 +260,7 @@
                 max-width: 100%;
                 width: 100% !important;
                 display: block;
+                /* Remove object-fit to prevent shifting */
             }
         }
         
@@ -228,6 +271,7 @@
             
             .banner-ad-container ins {
                 height: auto;
+                /* Remove object-fit to prevent shifting */
             }
         }
         
@@ -248,11 +292,14 @@
             .banner-ad-container {
                 max-width: 320px;
                 height: 50px;
+                /* Fix for ad shifting up */
+                line-height: 0;
             }
             
             .banner-ad-container ins {
                 width: 320px !important;
                 height: 50px !important;
+                /* Remove object-fit to prevent shifting */
             }
         }
         
@@ -266,6 +313,7 @@
             .banner-ad-container ins {
                 max-width: 100% !important;
                 width: 100% !important;
+                /* Remove object-fit to prevent shifting */
             }
         }
         
@@ -273,6 +321,7 @@
         .ad-container iframe,
         .ad-container ins {
             aspect-ratio: auto !important;
+            /* Remove object-fit to prevent shifting */
         }
         
         .ad-desktop .banner-ad-container ins {
@@ -281,6 +330,22 @@
         
         .ad-mobile .banner-ad-container ins {
             aspect-ratio: 320/50 !important;
+        }
+        
+        /* Flexbox layout for footer positioning */
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .content-wrapper {
+            flex: 1;
+        }
+        
+        .footer {
+            flex-shrink: 0;
+            margin-top: auto;
         }
     </style>
 
@@ -299,7 +364,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
 </head>
-<body class="bg-primary text-white min-h-screen font-body">
+<body class="bg-primary text-white min-h-screen font-body page-wrapper">
     <!-- Navigation Bar -->
     <nav class="glass-card sticky top-0 z-50 border-b border-gray-700">
         <div class="container mx-auto px-4 py-4">
