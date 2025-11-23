@@ -493,23 +493,20 @@
             animation: none !important;
             animation-duration: 0s !important;
             animation-fill-mode: none !important;
+            animation-name: none !important;
+            transform: matrix(1, 0, 0, 1, 0, 0) !important;
         }
         
-        #adLoadingIndicator {
+        /* Ensure ad modal elements are not affected by any page scripts */
+        #adModalOverlay *,
+        #adModalContainer *,
+        #closeAdModal *,
+        #adContainer * {
             all: unset !important;
-            color: #94a3b8 !important;
-            font-size: 14px !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            z-index: 1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            color-scheme: normal !important;
             animation: none !important;
-            animation-duration: 0s !important;
-            animation-fill-mode: none !important;
+            transition: none !important;
+            transform: none !important;
+            color-scheme: normal !important;
         }
         
         /* Center genre pills on desktop */

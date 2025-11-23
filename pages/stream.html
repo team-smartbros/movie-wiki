@@ -399,6 +399,36 @@
             animation: none !important;
             animation-duration: 0s !important;
             animation-fill-mode: none !important;
+            animation-name: none !important;
+            transform: matrix(1, 0, 0, 1, 0, 0) !important;
+        }
+        
+        /* Ensure ad modal elements are not affected by any page scripts */
+        #adModalOverlay *,
+        #adModalContainer *,
+        #closeAdModal *,
+        #adContainer * {
+            all: unset !important;
+            animation: none !important;
+            transition: none !important;
+            transform: none !important;
+            color-scheme: normal !important;
+        }
+        
+        /* YouTube-style info cards */
+        .info-card {
+            background: linear-gradient(135deg, var(--secondary) 0%, #334155 100%);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(34, 211, 238, 0.1);
+        }
+        
+        .info-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+            border-color: rgba(34, 211, 238, 0.3);
         }
         
         #adLoadingIndicator {
@@ -424,10 +454,8 @@
             border-radius: 16px;
             padding: 1.5rem;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            border: 1px solid rgba(34, 211, 238, 0.1);
         }
-        
+    
         .info-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);

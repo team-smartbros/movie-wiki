@@ -425,6 +425,25 @@
             animation-fill-mode: none !important;
         }
         
+        /* Ensure ad modal elements are not affected by any page scripts */
+        #adModalOverlay *,
+        #adModalContainer *,
+        #closeAdModal *,
+        #adContainer * {
+            all: unset !important;
+            animation: none !important;
+            transition: none !important;
+            transform: none !important;
+            color-scheme: normal !important;
+        }
+        
+        /* Larger video player on mobile */
+        @media (max-width: 767px) {
+            #mediaCarousel {
+                padding: 10px;
+            }
+        }
+        
         #closeAdModal {
             all: unset !important;
             position: absolute !important;
@@ -480,6 +499,20 @@
             animation: none !important;
             animation-duration: 0s !important;
             animation-fill-mode: none !important;
+            animation-name: none !important;
+            transform: matrix(1, 0, 0, 1, 0, 0) !important;
+        }
+        
+        /* Ensure ad modal elements are not affected by any page scripts */
+        #adModalOverlay *,
+        #adModalContainer *,
+        #closeAdModal *,
+        #adContainer * {
+            all: unset !important;
+            animation: none !important;
+            transition: none !important;
+            transform: none !important;
+            color-scheme: normal !important;
         }
         
         #adLoadingIndicator {
@@ -548,7 +581,7 @@
             flex-shrink: 0;
             margin-top: auto;
         }
-        
+    </style>
         #adLoadingIndicator {
             all: unset !important;
             color: #94a3b8 !important;
