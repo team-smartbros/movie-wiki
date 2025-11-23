@@ -24,34 +24,36 @@
         const modalOverlay = document.createElement('div');
         modalOverlay.id = 'adModalOverlay';
         modalOverlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            backdrop-filter: blur(3px);
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-color: rgba(0, 0, 0, 0.85) !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            z-index: 10000 !important;
+            backdrop-filter: blur(3px) !important;
+            border-radius: 0 !important;
         `;
 
         // Create modal container - sized specifically for 300x250 ad
         const modalContainer = document.createElement('div');
         modalContainer.id = 'adModalContainer';
         modalContainer.style.cssText = `
-            position: relative;
-            background: #1e293b;
-            border-radius: 16px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-            width: 330px;  /* Slightly larger than ad to accommodate padding */
-            height: 280px; /* Slightly larger than ad to accommodate close button */
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            position: relative !important;
+            background: #1e293b !important;
+            border-radius: 16px !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+            width: 330px !important;  /* Slightly larger than ad to accommodate padding */
+            height: 280px !important; /* Slightly larger than ad to accommodate close button */
+            overflow: hidden !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 16px !important;
         `;
 
         // Create close button with appropriate styling
@@ -59,42 +61,42 @@
         closeBtn.id = 'closeAdModal';
         closeBtn.innerHTML = '&times;';
         closeBtn.style.cssText = `
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: #22d3ee;
-            color: #0f172a;
-            border: none;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 10001;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            line-height: 1;
-            padding: 0;
-            margin: 0;
-            box-sizing: border-box;
+            position: absolute !important;
+            top: 8px !important;
+            right: 8px !important;
+            background: #22d3ee !important;
+            color: #0f172a !important;
+            border: none !important;
+            border-radius: 50% !important;
+            width: 24px !important;
+            height: 24px !important;
+            font-weight: bold !important;
+            cursor: pointer !important;
+            z-index: 10001 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 18px !important;
+            line-height: 1 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
         `;
 
         // Create ad container - exactly 300x250
         const adContainer = document.createElement('div');
         adContainer.id = 'adContainer';
         adContainer.style.cssText = `
-            margin-top: 20px;
-            width: 300px;
-            height: 250px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #0f172a;
-            border-radius: 8px;
-            position: relative;
-            overflow: hidden;
+            margin-top: 20px !important;
+            width: 300px !important;
+            height: 250px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: #0f172a !important;
+            border-radius: 8px !important;
+            position: relative !important;
+            overflow: hidden !important;
         `;
 
         // Add loading indicator
@@ -102,13 +104,13 @@
         loadingIndicator.id = 'adLoadingIndicator';
         loadingIndicator.innerHTML = 'Loading advertisement...';
         loadingIndicator.style.cssText = `
-            color: #94a3b8;
-            font-size: 14px;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1;
+            color: #94a3b8 !important;
+            font-size: 14px !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            z-index: 1 !important;
         `;
         adContainer.appendChild(loadingIndicator);
 
