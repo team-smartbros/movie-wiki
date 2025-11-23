@@ -37,7 +37,7 @@
             backdrop-filter: blur(3px);
         `;
 
-        // Create modal container
+        // Create modal container - sized specifically for 300x250 ad
         const modalContainer = document.createElement('div');
         modalContainer.id = 'adModalContainer';
         modalContainer.style.cssText = `
@@ -45,8 +45,8 @@
             background: #1e293b;
             border-radius: 16px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-            width: 330px;
-            height: 310px;
+            width: 330px;  /* Slightly larger than ad to accommodate padding */
+            height: 280px; /* Slightly larger than ad to accommodate close button */
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -54,38 +54,38 @@
             justify-content: center;
         `;
 
-        // Create close button with improved styling
+        // Create close button with appropriate styling
         const closeBtn = document.createElement('button');
         closeBtn.id = 'closeAdModal';
         closeBtn.innerHTML = '&times;';
         closeBtn.style.cssText = `
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 8px;
+            right: 8px;
             background: #22d3ee;
             color: #0f172a;
             border: none;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 24px;
+            height: 24px;
             font-weight: bold;
             cursor: pointer;
             z-index: 10001;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 18px;
             line-height: 1;
             padding: 0;
             margin: 0;
             box-sizing: border-box;
         `;
 
-        // Create ad container
+        // Create ad container - exactly 300x250
         const adContainer = document.createElement('div');
         adContainer.id = 'adContainer';
         adContainer.style.cssText = `
-            margin-top: 30px;
+            margin-top: 20px;
             width: 300px;
             height: 250px;
             display: flex;
