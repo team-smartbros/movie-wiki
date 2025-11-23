@@ -180,10 +180,25 @@
             hideLoadingIndicator();
         };
 
-        // Also hide loading indicator after a timeout as fallback
+        // Also hide loading indicator after a shorter timeout as fallback
         setTimeout(function() {
             hideLoadingIndicator();
-        }, 3000);
+        }, 1000);
+
+        // Additional check for when the iframe content is loaded
+        const checkAdLoaded = setInterval(function() {
+            const adContainer = document.getElementById('adContainer');
+            const iframe = adContainer.querySelector('iframe');
+            if (iframe && iframe.contentDocument && iframe.contentDocument.body && iframe.contentDocument.body.children.length > 0) {
+                hideLoadingIndicator();
+                clearInterval(checkAdLoaded);
+            }
+        }, 500);
+
+        // Stop checking after 5 seconds
+        setTimeout(function() {
+            clearInterval(checkAdLoaded);
+        }, 5000);
 
         // Function to hide loading indicator
         function hideLoadingIndicator() {
