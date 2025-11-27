@@ -489,15 +489,64 @@ if (window.trailerJSLoaded) {
     async function fetchPopularMoviesSection() {
         try {
             console.log('📥 Fetching popular movies section...');
-            let response = await fetch(`${window.SCRAPER_API_BASE || 'https://web-1-production.up.railway.app'}/popular?page=1`);
             
-            // If primary API fails, try fallback
-            if (!response.ok) {
-                console.log('Primary API failed, trying fallback...');
-                response = await fetch(`${window.FALLBACK_SCRAPER_API_BASE || 'https://web-1-mykj.onrender.com'}/popular?page=1`);
+            // Try multiple API endpoints
+            const apiEndpoints = [
+                `${window.SCRAPER_API_BASE || 'https://web-1-production.up.railway.app'}/popular?page=1`,
+                `${window.FALLBACK_SCRAPER_API_BASE || 'https://web-1-mykj.onrender.com'}/popular?page=1`,
+                'https://web-1-mykj.onrender.com/popular?page=1',
+                'https://web-1-production.up.railway.app/popular?page=1'
+            ];
+            
+            let response;
+            let textData;
+            
+            // Try each endpoint until one works
+            for (const url of apiEndpoints) {
+                try {
+                    console.log(`Trying API endpoint: ${url}`);
+                    response = await fetchWithProxy(url);
+                    
+                    if (response.ok) {
+                        // Check if response is HTML (error page) instead of JSON
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('text/html')) {
+                            console.log('Received HTML response, trying next endpoint...');
+                            continue;
+                        }
+                        
+                        textData = await response.text();
+                        
+                        // Check if the response is HTML
+                        if (textData.trim().startsWith('<!doctype') || textData.trim().startsWith('<html')) {
+                            console.log('Received HTML page, trying next endpoint...');
+                            continue;
+                        }
+                        
+                        // If we get here, we have valid data
+                        break;
+                    }
+                } catch (error) {
+                    console.log(`Endpoint ${url} failed:`, error.message);
+                    continue;
+                }
             }
             
-            const data = await response.json();
+            // If no endpoint worked, throw an error
+            if (!textData) {
+                throw new Error('All API endpoints failed');
+            }
+            
+            // Try to parse as JSON
+            let data;
+            try {
+                data = JSON.parse(textData);
+            } catch (parseError) {
+                console.error('Failed to parse JSON:', parseError);
+                console.error('Response content:', textData.substring(0, 200) + '...');
+                throw new Error('Invalid JSON response');
+            }
+            
             console.log('Scraper API response for popular:', data);
             
             if (data.items) {
@@ -525,15 +574,64 @@ if (window.trailerJSLoaded) {
     async function fetchLatestMoviesSection() {
         try {
             console.log('📥 Fetching latest movies section...');
-            let response = await fetch(`${window.SCRAPER_API_BASE || 'https://web-1-production.up.railway.app'}/popular?page=1`);
             
-            // If primary API fails, try fallback
-            if (!response.ok) {
-                console.log('Primary API failed, trying fallback...');
-                response = await fetch(`${window.FALLBACK_SCRAPER_API_BASE || 'https://web-1-mykj.onrender.com'}/popular?page=1`);
+            // Try multiple API endpoints
+            const apiEndpoints = [
+                `${window.SCRAPER_API_BASE || 'https://web-1-production.up.railway.app'}/popular?page=1`,
+                `${window.FALLBACK_SCRAPER_API_BASE || 'https://web-1-mykj.onrender.com'}/popular?page=1`,
+                'https://web-1-mykj.onrender.com/popular?page=1',
+                'https://web-1-production.up.railway.app/popular?page=1'
+            ];
+            
+            let response;
+            let textData;
+            
+            // Try each endpoint until one works
+            for (const url of apiEndpoints) {
+                try {
+                    console.log(`Trying API endpoint: ${url}`);
+                    response = await fetchWithProxy(url);
+                    
+                    if (response.ok) {
+                        // Check if response is HTML (error page) instead of JSON
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('text/html')) {
+                            console.log('Received HTML response, trying next endpoint...');
+                            continue;
+                        }
+                        
+                        textData = await response.text();
+                        
+                        // Check if the response is HTML
+                        if (textData.trim().startsWith('<!doctype') || textData.trim().startsWith('<html')) {
+                            console.log('Received HTML page, trying next endpoint...');
+                            continue;
+                        }
+                        
+                        // If we get here, we have valid data
+                        break;
+                    }
+                } catch (error) {
+                    console.log(`Endpoint ${url} failed:`, error.message);
+                    continue;
+                }
             }
             
-            const data = await response.json();
+            // If no endpoint worked, throw an error
+            if (!textData) {
+                throw new Error('All API endpoints failed');
+            }
+            
+            // Try to parse as JSON
+            let data;
+            try {
+                data = JSON.parse(textData);
+            } catch (parseError) {
+                console.error('Failed to parse JSON:', parseError);
+                console.error('Response content:', textData.substring(0, 200) + '...');
+                throw new Error('Invalid JSON response');
+            }
+            
             console.log('Scraper API response for latest:', data);
             
             if (data.items) {
@@ -561,15 +659,64 @@ if (window.trailerJSLoaded) {
     async function fetchComingSoonMoviesSection() {
         try {
             console.log('📥 Fetching coming soon movies section...');
-            let response = await fetch(`${window.SCRAPER_API_BASE || 'https://web-1-production.up.railway.app'}/upcoming?page=1`);
             
-            // If primary API fails, try fallback
-            if (!response.ok) {
-                console.log('Primary API failed, trying fallback...');
-                response = await fetch(`${window.FALLBACK_SCRAPER_API_BASE || 'https://web-1-mykj.onrender.com'}/upcoming?page=1`);
+            // Try multiple API endpoints
+            const apiEndpoints = [
+                `${window.SCRAPER_API_BASE || 'https://web-1-production.up.railway.app'}/upcoming?page=1`,
+                `${window.FALLBACK_SCRAPER_API_BASE || 'https://web-1-mykj.onrender.com'}/upcoming?page=1`,
+                'https://web-1-mykj.onrender.com/upcoming?page=1',
+                'https://web-1-production.up.railway.app/upcoming?page=1'
+            ];
+            
+            let response;
+            let textData;
+            
+            // Try each endpoint until one works
+            for (const url of apiEndpoints) {
+                try {
+                    console.log(`Trying API endpoint: ${url}`);
+                    response = await fetchWithProxy(url);
+                    
+                    if (response.ok) {
+                        // Check if response is HTML (error page) instead of JSON
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('text/html')) {
+                            console.log('Received HTML response, trying next endpoint...');
+                            continue;
+                        }
+                        
+                        textData = await response.text();
+                        
+                        // Check if the response is HTML
+                        if (textData.trim().startsWith('<!doctype') || textData.trim().startsWith('<html')) {
+                            console.log('Received HTML page, trying next endpoint...');
+                            continue;
+                        }
+                        
+                        // If we get here, we have valid data
+                        break;
+                    }
+                } catch (error) {
+                    console.log(`Endpoint ${url} failed:`, error.message);
+                    continue;
+                }
             }
             
-            const data = await response.json();
+            // If no endpoint worked, throw an error
+            if (!textData) {
+                throw new Error('All API endpoints failed');
+            }
+            
+            // Try to parse as JSON
+            let data;
+            try {
+                data = JSON.parse(textData);
+            } catch (parseError) {
+                console.error('Failed to parse JSON:', parseError);
+                console.error('Response content:', textData.substring(0, 200) + '...');
+                throw new Error('Invalid JSON response');
+            }
+            
             console.log('Scraper API response for coming soon:', data);
             
             if (data.items) {

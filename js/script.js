@@ -1659,12 +1659,12 @@ function applyAdBlockingEnhancements() {
     // Remove common ad containers but preserve our banner ad and marquee
     const adSelectors = [
         'iframe[src*="ads"]:not(.tf6d2171a86)',
-        'div[class*="ad"]:not(.banner-ad-container):not(.animate-marquee)',
-        'div[id*="ad"]:not(.banner-ad-container):not(.animate-marquee)',
-        '.advertisement:not(.banner-ad-container):not(.animate-marquee)',
-        '.sponsor:not(.banner-ad-container):not(.animate-marquee)',
-        '[class*="popup"]:not(.banner-ad-container):not(.animate-marquee)',
-        '[id*="popup"]:not(.banner-ad-container):not(.animate-marquee)'
+        'div[class*="ad"]:not(.banner-ad-container):not(.animate-marquee):not(.ad-desktop):not(.ad-mobile)',
+        'div[id*="ad"]:not(.banner-ad-container):not(.animate-marquee):not(.ad-desktop):not(.ad-mobile)',
+        '.advertisement:not(.banner-ad-container):not(.animate-marquee):not(.ad-desktop):not(.ad-mobile)',
+        '.sponsor:not(.banner-ad-container):not(.animate-marquee):not(.ad-desktop):not(.ad-mobile)',
+        '[class*="popup"]:not(.banner-ad-container):not(.animate-marquee):not(.ad-desktop):not(.ad-mobile)',
+        '[id*="popup"]:not(.banner-ad-container):not(.animate-marquee):not(.ad-desktop):not(.ad-mobile)'
     ];
     
     adSelectors.forEach(selector => {
@@ -1673,6 +1673,8 @@ function applyAdBlockingEnhancements() {
             // Don't hide our own banner ad container or marquee
             if (!element.classList.contains('banner-ad-container') && 
                 !element.classList.contains('animate-marquee') &&
+                !element.classList.contains('ad-desktop') &&
+                !element.classList.contains('ad-mobile') &&
                 !element.querySelector('.banner-ad-container') &&
                 !element.querySelector('.animate-marquee')) {
                 console.log('Hiding ad element:', element);
@@ -1695,17 +1697,19 @@ function applyAdBlockingEnhancements() {
     
     // Ensure our important elements remain visible and centered
     const marquee = document.querySelector('.animate-marquee');
-    const adBanner = document.querySelector('.banner-ad-container');
+    // Select all banner ad containers (both desktop and mobile)
+    const adBanners = document.querySelectorAll('.banner-ad-container');
     
     if (marquee) {
         marquee.style.display = 'block';
     }
     
-    if (adBanner) {
+    // Ensure all ad banners are visible
+    adBanners.forEach(adBanner => {
         adBanner.style.display = 'flex';
         adBanner.style.justifyContent = 'center';
         adBanner.style.alignItems = 'center';
-    }
+    });
 }
 
 // Web scraper for fetching movie and TV show data

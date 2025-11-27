@@ -224,6 +224,7 @@
             width: 100%;
             max-width: 728px;
             height: 90px;
+            min-height: 90px;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
@@ -236,8 +237,10 @@
         
         .banner-ad-container ins {
             display: block;
-            width: 728px !important;
-            height: 90px !important;
+            width: 100% !important;
+            height: auto !important;
+            max-width: 728px !important;
+            max-height: 90px !important;
         }
         
         /* Adsterra Responsive Fix */
@@ -260,98 +263,38 @@
         .ad-desktop {
             display: block;
             width: 100%;
+            text-align: center;
         }
         
         .ad-mobile {
             display: none;
             width: 100%;
-        }
-        
-        /* Force override for fixed-size ads */
-        *[style*="width"] {
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-        
-        *[style*="height"] {
-            height: auto !important;
-        }
-        
-        /* Mobile ad adjustments */
-        @media (max-width: 768px) {
-            .banner-ad-container {
-                max-width: 100%;
-                padding: 0 10px;
-                height: auto;
-            }
-            
-            .banner-ad-container ins {
-                max-width: 100%;
-                width: 100% !important;
-                display: block;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .banner-ad-container {
-                height: auto;
-            }
-            
-            .banner-ad-container ins {
-                height: auto;
-            }
+            text-align: center;
         }
         
         /* Switch between desktop and mobile ads */
         @media (max-width: 600px) {
             .ad-desktop {
-                display: none;
+                display: none !important;
+                visibility: hidden !important;
             }
+            
             .ad-mobile {
-                display: block;
-            }
-            
-            .banner-ad-wrapper {
-                max-width: 320px;
-                padding: 8px 0;
-            }
-            
-            .banner-ad-container {
-                max-width: 320px;
-                height: 50px;
-            }
-            
-            .banner-ad-container ins {
-                width: 320px !important;
-                height: 50px !important;
+                display: block !important;
+                visibility: visible !important;
             }
         }
         
-        /* Additional responsive fixes for ad containers */
-        @media (max-width: 768px) {
-            .banner-ad-container {
-                max-width: 100%;
-                padding: 0 10px;
+        @media (min-width: 601px) {
+            .ad-desktop {
+                display: block !important;
+                visibility: visible !important;
             }
             
-            .banner-ad-container ins {
-                max-width: 100% !important;
-                width: 100% !important;
+            .ad-mobile {
+                display: none !important;
+                visibility: hidden !important;
             }
-        }
-        
-        /* Ensure ads maintain aspect ratio */
-        .ad-container iframe,
-        .ad-container ins {
-            aspect-ratio: auto !important;
-        }
-        
-        .ad-desktop .banner-ad-container ins {
-            aspect-ratio: 728/90 !important;
-        }
-        
-        .ad-mobile .banner-ad-container ins {
-            aspect-ratio: 320/50 !important;
         }
         
         /* Center genre pills on desktop */
@@ -981,46 +924,34 @@
             </div>
         </div>
 
-        <!-- Banner Ad -->
-        <!-- Desktop Ad -->
-        <div class="ad-container ad-desktop">
-            <div class="banner-ad-wrapper">
-                <div class="banner-ad-container">
-                    <script type="text/javascript">
-                        
-            atOptions = {
-                'key' : '1f6ffd348b19de8ff0903dba0ad2a8ea',
-                'format' : 'iframe',
-                'height' : 90,
-                'width' : 728,
-                'params' : {}
-            };
-            
-        </script>
-        
-        <script type="text/javascript" src="//www.highperformanceformat.com/1f6ffd348b19de8ff0903dba0ad2a8ea/invoke.js"></script>
-                </div>
+        <!-- Ad Container -->
+        <div style="text-align: center !important; margin: 10px auto !important; display: block !important; max-width: 728px; width: 100%;">
+            <!-- Desktop Ad -->
+            <div class="ad-desktop" style="display: block !important;">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : '1f6ffd348b19de8ff0903dba0ad2a8ea',
+                        'format' : 'iframe',
+                        'height' : 90,
+                        'width' : 728,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="//www.highperformanceformat.com/1f6ffd348b19de8ff0903dba0ad2a8ea/invoke.js"></script>
             </div>
-        </div>
-
-        <!-- Mobile Ad -->
-        <div class="ad-container ad-mobile">
-            <div class="banner-ad-wrapper">
-                <div class="banner-ad-container">
-                    <script type="text/javascript">
-                        
-            atOptions = {
-                'key' : 'addbf8d4e3c749085da72c0be2e609ed',
-                'format' : 'iframe',
-                'height' : 50,
-                'width' : 320,
-                'params' : {}
-            };
             
-        </script>
-        
-        <script type="text/javascript" src="//www.highperformanceformat.com/addbf8d4e3c749085da72c0be2e609ed/invoke.js"></script>
-                </div>
+            <!-- Mobile Ad -->
+            <div class="ad-mobile" style="display: none !important;">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : 'addbf8d4e3c749085da72c0be2e609ed',
+                        'format' : 'iframe',
+                        'height' : 50,
+                        'width' : 320,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="//www.highperformanceformat.com/addbf8d4e3c749085da72c0be2e609ed/invoke.js"></script>
             </div>
         </div>
         
@@ -1665,8 +1596,31 @@
                 // Ensure ad banner is always visible
                 adBanner.style.display = 'block';
                 // Add important flag to prevent script.js from hiding it
+              adBanner.style.setProperty('display', 'block', 'important');
+            }
+        });
+    </script>
+    <script>
+        // Ensure marquee and ad banner remain visible
+        // These elements should not be affected by script.js DOM manipulation
+        document.addEventListener('DOMContentLoaded', function() {
+            if (marquee) {
+                // Ensure marquee animation is always running
+                marquee.style.animation = 'marquee 15s linear infinite';
+                marquee.style.display = 'block'; // Ensure it's visible
+                // Add important flag to prevent script.js from hiding it
+                marquee.style.setProperty('display', 'block', 'important');
+            }
+            
+            if (adBanner) {
+                // Ensure ad banner is always visible
+                adBanner.style.display = 'block';
+                // Add important flag to prevent script.js from hiding it
                 adBanner.style.setProperty('display', 'block', 'important');
             }
+            
+// Ads are handled by CSS media queries only
+            // No JavaScript needed for ad visibility
         });
     </script>
 </body>
